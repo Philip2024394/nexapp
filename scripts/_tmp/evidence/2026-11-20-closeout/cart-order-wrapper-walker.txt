@@ -1,0 +1,14 @@
+FLAG · NEX_CART_ORDER_TX=1 loaded in this process (committed .env unchanged)
+CONNECTED · sandbox kdstoyyeygcopkogqsyv via supabase-js admin + pg
+fixtures · hamrex=11111111 rosa=11111111 conv=d972e635 product=1a0eb693
+PASS · W1 · wrapper call returns ok · ok=true msgId=0d935292 orderId=80a9552b skipped=undefined error=undefined
+PASS · W1a · nex_peer_message row + attachment_meta.cart intact · rows=1 cart.order_id=80a9552b items=1
+PASS · W1b · nex_order row persists w/ customer_note + idem · rows=1 state=created customer_note=wrapper-walker customer note
+PASS · W1c · nex_order_event row + metadata.product_id · rows=1 event=created meta.product=1a0eb693
+PASS · W2 · wrapper dedup returns order_dedup_hit, same orderId · ok=true skipped=order_dedup_hit orderId=80a9552b
+PASS · W3 · wrong supabase_user_id returns caller_account_not_found · ok=false error=caller_account_not_found
+PASS · W4 · invalid product_id returns product_not_found · ok=false error=product_not_found
+PASS · W5 · null product returns no_product_item skipped · ok=true skipped=no_product_item orderId=null
+CLEANUP · orders=1 messages=2
+
+SUMMARY · 8/8 passed

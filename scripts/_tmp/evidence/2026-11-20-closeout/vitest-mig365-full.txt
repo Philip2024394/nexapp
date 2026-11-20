@@ -1,0 +1,2104 @@
+
+> nexapp@0.1.0 test
+> vitest run --run
+
+
+ RUN  v4.1.11 C:/Users/Victus/nexapp
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · reachability > PRIORITY · targets under src/lib/nex-agent are reached when priority_prefixes set + walker sees a code-engine question
+[REACH-Q1] assessFear reached=✗ · candidates=0
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-aware ranking · Q1-Q4 > Q1 · assessFear (exported function) is top-1
+[RANK-Q1] top1=null · target_rank=-1 · declaration_signal=false
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-aware ranking · Q1-Q4 > Q2 · runNativeInvestigation (exported async function) is top-1
+[RANK-Q2] top1=null · target_rank=-1 · declaration_signal=false
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-aware ranking · Q1-Q4 > Q3 · InvestigationConclusionEntry (exported interface) is top-1
+[RANK-Q3] top1=null · target_rank=-1 · declaration_signal=false
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-aware ranking · Q1-Q4 > Q4 · patternIdOf (exported function) is top-1
+[RANK-Q4] top1=null · target_rank=-1 · declaration_signal=false
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F1-fn · runNativeInvestigation (exported async function) is top-1
+[FORM-F1-fn] exported async function · target=runNativeInvestigation · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F2-if · InvestigationConclusionEntry (exported interface) is top-1
+[FORM-F2-if] exported interface · target=InvestigationConclusionEntry · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F3-type · ChangeVerb (exported type) is top-1
+[FORM-F3-type] exported type · target=ChangeVerb · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F4-const · ENGLISH_QUANTIFIERS (exported const) is top-1
+[FORM-F4-const] exported const · target=ENGLISH_QUANTIFIERS · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F5-class · Nex1ReasoningRegistry (exported class) is top-1
+[FORM-F5-class] exported class · target=Nex1ReasoningRegistry · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F6-priv · evaluateFunctionCall (private function) is top-1
+[FORM-F6-priv] private function · target=evaluateFunctionCall · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · declaration-form coverage > F7-meth · interpretTask (class method) is top-1
+[FORM-F7-meth] class method · target=interpretTask · top1=null
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · ambiguity policy · preserves multi-declaration honesty > A1 · toForwardSlash · all 3 legitimate declarations are marked as declaration sites (no false uniqueness)
+[AMB-A1] declaration_sites (0):
+
+stdout | src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts > S1 Repair · ambiguity policy · preserves multi-declaration honesty > A2 · recordEvidence · both the exported function AND the class method are flagged as declarations
+[AMB-A2] declaration_sites: 
+[AMB-A2] function-site declaration_matches=n/a
+[AMB-A2] method-site method_declaration_matches=n/a
+
+ ❯ src/lib/nex-agent/code-engine/capability-repository-discovery-s1-repair.test.ts (19 tests | 15 failed) 2401ms
+     × PRIORITY · targets under src/lib/nex-agent are reached when priority_prefixes set + walker sees a code-engine question 237ms
+     × Q1 · assessFear (exported function) is top-1 84ms
+     × Q2 · runNativeInvestigation (exported async function) is top-1 77ms
+     × Q3 · InvestigationConclusionEntry (exported interface) is top-1 114ms
+     × Q4 · patternIdOf (exported function) is top-1 122ms
+     × F1-fn · runNativeInvestigation (exported async function) is top-1 114ms
+     × F2-if · InvestigationConclusionEntry (exported interface) is top-1 99ms
+     × F3-type · ChangeVerb (exported type) is top-1 78ms
+     × F4-const · ENGLISH_QUANTIFIERS (exported const) is top-1 89ms
+     × F5-class · Nex1ReasoningRegistry (exported class) is top-1 87ms
+     × F6-priv · evaluateFunctionCall (private function) is top-1 82ms
+     × F7-meth · interpretTask (class method) is top-1 74ms
+     × A1 · toForwardSlash · all 3 legitimate declarations are marked as declaration sites (no false uniqueness) 84ms
+     × A2 · recordEvidence · both the exported function AND the class method are flagged as declarations 79ms
+     × when definition_intent is false · declaration boost does not apply 76ms
+ ❯ src/app/api/nex-native/unread-count/__tests__/route.test.ts (7 tests | 4 failed) 2563ms
+     × anonymous viewer returns 200 { count: 0 } · correct zero · no leak 18ms
+     × signed-in viewer returns 200 { count: N } · N from the service 1323ms
+     × signed-in viewer with zero unread returns 200 { count: 0 } · genuine zero 512ms
+     × anonymous never calls the service · never exposes another user's count 1ms
+ ❯ scripts/gate-a-connected-matrix/__tests__/signup-write-ahead.spec.mjs (19 tests | 2 failed) 3047ms
+     × success mode · three labels · every row transitions pending_signup → signed_up 397ms
+     × crash_after_pending_label=A · manifest on disk still carries A's pending_signup row + run-scoped provenance 268ms
+ ❯ src/lib/nex/harvest/__tests__/production-boot.test.ts (15 tests | 1 failed) 2983ms
+     × (F2) grep proof · outside test files, `new ProductionOverpassAdapter` appears ONLY in production-boot.ts 1622ms
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts (38 tests | 7 failed) 271ms
+     × 404 when vault is not configured 5ms
+     × 429 and no envelope leak when rate-limited 1ms
+     × happy path returns opaque envelope + non-secret derivation params 1ms
+     × 403 when device has no envelope (device not authorised for vault) 1ms
+     × success=true marks unlocked + logs vault_unlock event 1ms
+     × success=false records failure + logs vault_unlock_failed 1ms
+     × 5 failures exposes 'window_exceeded' in rate.reason 1ms
+ ❯ src/app/nex-native/library/backgrounds/__tests__/sandbox-db.test.ts (7 tests | 2 failed) 3487ms
+     × Row counts · 450 catalog rows · 279 shop + 171 chat · 0 cross-context 207ms
+     × Spot check · catalog retains context metadata but both pickers see all 450 551ms
+ ❯ src/lib/nex/agent-runtime/worker-specialists-registration.test.ts (11 tests | 7 failed) 403ms
+     × vision worker exports runVisionWorker + runVisionBenchmarkOnce 88ms
+     × travel worker exports runTravelWorker + runTravelBenchmarkOnce 29ms
+     × business worker exports runBusinessWorker + runBusinessBenchmarkOnce 21ms
+     × vision benchmark returns pass=8 fail=0 on frozen corpus V1 1ms
+     × travel benchmark returns pass=8 fail=0 on frozen corpus V1 1ms
+     × business benchmark returns pass=8 fail=0 on frozen corpus V1 1ms
+     × all three benchmarks are deterministic (repeated runs same result) 1ms
+ ❯ src/lib/nex/brain/world-adapters/accommodation-postgres.test.ts (16 tests | 13 failed) 64ms
+     × emits WorldRecord shape · provenance stamped with readAt 11ms
+     × applies the VISIBILITY_FILTER on every query 4ms
+     × optional filters (city · category · amenities · query) build parameterised WHERE 3ms
+     × null DB fields stay undefined in the WorldRecord · never fabricated 3ms
+     × owner_status='claimed' or 'verified' → verified=true 3ms
+     × owner_status='unknown' → verified=false 5ms
+     × second query returns the updated row · adapter caches nothing 9ms
+     × newly listed row appears in the next search 3ms
+     × row hidden (claim_status change) disappears from next search 3ms
+     × whatsapp added → next search's record carries the whatsapp field 3ms
+     × hero image changed → next search's record uses the new image 3ms
+     × returns null when the DB returns no rows 3ms
+     × returns the WorldRecord when a row exists 3ms
+ ❯ src/lib/nex-agent/code-engine/capability-declaration-bridge.test.ts (14 tests | 7 failed) 1183ms
+     × Q1 · assessFear · selects capability-fear.ts 99ms
+     × Q2 · runNativeInvestigation · selects native-investigation-mode.ts 94ms
+     × Q3 · InvestigationConclusionEntry · selects investigation-conclusion-store.ts 74ms
+     × Q4 · patternIdOf · selects both legitimate declarations 78ms
+     × A1 · toForwardSlash · preserves all 3 legitimate private declarations 93ms
+     × A2 · recordEvidence · preserves function + method declarations 79ms
+     × N2 · usage-only file never wins · walker recognises it as non-declaration 99ms
+ ❯ src/app/nex-native/call/preview/__tests__/preview-honesty.test.ts (12 tests | 7 failed) 215ms
+     × mounts a visible ribbon with the honest 'dev preview' marker 12ms
+     × gate appears BEFORE any mock data is picked (short-circuit before render) 1ms
+     × the ribbon remains alongside the gate (belt-and-braces honesty for NEX_DEV_ROUTES=1 sessions) 3ms
+     × matches the sealed convention · /dev/standard-experience-preview uses the SAME gate 2ms
+     × Add people button is disabled with a 'coming later' aria-label + title 4ms
+     × preview End Call routes to the Calls hub (no engine teardown · no server action) 2ms
+     × preview Mute + Camera are explicitly local-state toggles with NO engine attached 1ms
+ ❯ src/lib/nex-native/live-broadcast/__tests__/uploaded-video-service.test.ts (17 tests | 3 failed) 223ms
+     × inserts a row with required fields · rights declaration enforced 210ms
+     × isAiGenerated=true · insert payload carries the flag · row returns it 1ms
+     × isAiGenerated omitted · insert payload defaults to false 0ms
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts (28 tests | 5 failed) 168ms
+     × 404 when recovery not configured 7ms
+     × happy path returns opaque materials 1ms
+     × 429 and NO envelope leak when rate-limited 1ms
+     × success=true marks unlocked + logs vault_unlock 15ms
+     × success=false logs vault_unlock_failed + returns rate verdict 1ms
+ ❯ src/app/nex-native/directory/__tests__/page-no-fabrication.test.ts (152 tests | 5 failed) 113ms
+     × _directory-card.tsx does not expose 'Unclaimed' or ownership-status copy to visitors 8ms
+     × page.tsx pre-filters redirect_to_canonical + unresolved from render 8ms
+     × page.tsx has a preparing state when systemReady is false 5ms
+     × page.tsx has an empty state when results are 0 4ms
+     × empty state explicitly declares the content is not fabricated 4ms
+ ❯ src/lib/nex-agent-runtime/self-diagnostics/__tests__/evidence-collector.test.ts (54 tests | 23 failed) 123ms
+     × A-1 · capability_inventory populated for each registry wave 9ms
+     × A-2 · c1 record has promotion_status = promoted 1ms
+     × A-3 · r2 record cites the authoritative acceptance report path 1ms
+     × A-4 · test_run_summary entries (if any) carry the declared-only note 1ms
+     × A-5 · gap note emitted for r2 when locked TEST_COUNT_SPAN does not match the report 1ms
+     × A-6 · rollback_proof_inventory finds R2's baseline-hashes.txt 1ms
+     × A-7 · rollback proof declares protected paths (>=15 in R2) 1ms
+     × A-8 · grep_marker_inventory contains §36-D-D · ROUTE-R2 marker 1ms
+     × A-9 · grep_marker_inventory contains the IESB PLAN-ONLY marker 2ms
+     × A-10 · marker entry lists paths where the marker appears (deterministically sorted) 1ms
+     × A-11 · finds all six §36 amendments 1ms
+     × A-13 · nested-root discovery covers docs/NEX1/BENCHMARKS/ 1ms
+     × A-14 · baseline verification passes on the R2-declared protected files 1ms
+     × A-15 · workspace_root_sha256 is a deterministic 64-hex string 1ms
+     × A-16 · evidence_kinds_collected reflects the request 0ms
+     × A-17 · empty capability wave_filter returns entries for all registry waves 1ms
+     × A-18 · wave_filter narrows capability_inventory to matching slugs 1ms
+     × A-19 · wave_filter slug not in registry emits gap note 1ms
+     × A-20 · gap_notes is deterministically sorted by composite key 1ms
+     × B-1 · identical inputs → identical evidence_sha256 1ms
+     × B-2 · every inventory array is sorted by a locked key 1ms
+     × B-3 · directory walk order does not affect output 1ms
+     × B-4 · injected clock makes collected_at deterministic 1ms
+ ❯ src/lib/nex/category-registry.test.ts (55 tests | 2 failed) 87ms
+     × getDirectoryCardsForCountry('ID') returns 6 entries in the expected DISPLAY_ORDER 63ms
+     × getDirectoryCardsForCountry('GB') returns empty (Truth Invariant · no UK inventory) 0ms
+ ❯ src/lib/nex-native/theme-category/registry.test.ts (42 tests | 1 failed) 123ms
+     × pizza package → identity.categoryId = 'food' 4ms
+ ❯ src/components/nex-native/directory/__tests__/listing-card.test.tsx (30 tests | 8 failed) 87ms
+     × mock_seed listings STILL render the SAMPLE chip (honest-labelling of preview data) 13ms
+     × mock_seed cards expose aria-label flagging them as SAMPLE previews 2ms
+     × ALWAYS renders the category footer (divider + icon + label + chevron) 12ms
+     × category label text picks up the categoryAccent colour 4ms
+     × category icon uses the correct sprite coordinates 2ms
+     × renders the description when present 3ms
+     × component source contains NO hardcoded price / discount / rating LITERALS (comments stripped) 5ms
+     × buyerLocalPrice populated (future Phase 1.5 wire-up) → second line + second flag render 2ms
+ ❯ src/lib/nex-native/directory/__tests__/directory-no-fabrication.test.ts (125 tests | 1 failed) 69ms
+     × types.ts imports only type-level symbols from the sealed canonical pipeline 7ms
+ ❯ src/app/nex-native/directory/[id]/__tests__/detail-page-no-fabrication.test.ts (53 tests | 3 failed) 88ms
+     × does not expose 'claim this listing' copy to visitors 10ms
+     × renders a Call action only when phoneE164 is present 3ms
+     × the contact section renders nothing when no real contact fields exist 2ms
+ ❯ src/app/nex-native/profile/[handle]/__tests__/submit-report-fail-open-policy.test.ts (4 tests | 1 failed) 62ms
+     × when the 24h dedup SELECT errors, createReport is still called (fail-open) 58ms
+ ❯ src/lib/nex-native/live-broadcast/__tests__/sealed-defaults-invariants.test.ts (21 tests | 8 failed) 60ms
+     × no migration file introduces a comments-persistence table 7ms
+     × viewer footer source-shape · cancelled share sheet fires NO evidence 5ms
+     × viewer footer source-shape · clipboard write failure fires NO evidence 4ms
+     × server action rejects spurious evidence on non-share kinds (defence-in-depth) 1ms
+     × Migration 221 declares a 16-byte bytea seed 1ms
+     × Shop Contacts card component displays NEX-ID only · never evidence kind 1ms
+     × Shop Contacts page renders cards in service-provided shuffle order 0ms
+     × Shop Contacts page gates on broadcaster ownership 0ms
+ ❯ src/lib/nex/brain/world-adapters/multi-vertical.test.ts (18 tests | 12 failed) 93ms
+     × SQL always contains claim_status visibility filter 11ms
+     × hero_image_approved=false → heroImage undefined (owner-provenanced doctrine) 6ms
+     × hero_image_approved=true → heroImage surfaces + ownerProvided=true in provenance 3ms
+     × SQL uses visibility='public' + status='listed' gate (matches /services page loader verbatim) 19ms
+     × claimed=true → claimStatus='claimed' · claimed=false + live → 'listed' (visibility!=ownership) 14ms
+     × SQL joins mp_product and mp_seller + gates on active + status 4ms
+     × base_price_idr populated → WorldRecord.price surfaces the real number 3ms
+     × base_price_idr null → WorldRecord.price undefined · never fabricates 3ms
+     × base_stock <= 0 → availability='unavailable' · < 5 → 'limited' · >= 5 → 'available' 5ms
+     × SQL uses status IN (approved,active,live) AND is_available=true gate 5ms
+     × provider record surfaces whatsapp, rating, price, amenities (bike, raincoat, plate, language) 8ms
+     × EVERY adapter carries provenance.sourceKey referencing its DB table 3ms
+ ❯ src/app/nex-native/settings/_landing-i18n.test.ts (464 tests | 8 failed) 44ms
+     × row "chat-background-sync" has settings.rows.chat-background-sync.title + .subtitle keys 6ms
+     × row "disappearing-messages" has settings.rows.disappearing-messages.title + .subtitle keys 1ms
+     × row "chat-font" has settings.rows.chat-font.title + .subtitle keys 0ms
+     × row "chat-protection" has settings.rows.chat-protection.title + .subtitle keys 0ms
+     × row "payments" has settings.rows.payments.title + .subtitle keys 1ms
+     × landing source does not contain literal: "Emergency Help" 3ms
+     × landing source does not contain literal: "Family Safe" 1ms
+     × landing WITH hero tile hrefs still intact (href literals are not translatable) 1ms
+ ❯ src/lib/nex/brain/world-adapters/live-update-doctrine.test.ts (14 tests | 14 failed) 292ms
+     × rating change surfaces on next query · no cache 17ms
+     × new listing appears in next query 18ms
+     × hidden (claim_status→discovered) disappears 14ms
+     × hero_image_approved flip false→true → next query surfaces image 4ms
+     × claim change unclaimed→claimed surfaces on next query · ownership updates 4ms
+     × hidden (visibility change) disappears 2ms
+     × verified flip false→true surfaces on next query 5ms
+     × price drop 3M→2.5M surfaces on next query 5ms
+     × stock depletion available→unavailable surfaces + availability signal flips 8ms
+     × product image added → next query card gets new image 3ms
+     × deactivated seller (status active→suspended) disappears 191ms
+     × driver goes offline (is_available true→false) disappears 11ms
+     × price change surfaces + rating change surfaces 3ms
+     × raincoat flag flip → amenities updates 4ms
+ ❯ src/lib/nex-native/directory/__tests__/directory-service.test.ts (90 tests | 1 failed) 35ms
+     × queries canonical first, then evidence (strict order) 7ms
+ ❯ src/app/nex-native/chat-standard/_universal-header-icons-overlay.test.ts (39 tests | 18 failed) 32ms
+     × src/app/nex-native/themes/theme-1/page.tsx · imports and mounts <UniversalHeaderIconsOverlay 6ms
+     × src/app/nex-native/themes/pink-dream/page.tsx · imports and mounts <UniversalHeaderIconsOverlay 1ms
+     × src/app/nex-native/themes/cyber-grid/page.tsx · imports and mounts <UniversalHeaderIconsOverlay 0ms
+     × src/app/nex-native/chat/prototypes/hauntedhoteltheme/page.tsx · imports and mounts <UniversalHeaderIconsOverlay 0ms
+     × src/app/nex-native/themes/theme-1/page.tsx · native R1 cluster is still tagged with data-nex-native-r1-cluster 1ms
+     × src/app/nex-native/themes/pink-dream/page.tsx · native R1 cluster is still tagged with data-nex-native-r1-cluster 1ms
+     × src/app/nex-native/themes/cyber-grid/page.tsx · native R1 cluster is still tagged with data-nex-native-r1-cluster 1ms
+     × hauntedhoteltheme route has no native R1 cluster to tag (overlay-only · null-stub today) 0ms
+     × theme-1 still passes shopHref=/nex-native/maria to <UniversalHeaderIconsOverlay (preserved contract so any future seal reversal keeps the destination) 0ms
+     × the pre-overlay Maria destination is still present in theme-1's own source (native cluster or data wiring · verified live) 0ms
+     × src/app/nex-native/themes/theme-1/page.tsx · imports + mounts R3 (UniversalComposerFooter) and R7 (UniversalChromeOverlay) 0ms
+     × src/app/nex-native/themes/pink-dream/page.tsx · imports + mounts R3 (UniversalComposerFooter) and R7 (UniversalChromeOverlay) 0ms
+     × src/app/nex-native/themes/cyber-grid/page.tsx · imports + mounts R3 (UniversalComposerFooter) and R7 (UniversalChromeOverlay) 0ms
+     × src/app/nex-native/chat/prototypes/hauntedhoteltheme/page.tsx · imports + mounts R3 (UniversalComposerFooter) and R7 (UniversalChromeOverlay) 0ms
+     × legacy static sites · R1 mount appears before R3 mount in JSX source 0ms
+     × src/app/nex-native/chat/prototypes/haunted-hotel-bubbles/page.tsx · does not import or mount the R1 overlay 1ms
+     × src/app/nex-native/chat/prototypes/haunted-hotel-effects/page.tsx · does not import or mount the R1 overlay 0ms
+     × prototype-only routes also remain outside R3 and R7 (contract parity) 0ms
+ ❯ src/app/nex-native/settings/_settings-ia.test.ts (38 tests | 3 failed) 32ms
+     × nex-socials · href="/nex-native/nex-socials/intro" has a page.tsx on disk 6ms
+     × settings shell exports NEX_SETTINGS palette constant 1ms
+     × storage/page.tsx uses the shared ComingSoonSettingsPage helper 10ms
+ ❯ src/app/nex-native/home/__tests__/first-contact-panel.test.ts (57 tests | 9 failed) 39ms
+     × imports FirstContactPanel + resolveFirstContactSignals from the panel 8ms
+     × imports shouldShowFirstContact from the pure predicate module 1ms
+     × calls the resolver with session.account.id 7ms
+     × derives the gate from the shared predicate 4ms
+     × derives canShareProfileUrl strictly from profile.is_discoverable === true 1ms
+     × renders FirstContactPanel ONLY under both the gate AND handle guard 1ms
+     × passes handle, firstName, canShareProfileUrl, accentHex to the panel 1ms
+     × preserves the sealed shouldShowFirstVisitInvitation path 3ms
+     × preserves the pinned Promise.all destructure name order 1ms
+ ❯ src/app/nex-native/chat-themes-library/_category-grid.test.ts (87 tests | 11 failed) 47ms
+     × landing page.tsx mounts the CategoryGrid component 11ms
+     × live-world rows produce food=7, waterworld=1, explore=2, rentals=1, services=1, property=1, teddy=2, hollywood=1, vitamins=1, accommodation=0, bakery=0, products=0, haunted=0 today 2ms
+     × every expected food world has category_id = 'food' 2ms
+     × showcase page calls notFound() when getCategory returns null 1ms
+     × showcase page renders an empty state when worlds.length === 0 1ms
+     × Step 1C introduces no alternative theme destination logic 1ms
+     × [categoryId]/page.tsx has no per-category branch 1ms
+     × no new Library file uses `<iframe` for grid tiles 1ms
+     × category 'teddy' · hero 'teddy-play' is a live-world row with matching category_id 0ms
+     × category 'watches' · hero 'watches-rolex' is a live-world row with matching category_id 0ms
+     × category 'property' · hero 'property1' is a live-world row with matching category_id 0ms
+ ❯ src/lib/nex-native/__tests__/vault-contacts.test.ts (36 tests | 2 failed) 36ms
+     × Vault Home mounts the Contacts entry tile 9ms
+     × the tile sits in the Vault navigation stream (Chats → Contacts → Settings via header) 1ms
+ ❯ src/app/nex-native/chat-standard/_surfaces/__tests__/_shop-slider-owner-add.test.tsx (9 tests | 3 failed) 28ms
+     × sealed DemoRoomDesigns four-condition gate stays intact 5ms
+     × owner-only Add Listing section is present and uses listingAddRouteFor 4ms
+     × owner-only block is gated on isOwnerViewing (never shown to guests) 1ms
+ ❯ src/components/nex-native/directory/CountryPicker.test.tsx (18 tests | 3 failed) 31ms
+     × renders the ISO code inside the badge when flagSrcFor is undefined 8ms
+     × renders an <img> element when flagSrcFor returns a non-null string 3ms
+     × falls back to the text badge when flagSrcFor returns null 1ms
+ ❯ src/app/nex-native/themes/[id]/motion/_motion-client.test.ts (27 tests | 2 failed) 21ms
+     × still has 10 animation variants (none dropped) 10ms
+     × exactly 1 or 2 variants are marked isNew: true (NEW stays meaningful) 1ms
+ ❯ src/lib/nex-native/intelligence/__tests__/product-knowledge.test.ts (19 tests | 8 failed) 25ms
+     × findProductEntry returns null for unknown ids 5ms
+     × maps bisnis subscription plan to Bisnis plan entry 2ms
+     × maps ringan subscription plan to Ringan entry 1ms
+     × maps buy subscription plan to Buy-a-theme entry 0ms
+     × falls back to bisnis when tier is bisnis but plan is null 1ms
+     × defaults to gratis when nothing else applies 1ms
+     × finds the Bisnis plan when the user asks about pricing 2ms
+     × emits IDR currency figures in the whitelist for plan entries 1ms
+ ❯ src/app/nex-native/home/__tests__/first-visit-invitation.test.ts (30 tests | 9 failed) 36ms
+     × imports the peer-conversation-service namespace 7ms
+     × imports both the component and the predicate from the local file 6ms
+     × adds listPeerConversationsForAccount to the Promise.all tuple 3ms
+     × destructures the fourth tuple position as `conversationCount` 1ms
+     × catches query failure and maps to null (fail-safe) 1ms
+     × derives the gate from the shared predicate (no inline duplicated check) 4ms
+     × renders FirstVisitInvitation ONLY under the gate 2ms
+     × passes the sealed themeAccent variable to the invitation 1ms
+     × preserves the sealed sign-in redirect for signed-out viewers 1ms
+ ❯ src/app/nex-native/settings/_landing-renders-ia.test.ts (32 tests | 6 failed) 36ms
+     × About sub-page is a real surface and reads the real version 5ms
+     × Blocked contacts sub-page is a real surface wired to friend-service 9ms
+     × Blocked contacts action delegates to sealed friend-service.unblockAccount 4ms
+     × Notifications sub-page is a real surface wired to sealed services 1ms
+     × Notifications action authenticates the session and never trusts form account_id 1ms
+     × hero tile · Family Safe tile retired · owner directive 2026-11-12 2ms
+ ❯ src/lib/nex-native/directory/__tests__/category-metadata.test.ts (22 tests | 7 failed) 17ms
+     × returns null for unknown slugs · never fabricates 5ms
+     × resolves aliases to the canonical entry · health family 3ms
+     × resolves aliases to the canonical entry · hair/beauty family 1ms
+     × picks the first known category in the list 0ms
+     × returns null when no category is registered 0ms
+     × separates known from unknown preserving order 1ms
+     × deduplicates while preserving first-seen order 1ms
+ ❯ src/app/nex-native/chat-themes-library/_mini-phone-controls-ambient.test.ts (40 tests | 1 failed) 24ms
+     × peer (default · glass) = rgba(deep, 0.72) 7ms
+ ❯ src/components/nex-native/directory/OsmAttributionBadge.test.tsx (6 tests | 2 failed) 23ms
+     × renders a linked badge for a valid OSM node ref 16ms
+     × renders a linked badge for way and relation refs 2ms
+ ❯ src/app/nex-native/chat/peer/[accountId]/__tests__/stage-a-document-contract.test.ts (44 tests | 1 failed) 27ms
+       × NexPeerAttachmentKind includes 'document' 9ms
+ ❯ scripts/sandbox/__tests__/apply-schema-ledger.test.ts (11 tests | 3 failed) 28ms
+     × yields exactly 236 applicable migration files 9ms
+     × entire set of 236 files derives 236 distinct ledger keys 1ms
+     × first + last files match the previously-reviewed dry-run output 3ms
+ ❯ src/lib/nex-native/__tests__/chat-view-preferences-service.test.ts (24 tests | 1 failed) 18ms
+     × caches first result · second call does not re-probe 6ms
+ ❯ src/app/nex-native/contacts/__tests__/header-mounted.test.ts (10 tests | 5 failed) 17ms
+     × mounts ContactsShell · ContactsHeader · ContactsSearchBar · ContactsFilterPills 5ms
+     × mounts InviteFriendsCard · MyGroupsCard · ContactsList 1ms
+     × reads friends via friend-service.listFriends and hydrates per id via account-service 1ms
+     × D1 · never surfaces last_known_city_label or city text in the page shell 1ms
+     × D2 · never reads from a nex_presence table or renders a 'presence' field 1ms
+ ❯ src/app/nex-native/settings/__tests__/_enforcement-anchors.test.ts (31 tests | 4 failed) 22ms
+     × imports resolveProfileVisibilityForViewer 9ms
+     × gate runs AFTER the is_discoverable gate 1ms
+     × non-visible resolution triggers notFound() (404 for private · prevents enumeration) 1ms
+     × owner (isSelf) bypasses the visibility gate 1ms
+ ❯ src/lib/nex-native/__tests__/badge-sync-contract.test.ts (9 tests | 1 failed) 16ms
+     × install button is mounted on exactly the two owner-approved surfaces 4ms
+ ❯ src/lib/nex-native/emergency/_email-adapter-for-emergency.test.ts (20 tests | 1 failed) 17ms
+     × falls back to 'A NEX user' when label is empty 6ms
+ ❯ nex-supabase/migrations/__tests__/scope-a-pr-1-migration-order.test.ts (28 tests | 1 failed) 24ms
+     × no PR-1 migration collides with existing migration numbers 001–259 12ms
+ ❯ src/lib/nex-agent/learning-ledger.test.ts (12 tests | 3 failed) 16ms
+     × gold at 75 7ms
+     × mythic at 95 1ms
+     × skillsLevelledUp lists non-bronze skills 2ms
+ ❯ src/app/nex-native/chat/peer/[accountId]/__tests__/peer-call-quality.test.ts (22 tests | 1 failed) 13ms
+     × imports deriveQuality + collectReceivedPackets + QUALITY_THRESHOLDS from the group-call hook (single source of truth) 5ms
+ ❯ src/components/nex-native/emergency/__tests__/EmergencyConfirmationScreen.test.tsx (22 tests | 20 failed) 28ms
+     × shows the SIMULATED badge and the ack-gate headline 13ms
+     × renders the Important Safety Warning block verbatim 1ms
+     × renders the I Understand — Continue acknowledgment button 1ms
+     × does NOT render the I NEED HELP primary CTA before policy ack 1ms
+     × does NOT render the category buttons before policy ack 1ms
+     × does NOT render the countdown block on the initial render 1ms
+     × shows the offline state when isOnline is false (even before ack) 1ms
+     × renders the secondary cancel link on the ack gate 0ms
+     × hides the SIMULATED badge when live mode is explicitly set 1ms
+     × does NOT auto-start the countdown · requires an explicit I NEED HELP tap 1ms
+     × renders the countdown block with heartbeat badge + CANCEL + Skip buttons 1ms
+     × surfaces category selection buttons but marks them disabled during countdown 0ms
+     × exposes the pending-incident-id data attribute during countdown (L1) 0ms
+     × calls createPending (not createDraft) when entering counting-down 1ms
+     × exposes the revoked phase with honest copy when forced via __testInitialPhase 0ms
+     × initial render does NOT invoke geolocation.getCurrentPosition on mount 1ms
+     × idle phase (post-ack, pre-tap) does NOT invoke geolocation 1ms
+     × renders the geo-note testid slot when forced into counting-down · honest copy only 1ms
+     × never shows I NEED HELP or category buttons until policy is acknowledged 1ms
+     × offline guard runs BEFORE the ack-gate (safety invariant) 1ms
+ ❯ src/lib/nex/universal-intent/classify.test.ts (9 tests | 4 failed) 15ms
+     × routes 'build me a website' to Create/Website 10ms
+     × routes 'oak or pine' to Decide/Staircase 1ms
+     × routes 'teach me marketing' to Learn/Marketing 1ms
+     × routes 'automate my marketing' to Automate/Marketing 0ms
+ ❯ src/lib/nex/marketing/selectBanner.test.ts (7 tests | 7 failed) 13ms
+     × selects a banner for a promotional kitchen campaign targeting family homeowners 6ms
+     × selects a luxury banner for executive homeowners 1ms
+     × selects a sales_event banner for budget renovators 1ms
+     × returns runners_up when multiple candidates exist 1ms
+     × applies timber compatibility (oak avoids industrial_orange + premium_purple) 0ms
+     × returns reasoning chain 2ms
+     × handles empty brief safely 1ms
+ ❯ src/app/nex-native/chat-themes-library/__tests__/featured-picks.test.ts (17 tests | 1 failed) 20ms
+     × popular row preserves POPULAR_THEME_IDS order (minus featured) 8ms
+ ❯ src/lib/nex/capability-runtime/execution-level.test.ts (23 tests | 1 failed) 20ms
+     × ANTI-INVENTION: every EnforcementGate.implementing_module exists on disk 8ms
+ ❯ src/lib/nex-agent/seo-agent.test.ts (13 tests | 1 failed) 15ms
+     × detects landing page from prompt 9ms
+ ❯ src/lib/nex-native/directory/__tests__/area-intelligence-types.test.ts (12 tests | 2 failed) 18ms
+     × returns null when short_summary is missing 8ms
+     × returns null when short_summary is empty whitespace 1ms
+ ❯ src/app/nex-native/chat/__tests__/shop-chooser-catalog.test.ts (15 tests | 1 failed) 15ms
+     × T5.9 · Accommodation is COMING SOON · href is null · no synthetic flow 6ms
+ ❯ src/lib/nex/security-agent/security-agent.test.ts (12 tests | 10 failed) 13ms
+     × rejects changeReason without CAP-XXX 2ms
+     × rejects file outside registry 1ms
+     × rejects ROGUE-flagged path modification 0ms
+     × rejects promote_to_authoritative 0ms
+     × rejects apply_r10_authorisation 0ms
+     × rejects write_production 0ms
+     × rejects destructive git command in content 0ms
+     × rejects apparent OpenAI API key in content 0ms
+     × rejects Stage 1a foundation modification via path 0ms
+     × accepts a well-formed benign change 0ms
+ ❯ src/lib/nex-native/directory/__tests__/owner-upload-trust-boundary.test.ts (7 tests | 2 failed) 12ms
+     × admin image-review page has NO server-action imports for approve/reject 3ms
+     × admin page's dev-admin gate matches the sealed pattern 1ms
+ ❯ src/lib/nex-agent/prompt-classifier.test.ts (10 tests | 2 failed) 12ms
+     × short prompt with continuation cue merges 6ms
+     × 'make sure' + shared keyword merges 1ms
+ ❯ src/lib/nex/brain/live-discovery-handler.test.ts (7 tests | 2 failed) 15ms
+     × empty result summary mentions the requested city when known 7ms
+     × empty result summary in Indonesian uses honest phrasing 1ms
+ ❯ src/lib/nex/centre-publishing/stairpartsPool.test.ts (10 tests | 1 failed) 14ms
+     × no stairparts pool URL exists in the nex-image-manifest 6ms
+ ❯ src/lib/nex-agent-runtime/c1-nex-facial-state-model/__tests__/contamination.test.ts (7 tests | 2 failed) 16ms
+     × MI-1 · master frontal reference SHA-256 unchanged 6ms
+     × MI-2 · master side-views reference SHA-256 unchanged 1ms
+ ❯ src/lib/nex/knowledge-layer/retrieve.test.ts (7 tests | 1 failed) 9ms
+     × returns FAQ results for a staircase query (legacy fallback) 5ms
+ ❯ src/lib/nex-agent-runtime/__tests__/real-repo-retry-a-plus-b-2026-09-15.test.ts (3 tests | 3 failed) 8ms
+     × R-1 · pre-audit confirms the bug exists in the current file (or documents that it's already been fixed) 5ms
+     × R-2 · Route 2e authors the fix (add_named_export runtime='nodejs') 1ms
+     × R-3 · post-fix audit shows NNX_MISSING_ROUTE_RUNTIME_DECL is GONE 1ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/session-registry-service.test.ts (22 tests | 22 skipped) 9ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/provisional-account-service.test.ts (15 tests | 15 skipped) 6ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/risk-signals.test.ts (20 tests | 20 skipped) 6ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/section-13-remaining-acceptance.test.ts (5 tests | 5 skipped) 6ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/end-to-end-a2.test.ts (5 tests | 5 skipped) 5ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/first-message-http.test.ts (28 tests | 28 skipped) 6ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/risk-service.test.ts (40 tests | 40 skipped) 6ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/first-message-orchestrator.test.ts (6 tests | 6 skipped) 5ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/reset-cover-continuity.test.ts (11 tests | 11 skipped) 6ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/welcome-outbox-worker.test.ts (10 tests | 10 skipped) 7ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/section-13-a1-single-identity.test.ts (2 tests | 2 skipped) 8ms
+ ❯ src/lib/nex-native/first-conversation/__tests__/provisional-session.test.ts (15 tests | 15 skipped) 6ms
+stdout | tmp-lane-g/31-4cap-model.test.mjs
+
+  ===========================================================
+  OFFLINE CONCURRENCY MODEL ONLY
+  NOT POSTGRESQL CONCURRENCY PROOF
+  GB-4CAP STAYS OPEN
+  ===========================================================
+
+
+stdout | tmp-lane-g/31-4cap-model.test.mjs
+[PASS] caseA_no_lock_race: {"expected":"count > 4 (race produces cap violation)","finalCount":5,"participants":["P1","P2","P3","P4","P5"],"outcomes":["fulfilled","fulfilled"]}
+
+stdout | tmp-lane-g/31-4cap-model.test.mjs
+[PASS] caseB_with_lock_blocks_second: {"expected":"count === 4 and exactly one rejection","finalCount":4,"rejections":["cap_exceeded · session S1 already has 4"]}
+
+stdout | tmp-lane-g/31-4cap-model.test.mjs
+[PASS] caseC_different_sessions_independent: {"expected":"both sessions reach cap 4, no rejection","SA":4,"SB":4,"outcomes":["fulfilled","fulfilled"]}
+
+stdout | tmp-lane-g/31-4cap-model.test.mjs
+[PASS] caseD_dedup_retry_no_increment: {"expected":"count stays 3, second call returns dedup=true","finalCount":3,"first":{"ok":true,"dedup":false},"second":{"ok":true,"dedup":true}}
+
+stdout | tmp-lane-g/31-4cap-model.test.mjs
+
+SUMMARY · 4/4 cases pass as expected
+
+  ===========================================================
+  OFFLINE CONCURRENCY MODEL ONLY
+  NOT POSTGRESQL CONCURRENCY PROOF
+  GB-4CAP STAYS OPEN
+  ===========================================================
+
+Results written: C:\Users\Victus\nexapp\tmp-lane-g/31-4cap-model-results.json
+
+ ❯ tmp-lane-g/31-4cap-model.test.mjs (0 test)
+ ❯ src/lib/nex-native/first-conversation/__tests__/welcome-delivery.test.ts (7 tests | 7 skipped) 5ms
+ ❯ src/lib/nex/jobs/terminal-transition.test.ts (5 tests | 5 failed) 10500ms
+     × transitions claimed → completed and writes paired audit 1388ms
+     × transitions claimed → failed and writes paired audit 1416ms
+     × is idempotent · repeated calls on already-terminal KJ produce zero extra audit rows 1370ms
+     × returns { changed:false, snapshot:null } when the KJ does not exist 1301ms
+     × audit-write failure does not roll back the fs-store state · warning path 5023ms
+ ❯ tests/nex-feed-perf-baseline.spec.ts (0 test)
+ ❯ tests/e2e/bio-link-mobile.spec.ts (0 test)
+ ❯ tests/e2e/bio-link-owner-preview.spec.ts (0 test)
+ ❯ tests/e2e/composer-overflow-diag.spec.ts (0 test)
+ ❯ tests/e2e/composer-overflow-regression.spec.ts (0 test)
+ ❯ tests/e2e/create-page-visual.spec.ts (0 test)
+ ❯ tests/e2e/live-commerce-public-surfaces.spec.ts (0 test)
+ ❯ tests/e2e/live-commerce-video-journey.spec.ts (0 test)
+ ❯ tests/e2e/live-commerce-viewer-footer.spec.ts (0 test)
+ ❯ tests/e2e/live-commerce-visual-verify.spec.ts (0 test)
+ ❯ tests/e2e/live-footer-3-dots-container.spec.ts (0 test)
+ ❯ tests/e2e/live-footer-products-flow.spec.ts (0 test)
+ ❯ tests/e2e/live-header-ping-and-ai-chip.spec.ts (0 test)
+ ❯ tests/e2e/live-library-tiles.spec.ts (0 test)
+ ❯ tests/e2e/mobile-authenticated-journey.spec.ts (0 test)
+ ❯ tests/e2e/mobile-public-surfaces.spec.ts (0 test)
+ ❯ tests/e2e/nex-feed-gate1-acceptance.spec.ts (0 test)
+ ❯ tests/e2e/nex-feed-visual-verify.spec.ts (0 test)
+ ❯ tests/e2e/personal-chat-preview-hides-business-controls.spec.ts (0 test)
+ ❯ tests/e2e/s8-browser-qa.spec.ts (0 test)
+ ❯ tests/e2e/sign-in-composer-overflow.spec.ts (0 test)
+ ❯ tests/e2e/_capture-comments-behind.spec.ts (0 test)
+ ❯ tests/e2e/_capture-counts.spec.ts (0 test)
+ ❯ tests/e2e/_capture-dev-roles.spec.ts (0 test)
+ ❯ tests/e2e/_capture-feed-prefs.spec.ts (0 test)
+ ❯ tests/e2e/_capture-heart-right.spec.ts (0 test)
+ ❯ tests/e2e/_capture-live-persona-bayu.spec.ts (0 test)
+ ❯ tests/e2e/_capture-live-persona-hendra.spec.ts (0 test)
+ ❯ tests/e2e/_capture-overlay-pref.spec.ts (0 test)
+ ❯ tests/e2e/_capture-products-flow.spec.ts (0 test)
+ ❯ tests/e2e/_identify-session-account.spec.ts (0 test)
+ ❯ tests/e2e/_tmp-measure-action-row.spec.ts (0 test)
+ ❯ tests/e2e-chat-responsive/chat-public-responsive.spec.ts (0 test)
+ ❯ tests/e2e-product-upload/create-publish-verify.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/cart-order-deterministic.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/customer-to-seller-order.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/missing-ui-journeys.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/order-visibility.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/password-recovery-flow.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/product-create-form.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/seller-onboarding-flow.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/product-linked-inquiry.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/session-persistence.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/sign-up-approved-inbox.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/stripe-subscription-activation.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/sign-up-flow.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/two-context-isolation.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/stripe-subscription-handoff.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-acceptance.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-chat-behavior.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-chat-ui-behavior.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-cross-account-reset.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-landing-tiles.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-lockout-threshold.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-reset-flow.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-surfaces.spec.ts (0 test)
+ ❯ tests/e2e-stage5-shop-chat/anon-popup.spec.ts (0 test)
+ ❯ tests/e2e-stage5-shop-chat/rosa-side.spec.ts (0 test)
+ ❯ tests/e2e-stage5-shop-chat/shop-chat-journey.spec.ts (0 test)
+ ❯ tests/e2e-themes/theme-previews.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/ai-chip.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/arrowdown-trace.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/category-icon-down.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/category-icons-after.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/category-tiles.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/composer-author.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/composer-final.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/composer-poll.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/feed-25-cards.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/final-journeys.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/footer-after.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/footer-before.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/footer-width-avatar.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/live-side-drawer.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/journey-probe.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/message-panel.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/mock-owner-resolve.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/ping-render.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/preview-shots-after-fix.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/preview-shots.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/probe-adjacent-routes.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/progress-bar-and-message.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/scrub-bar.spec.ts (0 test)
+ ❯ src/app/nex-native/library/backgrounds/__tests__/entitlement-integration.test.ts (8 tests | 3 failed) 21850ms
+     × #4 · Active Themes Plus subscriber CAN select premium 5005ms
+     × #5 · Expired Themes Plus subscriber CANNOT select premium 5007ms
+     × #6 · Historic verified owner CAN access the owned theme 5004ms
+ ❯ tests/_preview-pass-tmp/sound-icon-on-state.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/sound-icon-verify.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/square-avatar-verify.spec.ts (0 test)
+ ❯ tests/_preview-pass-tmp/three-dot.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-backdrop-promo-banner.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-backdrop-swap.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-browse-dropdown.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c24-asset-swap.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c24-option-b-validation.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c24-option-b.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c25-contacts-ui.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c24-route-matrix.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c26-contacts-long.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c26-contacts-preview.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c27-final-prototype.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c27-no-flashing.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c27-wait-for-content.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c27-polished.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c28-contacts.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c28-dom-probe.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c28-final.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c28-v2-scroll.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c29-wave-bg.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c30-header-sort.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-c31-sticky-bg.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-create-profile-scroll.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-free-chat-flashing-diag.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-free-chat-ireland-themes.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-full-library-450.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-how-it-works-cream.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-live-asset-swap.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-live-contacts-snapshot.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-phase-a-mobile-diag.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-phase-a-perf.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-phase-a-slide-investigation.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-phone-frame-stays-still.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-preview-modal.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-profile-edit-scroll.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-ready-before-slide.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-settings-redesign.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-settings-scroll.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-theme-preview-countdown.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-unified-library-e2e.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-vault-longer.spec.ts (0 test)
+ ❯ src/lib/nex/city-registry.test.ts (0 test)
+ ❯ scripts/_tmp/verify-visual-library.spec.ts (0 test)
+ ❯ evidence/rolex-buying-guide/verification/run.spec.ts (0 test)
+ ❯ src/app/nex-native/library/backgrounds/__tests__/shop-happy-path.test.ts (4 tests | 4 failed) 27572ms
+     × creates disposable subscriber · applies shop bg · verifies · cleans up 4050ms
+     × two-business isolation · each disposable biz keeps its own bg 20010ms
+     × CRITICAL · cross-context · gratis chat user picking a SHOP asset for chat = DENIED (Themes Plus required) 2728ms
+     × gratis account CANNOT apply shop background (denial path) 1ms
+ ❯ src/app/nex-native/__tests__/slice-1a-inquiry-idempotency.test.ts (0 test)
+ ❯ src/app/nex-native/__tests__/vertical-cookie-clear-on-success.test.ts (0 test)
+ ❯ scripts/_tmp/qa-nov16/qa-checkpoint-A-buyer.spec.ts (0 test)
+ ❯ scripts/_tmp/qa-nov16/qa-checkpoint-B2-api.spec.ts (0 test)
+ ❯ scripts/_tmp/qa-nov16/qa-checkpoint-B-seller.spec.ts (0 test)
+ ❯ src/app/nex-native/__tests__/_shop-auto-open-cookie.test.ts (0 test)
+ ❯ scripts/_tmp/qa-nov16/qa-checkpoint-C-routes.spec.ts (0 test)
+ ❯ src/components/nexapp/CategoryConstellation.test.ts (0 test)
+ ❯ src/lib/nex-agent/code-engine/capability-target-discovery.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/crawler-reference-agent.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/all-brains.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/foundation-extensions.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/mission-dispatcher.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/growth-snapshot.test.ts (0 test)
+ ❯ src/lib/nex/ab/overnight.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/restart-and-failure-honesty.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/supervisor.test.ts (0 test)
+ ❯ src/lib/nex-agent/code-engine/capability-chat-turn-integration.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/__tests__/wo-agent-runtime-01.test.ts (0 test)
+ ❯ src/lib/nex/brain/abandonment-3-41-k-landing-1.test.ts (0 test)
+ ❯ src/lib/nex/brain/abandonment-3-41-l.test.ts (0 test)
+ ❯ src/lib/nex/brain/commerce-composer.test.ts (0 test)
+ ❯ src/lib/nex/brain/discovery-continuity-slice.test.ts (0 test)
+ ❯ src/lib/nex/brain/goal-tracking.test.ts (0 test)
+ ❯ src/lib/nex/brain/golden-conversation-3-41-d.test.ts (0 test)
+ ❯ src/lib/nex/brains/_integrations.test.ts (0 test)
+ ❯ src/lib/nex/brain/im-hungry-journey.test.ts (0 test)
+ ❯ src/lib/nex/brain/orchestrate-accommodation-id.test.ts (0 test)
+ ❯ src/lib/nex/brain/orchestrate-accommodation.test.ts (0 test)
+ ❯ src/lib/nex/ab/agents.test.ts (0 test)
+ ❯ src/lib/nex/brain/orchestrate-action-authorization.test.ts (0 test)
+ ❯ src/lib/nex/brain/orchestrate-conversation.test.ts (0 test)
+ ❯ src/lib/nex/brain/orchestrate-live-world.test.ts (0 test)
+ ❯ src/lib/nex/brain/six-turn-context-switch-journey.test.ts (0 test)
+ ❯ src/lib/nex/brain/sticky-vertical-3-41-f.test.ts (0 test)
+ ❯ src/lib/nex/brain/tool-router.test.ts (0 test)
+ ❯ src/lib/nex/brain/universal-entity-capture-3-41-g.test.ts (0 test)
+ ❯ src/lib/nex/brain/vertical-switch-3-41-h.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-acceptance.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-comparison-wrapper.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-extractors.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-final-gate.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-multi-vertical-wrapper.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-query-intent.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-reasoning-wrapper.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-recommendation-wrapper.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-show-more.test.ts (0 test)
+ ❯ src/lib/nex/brain/world-single-evidence.test.ts (0 test)
+ ❯ src/lib/nex/brain/_companion-observation.test.ts (0 test)
+ ❯ src/lib/nex/brain/_observation-cross-vertical.test.ts (0 test)
+ ❯ src/lib/nex/centre-publishing/indexForSearch.test.ts (0 test)
+ ❯ src/lib/nex/cv/analyze.test.ts (0 test)
+ ❯ src/lib/nex/cx/resolver.test.ts (0 test)
+ ❯ src/lib/nex/est/explain.test.ts (0 test)
+ ❯ src/lib/nex/est/engine.test.ts (0 test)
+ ❯ src/lib/nex/est/answer.test.ts (0 test)
+ ❯ src/lib/nex/merchant-assistant/bannerGenerator.test.ts (0 test)
+ ❯ src/lib/nex/merchant-assistant/toolExecutors.test.ts (0 test)
+ ❯ src/lib/nex/merchant-assistant/writeExecutors.test.ts (0 test)
+ ❯ src/lib/nex/ops/answer.test.ts (0 test)
+ ❯ src/lib/nex/pm/answer.test.ts (0 test)
+ ❯ src/lib/nex/programmer-improvement/adversarial-evaluator.test.ts (0 test)
+ ❯ src/lib/nex-native/__tests__/vault-lock-and-leave-recover.test.ts (0 test)
+ ❯ src/lib/nex-native/__tests__/directory-v1-api-contract.test.ts (0 test)
+ ❯ src/lib/nex/programmer-review/reviewer.test.ts (0 test)
+ ❯ src/lib/nex/programmer-benchmark/evaluator.test.ts (0 test)
+ ❯ src/lib/nex/programmer-stability/stability.test.ts (0 test)
+ ❯ src/app/nex-native/settings/__tests__/_save-ui-honesty.test.ts (0 test)
+ ❯ src/app/nex-native/settings/__tests__/_server-actions.test.ts (0 test)
+ ❯ src/components/nex-native/live-commerce/__tests__/live-mounts.test.tsx (0 test)
+ ❯ src/lib/nex-agent-runtime/nex1/__tests__/nex1-tick-integration.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/internet-doorway/__tests__/runtime-09.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/nex1/__tests__/nex1.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/founder-authority/__tests__/runtime-08.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/nex2/__tests__/nex2.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/orchestrator/__tests__/orchestrator.test.ts (0 test)
+ ❯ src/components/nex-native/live-commerce/__tests__/live-ui.test.tsx (0 test)
+ ❯ src/lib/nex-agent-runtime/nex3/__tests__/nex3.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-11.test.ts (0 test)
+ ❯ src/lib/nex-agent-runtime/security/__tests__/security.test.ts (0 test)
+ ❯ src/lib/nex/alerts/tests/dispatch-gate.test.mjs (0 test)
+✔ HD1 · gate ON + severity clears + webhook env set · dispatched · no_transport NOT bumped (38.9236ms)
+✔ HD2 · gate ON + severity clears + ZERO transports configured · fail-closed · counter bumped + log.warn (6.0605ms)
+✔ HD3 · severity BELOW min · early-skip path · counter NOT bumped (3.5621ms)
+✔ HD4 · evaluator source declares dispatch_skipped_gate return field + isDispatchEnabled export (1.1886ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 57.211
+ ❯ src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts (0 test)
+ ❯ src/lib/nex/analytics/tests/rollup-gate.test.mjs (0 test)
+✔ G1 · Flag=1 + 049 fully applied · no throw · counter unchanged (35.5713ms)
+✔ G2 · Flag=1 + table missing · MigrationDependencyError · counter bumped (2.8882ms)
+✔ G3 · Flag=1 + function missing · MigrationDependencyError · counter bumped (4.1341ms)
+✔ G4 · Flag=1 + both missing · missing lists both · counter bumped once (3.0157ms)
+✔ W4-1-1 · Date instance → ISO 8601 UTC string ending in Z (2.7696ms)
+✔ W4-1-2 · already-ISO string passes through unchanged (3.5955ms)
+✔ W4-1-3 · null / undefined / empty-string / non-Date-non-string → null (0.2563ms)
+✔ W4-1-4 · invalid Date (NaN time) → null · NOT the string 'Invalid Date' (0.1888ms)
+✔ W4-1-5 · Date-out shape always matches Postgres-safe ISO 8601 UTC (0.5826ms)
+ ❯ src/lib/nex/analytics/tests/timestamp-normalisation.test.mjs (0 test)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 28.4784
+ ❯ src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-12-attacks.test.ts (0 test)
+✔ EE1 · returns { ok: false, error: <safe code>, correlation_id: <hex> } for a plain Error (5.55ms)
+✔ EE2 · surfaces err.code when it is on the safe allowlist (3.2829ms)
+✔ EE3 · falls back to default when err.code is UNKNOWN (rogue code doesn't leak) (0.3571ms)
+✔ EE4 · falls back to default when err has NO code field (0.366ms)
+✔ EE5 · logs the raw error server-side with correlation id (0.9092ms)
+✔ EE6 · client response NEVER includes err.message, filesystem paths, or stack frames (0.3047ms)
+✔ EE7 · empty-string err.code coerces to defaultCode (0.2318ms)
+✔ EE8 · non-string err.code (number / object) coerces to defaultCode (0.3226ms)
+✔ EE9 · null / undefined err collapses to internal_error (0.2292ms)
+✔ EE10 · safe-code allowlist includes the codes cited by other Wave 11 findings (0.2847ms)
+ ❯ src/lib/nex/api/tests/error-envelope.test.mjs (0 test)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 32.9214
+✔ V1 · assertBrainSlug accepts every known trade slug (1.9105ms)
+✔ V2 · assertBrainSlug accepts HQ brain slugs (normalised form) (2.5545ms)
+✔ V3 · assertBrainSlug rejects '../etc' with unknown_brain (after shape passes) (0.2311ms)
+✔ V4 · assertBrainSlug is STRICT · rejects capitalised/spaced/padded input (0.1906ms)
+✔ V5 · assertBrainSlug rejects unknown slugs with shape but not in allowlist (0.2128ms)
+✔ V6 · assertBrainSlug rejects missing / non-string input (0.1534ms)
+✔ V7 · assertBrainSlug rejects URL-encoded traversal (0.1339ms)
+✔ V8 · knownBrainSlugs returns a stable, non-empty set (0.2143ms)
+✔ V9 · detectBinaryContent · pure ASCII text with many spaces returns isBinary=false (0.3095ms)
+✔ V10 · detectBinaryContent · buffer with ONE NUL byte returns isBinary=true (0.2663ms)
+✔ V11 · detectBinaryContent · JPEG header (few spaces, contains NUL) returns isBinary=true (0.1599ms)
+✔ V12 · detectBinaryContent · empty buffer returns isBinary=false (nothing sampled) (0.1465ms)
+✔ V13 · detectBinaryContent · only samples the first N bytes (default 4096) (0.4253ms)
+✔ V14 · detectBinaryContent · CSV/JSON text with commas + newlines returns isBinary=false (0.1477ms)
+✔ V15 · requireEnvNonEmpty returns the value when set to a real string (0.1514ms)
+✔ V16 · requireEnvNonEmpty throws MissingEnvError when unset (0.8745ms)
+✔ V17 · requireEnvNonEmpty throws when value is empty string (0.2308ms)
+✔ V18 · requireEnvNonEmpty throws when value is whitespace-only (0.3198ms)
+✔ V19 · readEnvOrNull returns null on missing/blank · value otherwise (0.1935ms)
+ ❯ src/lib/nex/api/tests/validators.test.mjs (0 test)
+ ❯ src/lib/nex/business-context/__tests__/wave1.test.ts (0 test)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 28.6675
+ ❯ src/lib/nex/brain/tools/knowledge.test.ts (0 test)
+brain-adapter-contract.test.mjs
+  tag=parity_fce11ccb2cf9
+  PASS C1 · class PostgresBrainStore implements BrainStore (adapters/postgres.ts)
+  PASS C2 · all 40 BrainStore methods implemented
+  PASS C3 · activeBackend() branches into postgres when configured
+  PASS C4 · _resetBrainStoreForTests exported
+  PASS C5 · withTx does BEGIN + SET LOCAL ROLE nex_brain_app + COMMIT/ROLLBACK
+  PASS C6 · identical method surfaces · 40 methods
+  PASS C7 · insertRecordIdempotent uses ON CONFLICT (record_id) DO NOTHING
+  PASS C8 · claimNextJob delegates to nex.claim_next_job()
+  PASS C9 · claimNextLlmRetry delegates to nex.claim_next_llm_retry()
+  PASS C10 · upsertHeartbeat uses ON CONFLICT (worker_id) DO UPDATE
+  PASS C11 · brainStore() picks PostgresBrainStore when postgres backend configured
+ ❯ src/lib/nex/brain/tests/brain-adapter-contract.test.mjs (0 test)
+  PASS DD1 · BrainStore.listRecentPipelineInputRefs declared with correct signature
+  PASS DD2 · interface declaration is marked TRANSITIONAL
+  PASS DD3 · FilesystemStore.listRecentPipelineInputRefs reads worker_jobs table (adapters/filesystem.ts)
+  PASS DD4 · SupabaseStore.listRecentPipelineInputRefs present (adapters/supabase.ts)
+  PASS DD5 · SupabaseStore pages via range(from, to) past 1000-row cap (adapters/supabase.ts)
+  PASS DD6 · manager.ts calls store.listRecentPipelineInputRefs
+  PASS DD7 · readFsJobsSnapshot function removed from manager.ts
+  PASS DD8 · no code path touches worker_jobs.json · join=false readFile=false
+  PASS DD9 · alreadyQueuedIds populated from store call · not filesystem
+confidence-scores-classification.test.mjs
+ ❯ src/lib/nex/brain/tests/confidence-scores-classification.test.mjs (0 test)
+extractor-idempotency.test.mjs
+ ❯ src/lib/nex/brain/tests/extractor-idempotency.test.mjs (0 test)
+ ❯ src/lib/nex/brain/tests/factory-page.test.mjs (0 test)
+  SKIP DD10 · /status returned 404
+
+dispatch-dedup: 10/10 assertions passed
+✔ AI1 · storage.ts defines brainStore() exactly once · no duplicate selectors (54.9418ms)
+ ❯ src/lib/nex/brain/tests/dispatch-dedup.test.mjs (0 test)
+✖ AI2 · adapters/*.ts export ONLY classes · no selector functions · no cached singletons (12.2157ms)
+✔ AI3 · storage.ts imports NO provider SDK directly (3.875ms)
+✔ AI4 · brain/adapters/*.ts do NOT import from src/lib/nex/storage/* · Brain × NEX Storage boundary (5.1332ms)
+✔ AI5 · exactly ONE dual-write decorator exists in Brain (MirrorToSupabaseBrainStore) · gated by NEX_BRAIN_SHADOW_SUPABASE (64.3418ms)
+✔ AI6 · provider SDK imports in src/lib/nex/brain/** are confined to adapters/*.ts · F12.b exception list cannot grow (59.6442ms)
+✔ AI7 · NEX_BRAIN_BACKEND is read ONLY in src/lib/nex/brain/storage.ts · single Brain selection boundary (46.9098ms)
+✖ AI9 · every BrainStore interface method has an implementation in every adapter (3.1715ms)
+✔ AI10 · KnowledgeJobStatus (brain/types.ts) values equal JobStatus (jobs/fs-store.ts) (2.6886ms)
+✔ KJT1 · fs-store.updateJob terminal transitions are paired with applyTerminalKnowledgeJobTransition (or exempted) (5.9745ms)
+✔ AI8 · NEX_STORAGE_BACKEND is read ONLY in src/lib/nex/storage/registry.ts · NEX Storage boundary (67.8437ms)
+ ❯ src/lib/nex/brain/tests/heartbeat-liveness.test.mjs (0 test)
+ ❯ src/lib/nex/brain/tests/adapter-isolation.test.mjs (0 test)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 9
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 385.7943
+
+✖ failing tests:
+
+test at src\lib\nex\brain\tests\adapter-isolation.test.mjs:130:31
+✖ AI2 · adapters/*.ts export ONLY classes · no selector functions · no cached singletons (12.2157ms)
+  AssertionError [ERR_ASSERTION]: src/lib/nex/brain/adapters/open-directory.ts · adapter must export at least one class
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/brain/tests/adapter-isolation.test.mjs:137:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src\lib\nex\brain\tests\adapter-isolation.test.mjs:334:31
+✖ AI9 · every BrainStore interface method has an implementation in every adapter (3.1715ms)
+  AssertionError [ERR_ASSERTION]: src/lib/nex/brain/adapters/open-directory.ts · adapter missing BrainStore methods · insertRecord, insertRecordIdempotent, getRecord, listRecords, updateRecordStatus, insertVersion, insertEdge, listEdges, enqueueJob, claimNextJob, completeJob, failJob, countJobs, listRecentPipelineInputRefs, getWorkerJob, listWorkerJobsByInputRef, findWorkerJobsByKnowledgeJobId, listWorkerResultsByIds, writeKnowledgeJobTransitionAudit, insertResult, insertSource, insertConfidence, listConfidence, insertContradiction, listOpenContradictions, insertDeprecation, insertFeedback, listFeedback, markFeedbackApplied, insertAudit, listAudit, enqueueLlmRetry, claimNextLlmRetry, markLlmRetrySucceeded, markLlmRetryPending, markLlmRetryExhausted, listLlmRetries, upsertHeartbeat, listHeartbeats, status
+  
+  40 !== 0
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/brain/tests/adapter-isolation.test.mjs:355:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 40,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+ ❯ src/lib/nex/brain/tests/inbox-jobs-shadow.test.mjs (0 test)
+  PASS IB1 · updateInboxItemStatuses(Map) declared
+  PASS IB2 · bulk · readFile_count=1 writeFile_count=1
+  PASS IB3 · dispatch accumulates status updates in a Map
+  PASS IB4 · reconciliation path assigns processing for already-queued items
+  PASS IB5 · progression path assigns processing after enqueue
+  PASS IB6 · writeback returns WritebackOutcome · caller matches on success/partial/failed · never throws
+  PASS IB7 · dispatch return includes reconciled_inbox_status + inbox_source_health (F4+F5)
+  PASS IB8 · Factory icon imported from lucide-react
+  PASS IB9 · Knowledge Factory drawer entry present
+  FAIL IB10 · Knowledge Factory href points into /nex-head-quarters/
+  PASS IB11 · Nex Marketing entry preserved
+
+inbox-truthfulness: 10/11 assertions passed
+ ❯ src/lib/nex/brain/tests/inbox-truthfulness.test.mjs (0 test)
+knowledge-dump-worker.test.mjs
+  PASS KD1 · fs-store exports claimJobIfQueued
+  PASS KD2 · fs-store exports findActiveJobByInboxItemId
+  PASS KD3 · fs-store exports findJobByInboxItemId
+  PASS KD4 · manager imports claim + find helpers
+  PASS KD5 · manager passes knowledge_job_id in enqueued WorkerJob payload
+  PASS KD6 · extractor imports updateKnowledgeJob
+  PASS KD7 · extractor transitions to processing at start
+  FAIL KD8 · extractor transitions to completed on success
+  FAIL KD9 · extractor transitions to failed on catch
+  PASS KD10 · completion_result carries memories_added (new records only, no-ops excluded)
+ ❯ src/lib/nex/brain/tests/knowledge-dump-worker.test.mjs (0 test)
+  PASS KD11 · status=queued
+  PASS KD12 · status=claimed
+  PASS KD13 · guarded=not-queued
+  PASS KD14 · unknown=null
+  PASS KD15 · status=claimed
+  PASS KD16 · terminal_status=completed
+✔ MC1 · runOneCycle exported with options + CycleReport return (2.1537ms)
+✔ MC2 · exercises FIVE workers in the expected order: context → voice → learning → extractor → checker (3.2125ms)
+✔ MC3 · primes standby heartbeats BEFORE draining (0.2013ms)
+✔ MC4 · every worker call is wrapped in withAuditEvents (0.2761ms)
+✔ MC5 · each stage respects its batch cap (loop bound is the batch var) (0.338ms)
+✔ MC6 · returns a CycleReport including duration_ms (0.3101ms)
+✔ MC7 · short-circuits on empty outcome (break statements present per stage) (0.2191ms)
+✔ MC8 · drainLlmRetryQueue is invoked inside or immediately after the main workers (0.1831ms)
+✔ MD1 · dispatchNewInboxItems exported with 5-field return type (1.9175ms)
+✔ MD2 · reads inbox via readInboxIndex helper (not fs.readFile shortcut) (2.4057ms)
+✔ MD3 · dedup uses brainStore().listRecentPipelineInputRefs · NOT filesystem (0.4135ms)
+✔ MD4 · only waiting items are candidates for enqueue (0.272ms)
+✔ MD5 · unsupported kinds count into skipped_not_text_yet (0.2279ms)
+✔ MD6 · text/url/image are the ONLY dispatched kinds (0.4617ms)
+✔ MD7 · Phase 3a objectBucket/objectKey propagation present for image items (0.2033ms)
+✔ MD8 · statusUpdates map populated for both progression AND reconciliation (0.2704ms)
+✔ MD9 · reconciliation writeback consumes the F4 WritebackOutcome contract (0.202ms)
+✔ MD10 · function returns the summary object including original 5 fields + F5-added inbox_source_health (0.4295ms)
+ ❯ src/lib/nex/brain/tests/manager-cycle.test.mjs (0 test)
+ ❯ src/lib/nex/brain/tests/manager-dispatch.test.mjs (0 test)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39.5867
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 43.7403
+ ❯ src/lib/nex/brain/tests/reception-semantics.test.mjs (0 test)
+✔ SP1 · every KnowledgeSource maps to the doctrine-specified priority (1.9391ms)
+✔ SP2 · unknown source falls back to 5 (safe middle) (2.755ms)
+✔ SP3 · lower priority runs first (doctrine invariant) (0.2961ms)
+✔ SP4 · every KnowledgeSource has a defined priority (no undefined returns) (0.2243ms)
+✔ SPA1 · every migrated site imports sourcePriority from canonical module (1.5447ms)
+✔ SPA2 · no migrated site retains a local `function sourcePriority` definition (1.2428ms)
+✔ SPA3 · every migrated site actually USES sourcePriority (not dead import) (1.1043ms)
+ ❯ src/lib/nex/brain/tests/priorities.test.mjs (0 test)
+✔ prod · no tokens → 500 misconfigured (2.104ms)
+✔ prod · CRON_SECRET set to empty string → still misconfigured (2.8108ms)
+✔ prod · CRON_SECRET set · no auth header → 401 (0.1874ms)
+✔ prod · NEX_BRAIN_CRON_TOKEN set · no auth header → 401 (0.1261ms)
+✔ prod · CRON_SECRET + matching Authorization Bearer → ok (0.2222ms)
+✔ prod · NEX_BRAIN_CRON_TOKEN + matching Bearer → ok (0.1748ms)
+✔ prod · NEX_BRAIN_CRON_TOKEN + matching x-brain-cron-token header → ok (0.2264ms)
+✔ dev · no tokens → ok (dev convenience preserved · warning fires once) (0.5223ms)
+✔ dev · CRON_SECRET set · wrong auth → 401 (0.4589ms)
+✔ dev · CRON_SECRET set · correct auth → ok (0.4505ms)
+✔ both tokens set · brain match wins even when vercel doesn't match (0.3207ms)
+✔ both tokens set · neither matches → 401 (0.1927ms)
+✔ cronAuthErrorBody returns the code as the error string (1.303ms)
+✔ F14 · HMAC · valid sig within window → ok · auth_mode:hmac (2.5601ms)
+✔ F14 · HMAC · valid sig against CRON_SECRET → ok (0.7855ms)
+✔ F14 · HMAC · timestamp older than 300s → hmac_expired (0.3487ms)
+✔ F14 · HMAC · wrong secret → hmac_invalid · does NOT fall through to bearer (0.361ms)
+✔ F14 · HMAC · malformed X-Signature (missing sha256= prefix) → hmac_invalid (0.1785ms)
+✔ F14 · HMAC · no HMAC headers → falls through to bearer path (backward compat) (0.1096ms)
+✔ F14 · cronAuthErrorBody surfaces detail for HMAC errors (0.0911ms)
+✔ D4 · scoped token present · shared tokens ignored · correct scoped auth → ok (0.2116ms)
+✔ D4 · scoped token present · shared token DOES NOT authorise this scope (0.1415ms)
+✔ D4 · scoped token absent · falls through to shared tokens (0.1052ms)
+✔ D4 · scope name with hyphen · normalises to underscore (0.1117ms)
+✔ D4 · production · no scoped token AND no shared tokens → misconfigured (fail-closed) (0.1047ms)
+✔ D4 · HMAC signed with scoped key succeeds; HMAC signed with shared key fails when scope active (0.5413ms)
+ ❯ src/lib/nex/brain/tests/require-cron-token.test.mjs (0 test)
+ ❯ src/lib/nex/brain/tests/review-queue.test.mjs (0 test)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 46.6965
+✔ RR1 · routeJob exported with RouteResult return type (1.6675ms)
+✔ RR2 · returns skipped=job_not_found when getJob returns null (0.3099ms)
+✔ RR3 · returns skipped=not_completed when status !== 'completed' (0.3021ms)
+✔ RR4 · returns skipped=no_target_brains when target_brains empty (0.2769ms)
+✔ RR5 · idempotent · skipped=already_routed for brains already in brains_linked (0.3036ms)
+✔ RR6 · appendMemory called for every routed target brain (0.237ms)
+✔ RR7 · writes completion_result.brains_linked so next call skips these brains (1.852ms)
+✔ RR8 · normaliseBrain is deterministic and idempotent (1.0083ms)
+✔ RR9 · normaliseBrain lowercases + kebab-cases (0.7972ms)
+✔ RR10 · normaliseBrain does NOT collide across distinct display names (dot-separators) (2.7338ms)
+✔ RR11 · normaliseBrain strips outer punctuation but preserves inner separators (0.2282ms)
+✔ RR12 · normaliseBrain never emits leading/trailing hyphens (0.2991ms)
+ ❯ src/lib/nex/brain/tests/router-routing.test.mjs (0 test)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 58.2975
+adapter-isolation.test.mjs
+✔ SC1 · brainStore is exported and returns BrainStore (2.1356ms)
+✔ SC2 · activeBackend is exported returning the exact 3-value union (3.115ms)
+✔ SC3 · newId + nowIso helpers exported for cross-module use (0.2293ms)
+✔ SC4 · _resetBrainStoreForTests exported (contract tests depend on it) (0.1596ms)
+✔ SC5 · isSupabaseConfigured + isPostgresConfigured helpers present (private) (0.1616ms)
+✔ SC6 · brainStore() checks Postgres FIRST when both PG + Supabase configured (0.3429ms)
+✔ SC7 · brainStore() falls through to FilesystemStore when no backend configured (0.1255ms)
+✔ SC8 · brainStore() constructs PostgresBrainStore when Postgres configured (0.1072ms)
+✔ SC9 · brainStore() constructs SupabaseStore in the Supabase branch (0.15ms)
+✔ SC10 · MirrorToSupabaseBrainStore composes ONLY when strict AND of both shadow gates + Supabase configured (0.2426ms)
+✔ SC11 · FilesystemStore is defined and implements BrainStore (F12 · now in adapters/filesystem.ts) (0.2127ms)
+✔ SC12 · SupabaseStore is defined and implements BrainStore (F12 · now in adapters/supabase.ts) (0.1669ms)
+✔ SC13 · PostgresBrainStore is defined and implements BrainStore (F12 · now in adapters/postgres.ts) (0.1727ms)
+✔ SC14 · every BrainStore method appears in each adapter (contract-shape spot check) (1.3526ms)
+✖ SC15 · FS_ROOT filesystem path constant present (behavior anchor · moved to adapters/filesystem.ts with the class) (8.1215ms)
+✔ SC16 · adapters/filesystem.ts exports FilesystemStore AND owns the fs I/O primitives (0.5403ms)
+ ❯ src/lib/nex/brain/tests/storage-characterization.test.mjs (0 test)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 15
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 40.9706
+ ❯ src/lib/nex/brain/tests/warehouse.test.mjs (0 test)
+
+✖ failing tests:
+
+test at src\lib\nex\brain\tests\storage-characterization.test.mjs:152:31
+✖ SC15 · FS_ROOT filesystem path constant present (behavior anchor · moved to adapters/filesystem.ts with the class) (8.1215ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /const FS_ROOT = path\.join\(process\.cwd\(\), "data", "nex-brain"\)/. Input:
+  
+  '// src/lib/nex/brain/adapters/filesystem.ts\n' +
+    '//\n' +
+    '// Wave 11 · Step 10 · F12 remediation · behavior-preserving extraction.\n' +
+    '//\n' +
+    '// This file was carved verbatim from src/lib/nex/brain/storage.ts\n' +
+    '// (FS_ROOT + ensureFsRoot + readTable + writeTable + FilesystemStore).\n' +
+    '// Every filesystem path, every read/write ordering, every method\n' +
+    '// signature is byte-identical to the pre-extraction implementation.\n' +
+    '// If a future edit changes I/O ordering or method shape, that IS a\n' +
+    '// behavior change · not part of F12.\n' +
+    '//\n' +
+    '// The class is exported so storage.ts can construct it inside\n' +
+    '// brainStore() as the default (dev / no-backend) selection. External\n' +
+    '// callers continue to consume the BrainStore interface via `brainStore()`\n' +
+    '// without knowing which concrete class backs it.\n' +
+    '\n' +
+    'import { promises as fs } from "node:fs";\n' +
+    'import * as path from "node:path";\n' +
+    '\n' +
+    'import type {\n' +
+    '  AuditEntry,\n' +
+    '  BrainStatus,\n' +
+    '  ConfidenceScore,\n' +
+    '  Contradiction,\n' +
+    '  Deprecation,\n' +
+    '  GraphEdge,\n' +
+    '  JobStatus,\n' +
+    '  KnowledgeFeedback,\n' +
+    '  KnowledgeJobTransitionAudit,\n' +
+    '  KnowledgeRecord,\n' +
+    '  LlmRetryEntry,\n' +
+    '  LlmRetryStatus,\n' +
+    '  RecordVersion,\n' +
+    '  Source,\n' +
+    '  WorkerHeartbeat,\n' +
+    '  WorkerJob,\n' +
+    '  WorkerPoolHealth,\n' +
+    '  WorkerResult,\n' +
+    '  WorkerType,\n' +
+    '} from "../types";\n' +
+    'import type { BrainStore } from "../storage";\n' +
+    'import { newId, nowIso } from "../storage";\n' +
+    '\n' +
+    '// Wave 11 · Phase 5 · test-isolation fix.\n' +
+    '// FS_ROOT is resolved lazily via process.cwd() at each call so that\n' +
+    '// tests which chdir into a fresh tmp directory in beforeEach get true\n' +
+    '// isolation. Production behavior is unchanged: process.cwd() never\n' +
+    '// moves at runtime, so every resolution returns the same path as the\n' +
+    '// pre-fix module-level const did.\n' +
+    'function fsRoot(): string {\n' +
+    '  return path.join(process.cwd(), "data", "nex-brain");\n' +
+    '}\n' +
+    '\n' +
+    'async function ensureFsRoot() {\n' +
+    '  await fs.mkdir(fsRoot(), { recursive: true });\n' +
+    '}\n' +
+    '\n' +
+    'async function readTable<T>(name: string): Promise<T[]> {\n' +
+    '  await ensureFsRoot();\n' +
+    '  try {\n' +
+    '    const raw = await fs.readFile(path.join(fsRoot(), `${name}.json`), "utf8");\n' +
+    '    const parsed = JSON.parse(raw);\n' +
+    '    return Array.isArray(parsed) ? (parsed as T[]) : [];\n' +
+    '  } catch (err) {\n' +
+    '    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];\n' +
+    '    throw err;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'async function writeTable<T>(name: string, rows: T[]): Promise<void> {\n' +
+    '  await ensureFsRoot();\n' +
+    '  const p = path.join(fsRoot(), `${name}.json`);\n' +
+    '  const tmp = `${p}.tmp`;\n' +
+    '  await fs.writeFile(tmp, JSON.stringify(rows, null, 2), "utf8");\n' +
+    '  await fs.rename(tmp, p);\n' +
+    '}\n' +
+    '\n' +
+    'export class FilesystemStore implements BrainStore {\n' +
+    '  // ── Records ────────────────────────────────────────────────────────\n' +
+    '  async insertRecord(input: Omit<KnowledgeRecord, "id" | "created_at">): Promise<KnowledgeRecord> {\n' +
+    '    const rows = await readTable<KnowledgeRecord>("records");\n' +
+    '    const row: KnowledgeRecord = { ...input, id: newId(), created_at: nowIso() };\n' +
+    '    rows.push(row);\n' +
+    '    await writeTable("records", rows);\n' +
+    '    return row;\n' +
+    '  }\n' +
+    '  async insertRecordIdempotent(\n' +
+    '    input: Omit<KnowledgeRecord, "id" | "created_at">,\n' +
+    '  ): Promise<{ record: KnowledgeRecord; created: boolean }> {\n' +
+    '    const rows = await readTable<KnowledgeRecord>("records");\n' +
+    '    const existing = rows.find((r) => r.record_id === input.record_id);\n' +
+    '    if (existing) return { record: existing, created: false };\n' +
+    '    const row: KnowledgeRecord = { ...input, id: newId(), created_at: nowIso() };\n' +
+    '    rows.push(row);\n' +
+    '    await writeTable("records", rows);\n' +
+    '    return { record: row, created: true };\n' +
+    '  }\n' +
+    '  async getRecord(record_id: string): Promise<KnowledgeRecord | null> {\n' +
+    '    const rows = await readTable<KnowledgeRecord>("records");\n' +
+    '    return rows.find((r) => r.record_id === record_id) ?? null;\n' +
+    '  }\n' +
+    '  async listRecords(filter?: { status?: KnowledgeRecord["status"]; limit?: number }): Promise<KnowledgeRecord[]> {\n' +
+    '    const rows = await readTable<KnowledgeRecord>("records");\n' +
+    '    let out = rows;\n' +
+    '    if (filter?.status) out = out.filter((r) => r.status === filter.status);\n' +
+    '    out = out.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));\n' +
+    '    if (filter?.limit) out = out.slice(0, filter.limit);\n' +
+    '    return out;\n' +
+    '  }\n' +
+    '  async updateRecordStatus(record_id: string, status: KnowledgeRecord["status"], reviewer?: string): Promise<KnowledgeRecord | null> {\n' +
+    '    const rows = await readTable<KnowledgeRecord>("records");\n' +
+    '    let updated: KnowledgeRecord | null = null;\n' +
+    '    const next = rows.map((r) => {\n' +
+    '      if (r.record_id !== record_id) return r;\n' +
+    '      updated = {\n' +
+    '        ...r,\n' +
+    '        status,\n' +
+    '        reviewed_by: reviewer ?? r.reviewed_by,\n' +
+    '        last_reviewed_at: nowIso(),\n' +
+    '        deprecated_at: status === "DEPRECATED" || status === "SUPERSEDED" ? nowIso() : r.deprecated_at,\n' +
+    '      };\n' +
+    '      return updated;\n' +
+    '    });\n' +
+    '    await writeTable("records", next);\n' +
+    '    return updated;\n' +
+    '  }\n' +
+    '\n' +
+    '  // ── Versions ───────────────────────────────────────────────────────\n' +
+    '  async insertVersion(input: Omit<RecordVersion, "id" | "changed_at">): Promise<RecordVersion> {\n' +
+    '    const rows = await readTable<RecordVersion>("record_versions");\n' +
+    '    const row: RecordVersion = { ...input, id: newId(), changed_at: nowIso() };\n' +
+    '    rows.push(row);\n' +
+    '    await writeTable("record_versions", rows);\n' +
+    '    return row;\n' +
+    '  }\n' +
+    '\n' +
+    '  // ── Edges ──────────────────────────────────────────────────────────\n' +
+    '  async insertEdge(input: Omit<GraphEdge, "id" | "created_at">): Promise<GraphEdge> {\n' +
+    '    const rows = await readTable<GraphEdge>("graph_edges");\n' +
+    '    const dupe = rows.find(\n' +
+    '      (e) =>\n' +
+    '        e.from_record_id === input.from_record_id &&\n' +
+    '        e.to_record_id === input.to_record_id &&\n' +
+    '        e.edge_type === input.edge_type\n' +
+    '    );\n' +
+    '    if (dupe) return dupe;\n' +
+    '    const row: GraphEdge = { ...input, id: newId(), created_at: nowIso() };\n' +
+    '    rows.push(row);\n' +
+    '    await writeTable("graph_edges", rows);\n' +
+    '    return row;\n' +
+    '  }\n' +
+    '  async listEdges(from_record_id?: string): Promise<GraphEdge[]> {\n' +
+    '    const rows = await readTable<GraphEdge>("graph_edges");\n' +
+    '    return from_record_id ? rows.filter((e) => e.from_record_id === from_record_id) : rows;\n' +
+    '  }\n' +
+    '\n' +
+    '  // ── Jobs ───────────────────────────────────────────────────────────\n' +
+    '  async enqueueJob(input: Omit<WorkerJob, "id" | "status" | "attempts" | "created_at" | "updated_at">): Promise<WorkerJob> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    const row: WorkerJob = {\n' +
+    '      ...input,\n' +
+    '      id: newId(),\n' +
+    '      status: "waiting",\n' +
+    '      attempts: 0,\n' +
+    '      created_at: nowIso(),\n' +
+    '      updated_at: nowIso(),\n' +
+    '    };\n' +
+    '    rows.push(row);\n' +
+    '    await writeTable("worker_jobs", rows);\n' +
+    '    return row;\n' +
+    '  }\n' +
+    '  async claimNextJob(worker_type: WorkerType, worker_id: string, lease_seconds = 60): Promise<WorkerJob | null> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    // Priority ascending, then created_at ascending.\n' +
+    '    const candidate = rows\n' +
+    '      .filter((j) => j.worker_type === worker_type && j.status === "waiting")\n' +
+    '      .sort((a, b) => a.priority - b.priority || (a.created_at < b.created_at ? -1 : 1))[0];\n' +
+    '    if (!candidate) return null;\n' +
+    '    const now = nowIso();\n' +
+    '    const leaseIso = new Date(Date.now() + lease_seconds * 1000).toISOString();\n' +
+    '    let claimed: WorkerJob | null = null;\n' +
+    '    const next = rows.map((j) => {\n' +
+    '      if (j.id !== candidate.id) return j;\n' +
+    '      claimed = {\n' +
+    '        ...j,\n' +
+    '        status: "assigned",\n' +
+    '        assigned_worker_id: worker_id,\n' +
+    '        assigned_at: now,\n' +
+    '        lease_expires_at: leaseIso,\n' +
+    '        attempts: j.attempts + 1,\n' +
+    '        updated_at: now,\n' +
+    '      };\n' +
+    '      return claimed;\n' +
+    '    });\n' +
+    '    await writeTable("worker_jobs", next);\n' +
+    '    return claimed;\n' +
+    '  }\n' +
+    '  async completeJob(job_id: string, result_id: string): Promise<void> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    const now = nowIso();\n' +
+    '    const next = rows.map((j) =>\n' +
+    '      j.id === job_id\n' +
+    '        ? { ...j, status: "completed" as JobStatus, result_id, updated_at: now, completed_at: now }\n' +
+    '        : j\n' +
+    '    );\n' +
+    '    await writeTable("worker_jobs", next);\n' +
+    '  }\n' +
+    '  async failJob(job_id: string, error: string): Promise<void> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    const now = nowIso();\n' +
+    '    const next = rows.map((j) =>\n' +
+    '      j.id === job_id ? { ...j, status: "failed" as JobStatus, last_error: error, updated_at: now, completed_at: now } : j\n' +
+    '    );\n' +
+    '    await writeTable("worker_jobs", next);\n' +
+    '  }\n' +
+    '  async countJobs(worker_type: WorkerType, status: JobStatus): Promise<number> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    return rows.filter((j) => j.worker_type === worker_type && j.status === status).length;\n' +
+    '  }\n' +
+    '  // Phase 11.0 · TRANSITIONAL · see BrainStore.listRecentPipelineInputRefs.\n' +
+    '  async listRecentPipelineInputRefs(worker_types: WorkerType[]): Promise<string[]> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    const set  = new Set<string>();\n' +
+    '    for (const j of rows) {\n' +
+    '      if (worker_types.includes(j.worker_type) && j.input_ref) set.add(j.input_ref);\n' +
+    '    }\n' +
+    '    return Array.from(set);\n' +
+    '  }\n' +
+    '\n' +
+    '  // Wave 11 · Phase 5 · W-C-COMPANION storage-contract extension.\n' +
+    '  async getWorkerJob(job_id: string): Promise<WorkerJob | null> {\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    return rows.find((j) => j.id === job_id) ?? null;\n' +
+    '  }\n' +
+    '  async listWorkerJobsByInputRef(\n' +
+    '    input_refs: string[],\n' +
+    '    opts?: { limit?: number },\n' +
+    '  ): Promise<WorkerJob[]> {\n' +
+    '    if (!input_refs || input_refs.length === 0) return [];\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    const set  = new Set(input_refs);\n' +
+    '    const matched = rows\n' +
+    '      .filter((j) => j.input_ref && set.has(j.input_ref))\n' +
+    '      .sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));\n' +
+    '    const limit = opts?.limit ?? 500;\n' +
+    '    return matched.slice(0, limit);\n' +
+    '  }\n' +
+    '  async findWorkerJobsByKnowledgeJobId(kjid: string): Promise<WorkerJob[]> {\n' +
+    '    if (!kjid) return [];\n' +
+    '    const rows = await readTable<WorkerJob>("worker_jobs");\n' +
+    '    return rows\n' +
+    '      .filter((j) => {\n' +
+    '        const kj = (j.input_payload as { knowledge_job_id?: string | null } | null | undefined)?.knowledge_job_id;\n' +
+    '        return kj === kjid;\n' +
+    '      })\n' +
+    '  '... 17049 more characters
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/brain/tests/storage-characterization.test.mjs:148:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '// src/lib/nex/brain/adapters/filesystem.ts\n//\n// Wave 11 · Step 10 · F12 remediation · behavior-preserving extraction.\n//\n// This file was carved verbatim from src/lib/nex/brain/storage.ts\n// (FS_ROOT + ensureFsRoot + readTable + writeTable + FilesystemStore).\n// Every filesystem path, every read/write ordering, every method\n// signature is byte-identical to the pre-extraction implementation.\n// If a future edit changes I/O ordering or method shape, that IS a\n// behavior change · not part of F12.\n...',
+    expected: /const FS_ROOT = path\.join\(process\.cwd\(\), "data", "nex-brain"\)/,
+    operator: 'match',
+    diff: 'simple'
+  }
+  FAIL A1 boundary verifier passes on clean tree · exit=1
+  PASS A2 SocialProvider interface complete
+  PASS A3 simulator exports SocialProvider factory
+adapter-real-providers.test.mjs
+  PASS Meta · uses Graph API v20.0
+  PASS Meta · authorize endpoint correct
+  PASS Meta · token endpoint correct
+  PASS Meta · publish uses /{pageId}/feed or /photos
+  PASS Meta · classifies code 190 as invalid_token
+  PASS Meta · classifies code 4/17/32/613 as rate_limited
+  PASS Meta · publish uses req.access_token (not empty string)
+  PASS Meta · embeds idempotency_marker in caption
+  PASS Meta · declares supports_server_side_idempotency=false
+  PASS IG · container-then-publish flow
+  PASS IG · uses image_url + caption + creation_id
+  PASS IG · classifies code 24/36 as content_rejected
+  PASS IG · requires media in publish (text-only rejected)
+  PASS IG · declares platform=instagram
+  PASS LinkedIn · uses /oauth/v2 endpoints
+  PASS LinkedIn · uses /v2/ugcPosts for publish
+  PASS LinkedIn · uses /v2/userinfo for member URN
+  PASS LinkedIn · sends X-Restli-Protocol-Version 2.0.0
+  PASS LinkedIn · supports PKCE
+  PASS LinkedIn · Bearer authorization header on publish
+  PASS LinkedIn · classifies 401/403 as invalid_token
+  PASS LinkedIn · classifies 422 as content_rejected
+  PASS TikTok · uses open.tiktokapis.com endpoint
+  PASS TikTok · uses /post/publish/video/init/
+  PASS TikTok · supports PKCE
+  PASS TikTok · declares images_max=0 (video-only)
+  PASS TikTok · classifies 'invalid_grant' as invalid_token
+  PASS TikTok · classifies 'rate_limit_exceeded' as rate_limited
+  PASS TikTok · publish requires video · rejects if no video
+  PASS Google Business · uses accounts.google.com OAuth endpoint
+  PASS Google Business · uses oauth2.googleapis.com/token
+  PASS Google Business · uses mybusiness.googleapis.com/v4
+  PASS Google Business · uses localPosts endpoint
+  PASS Google Business · supports PKCE + refresh tokens
+  PASS Google Business · access_type=offline for refresh token
+  PASS Google Business · classifies UNAUTHENTICATED as invalid_token
+  PASS Google Business · classifies RESOURCE_EXHAUSTED as rate_limited
+  PASS Google Business · classifies INVALID_ARGUMENT as content_rejected
+  PASS http · AbortController timeout
+  PASS http · parses Retry-After header
+  PASS http · default classifier handles 401/403/429/5xx
+  PASS http · never retries (worker owns retry)
+  PASS env · returns null when creds missing (no crash at boot)
+  PASS env · convention <PROVIDER>_APP_ID/_APP_SECRET/_REDIRECT_URI
+  PASS registry · conditionally registers real providers
+  PASS registry · missing creds → not registered (no crash)
+
+Summary · 46/46 passed
+ ❯ src/lib/nex/comms-social/tests/adapter-real-providers.test.mjs (0 test)
+  FAIL A4 verifier detects provider-SDK outside adapters/ · exit=1
+  FAIL A5 verifier green after cleanup · exit=1
+
+Summary · 2/5 passed
+adversarial-probes.test.mjs
+ ❯ src/lib/nex/comms-social/tests/adapter-isolation.test.mjs (0 test)
+attribution-integration.test.mjs
+ ❯ src/lib/nex/comms-social/tests/attribution-integration.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/adversarial-probes.test.mjs (0 test)
+category-automation.test.mjs
+ ❯ src/lib/nex/comms-social/tests/claim-taxonomy.test.mjs (0 test)
+adapter-meta-live.test.mjs
+  PASS ML1 authorize URL correct
+  PASS ML2 exchangeCode returns page token + page id · {"ok":true,"access_token":"page-token-abc","refresh_token":null,"token_expires_at":null,"scopes":["pages_manage_posts","pages_read_engagement"],"platform_account_id":"page-123","display_name":"Test Pa
+  PASS ML3 190 → invalid_token · {"ok":false,"error_class":"invalid_token","error_message":"Invalid OAuth access token","provider_code":"190","retry_after_seconds":null,"raw_metadata":{"status":400,"body_text":"{\"error\":{\"code\":1
+  PASS ML4 code 4 → rate_limited
+  PASS ML5 publish success returns provider_post_id · {"ok":true,"provider_post_id":"page-123_9876543210","provider_post_url":"https://facebook.com/page-123_9876543210","idempotency_hit":false,"raw_metadata":{"id":"page-123_9876543210"}}
+
+Summary · 5/5 passed
+ ❯ src/lib/nex/comms-social/tests/category-automation.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/adapter-meta-live.test.mjs (0 test)
+content-sources.test.mjs
+ ❯ src/lib/nex/comms-social/tests/content-sources.test.mjs (0 test)
+customer-entry.test.mjs
+envelope-encryption.test.mjs
+ ❯ src/lib/nex/comms-social/tests/envelope-encryption.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/customer-entry.test.mjs (0 test)
+grounding-validation.test.mjs
+generation-e2e.test.mjs
+ ❯ src/lib/nex/comms-social/tests/generation-e2e.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/grounding-validation.test.mjs (0 test)
+hq-mission-control.test.mjs
+oauth-state.test.mjs
+oauth-e2e.test.mjs
+ ❯ src/lib/nex/comms-social/tests/hq-mission-control.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/oauth-state.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/oauth-e2e.test.mjs (0 test)
+pause-propagation.test.mjs
+ ❯ src/lib/nex/comms-social/tests/pause-propagation.test.mjs (0 test)
+predictive-boundary.test.mjs
+  PASS P1 no predictive import in comms-social/**
+  PASS P2 no local-learning column patterns in comms-social/**
+role-permission.test.mjs
+  PASS R1 permission matrix has every required role
+  PASS R2 SOCIAL_ACTIONS contains all required actions
+  PASS R3 nex_admin_publish documented as time-bounded
+  PASS R4 manage_roles is owner-only
+  PASS R5 staff cannot publish or enable Automatic
+  PASS R6 viewer restricted to read_analytics
+  PASS R7 nex_admin_support: read-only cross-tenant
+  PASS R8 nex_admin_publish: has administer_publish
+  PASS R9 permits() is default-deny
+
+Summary · 9/9 passed
+ ❯ src/lib/nex/comms-social/tests/role-permission.test.mjs (0 test)
+  FAIL P3 verifier catches synthetic predictive import · exit=1
+template-fill.test.mjs
+scheduling-worker.test.mjs
+  FAIL P4 verifier green after cleanup · exit=1
+
+Summary · 2/4 passed
+ ❯ src/lib/nex/comms-social/tests/predictive-boundary.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/scheduling-worker.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/template-fill.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/ui-boundaries.test.mjs (0 test)
+token-redaction.test.mjs
+ ❯ src/lib/nex/comms-social/tests/tenant-isolation.test.mjs (0 test)
+  PASS T1 no console.log with raw token vars
+  PASS T2 redaction helpers exported from crypto/envelope.ts
+  PASS T3 connectAccount audit uses redactSecret for both token fields
+  PASS T4 no thrown Error interpolates raw token vars
+ ❯ src/lib/nex/comms-social/tests/token-redaction.test.mjs (0 test)
+ ❯ src/lib/nex-native/family-safety/subscription/entitlement-service.test.ts (17 tests | 10 failed) 35468ms
+     × hasActiveEntitlement returns FALSE when DB is absent (pool null) 1464ms
+     × getActiveEntitlement returns null when DB absent 1288ms
+     × getNewestEntitlement returns null when DB absent 1389ms
+     × listEntitlementsForOwner returns [] when DB absent 1291ms
+     × findAttemptByIdempotencyKey returns null when DB absent 5006ms
+     × cancelActiveEntitlement returns null when DB absent 5007ms
+     × expireActiveEntitlement returns null when DB absent 5006ms
+     × recordFailedPayment returns null when DB absent 5001ms
+     × recordCancelledPayment returns null when DB absent 5003ms
+     × summary > 500 chars is clamped (no throw) 5003ms
+validator-brand.test.mjs
+validator-fact.test.mjs
+ ❯ src/lib/nex/comms-social/tests/validator-brand.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/validator-fact.test.mjs (0 test)
+validator-pipeline.test.mjs
+validator-platform.test.mjs
+validator-rights.test.mjs
+ ❯ src/lib/nex/comms-social/tests/validator-pipeline.test.mjs (0 test)
+validator-policy.test.mjs
+✔ G1 · every gate resolves to a stable default on empty env · honest 'unset' not fabricated 'off' (2.4655ms)
+✔ G2 · brain_backend accepts postgres | supabase | filesystem (3.455ms)
+✔ G3 · storage_backend accepts postgres | jsonl | dual-write (case-insensitive) (0.3128ms)
+✔ G4 · inbox_read_backend accepts postgres | filesystem (case-insensitive) (0.3032ms)
+✔ G5 · shadow gates distinguish 1=on · anything-else=off · missing=unset (0.302ms)
+✔ G6 · object_backend accepts postgres | filesystem (case-insensitive) (0.2678ms)
+✔ G7 · postgres_url_present tracks NEX_POSTGRES_URL validity (0.3424ms)
+✔ G8 · GATE_ENV_NAMES is the exact canonical set (drift-catcher) (1.0138ms)
+✔ G9 · getFeatureGates never throws · even on garbage input (0.5805ms)
+✔ G10 · getFeatureGates returns a NEW object each call · no shared mutable state (0.4813ms)
+ ❯ src/lib/nex/config/tests/gates.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/validator-rights.test.mjs (0 test)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 45.9215
+ ❯ src/lib/nex/comms-social/tests/validator-platform.test.mjs (0 test)
+ ❯ src/lib/nex/comms-social/tests/validator-policy.test.mjs (0 test)
+✔ CFGA1 · getPostgresUrl + getPostgresUrlOrNull + hasPostgresUrl defined exactly once (config/pg.ts) (114.6806ms)
+✔ CFGA2 · HQ files that read process.env.NEX_POSTGRES_URL directly are on CFGA2_KNOWN_EXCEPTIONS · list cannot grow silently (74.9094ms)
+✔ CFGA3 · getFeatureGates defined exactly once (config/gates.ts) (74.9603ms)
+✖ CFGA4 · /api/nex/storage/gates GET route exists and imports getFeatureGates from the canonical module (5.2524ms)
+✖ CFGA5 · every gate env var in GATE_ENV_NAMES appears in .env.example (F31 doc-completeness) (2.6028ms)
+ ❯ src/lib/nex/config/tests/adoption-drift.test.mjs (0 test)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 296.3839
+
+✖ failing tests:
+
+test at src\lib\nex\config\tests\adoption-drift.test.mjs:166:31
+✖ CFGA4 · /api/nex/storage/gates GET route exists and imports getFeatureGates from the canonical module (5.2524ms)
+  AssertionError [ERR_ASSERTION]: F29 route src/app/api/nex/storage/gates/route.ts must exist
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/config/tests/adoption-drift.test.mjs:163:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src\lib\nex\config\tests\adoption-drift.test.mjs:181:31
+✖ CFGA5 · every gate env var in GATE_ENV_NAMES appears in .env.example (F31 doc-completeness) (2.6028ms)
+  AssertionError [ERR_ASSERTION]: gate env vars missing from .env.example · every gate must be documented (even if unset): NEX_BRAIN_BACKEND, NEX_STORAGE_BACKEND, NEX_INBOX_READ_BACKEND, NEX_INBOX_SHADOW_POSTGRES, NEX_BRAIN_SHADOW_SUPABASE, NEX_OBJECT_BACKEND
+  
+  6 !== 0
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/config/tests/adoption-drift.test.mjs:192:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 6,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+✔ assertProductionPostgresUrl is a no-op in dev/test/undefined (2.0256ms)
+✔ assertProductionPostgresUrl throws in production when NEX_POSTGRES_URL is missing (3.4198ms)
+✔ assertProductionPostgresUrl throws in production on malformed URL (0.333ms)
+✔ assertProductionPostgresUrl throws in production on any dev-looking URL (0.7066ms)
+✔ assertProductionPostgresUrl PASSES for a real prod URL (0.2734ms)
+✔ requirePostgresUrl returns URL in dev when set (0.3493ms)
+✔ requirePostgresUrl throws code=missing-postgres-url in dev when unset (0.2544ms)
+✔ requirePostgresUrl fails closed in production on all four bad states (0.2549ms)
+✔ redactUrl strips the password segment (0.2326ms)
+✔ looksLikeDevUrl detects the four exact patterns (0.3136ms)
+ ❯ src/lib/nex/config/tests/production-guard.test.mjs (0 test)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 32.9403
+✖ CD1 · legacy Supabase RLS-no-policy gap does not exceed baseline (103.2614ms)
+✖ CD2 · P0 (financial) + P1 (consent) gap counts do not exceed per-tier baseline (98.199ms)
+ ❯ src/lib/nex/config/tests/legacy-rls-coverage-drift.test.mjs (0 test)
+✔ CFG1 · getPostgresUrl returns the URL when set (dev NODE_ENV) (2.5073ms)
+✔ CFG2 · getPostgresUrl throws in production when unset · code=missing-postgres-url-in-production (4.0372ms)
+✔ CFG3 · getPostgresUrl throws in dev when unset · code=missing-postgres-url (distinguishable) (0.2933ms)
+✔ CFG4 · getPostgresUrl throws on malformed URL · code=invalid-postgres-url (0.3601ms)
+✔ CFG5 · getPostgresUrl trims whitespace · rejects whitespace-only (0.2889ms)
+✔ CFG6 · getPostgresUrlOrNull returns null when unset · never throws (0.2406ms)
+✔ CFG7 · getPostgresUrlOrNull returns null on empty / whitespace-only (0.1844ms)
+✔ CFG8 · getPostgresUrlOrNull STILL throws on malformed URL · bad URL is a bug (0.1664ms)
+✔ CFG9 · hasPostgresUrl returns true on valid URL (0.2205ms)
+✔ CFG10 · hasPostgresUrl returns false on unset / whitespace-only / malformed · NEVER throws (0.323ms)
+✔ CFG11 · every thrown error carries a stable .code field (0.8617ms)
+✔ CFG12 · getPostgresUrl throws in production when URL points at localhost / 127.0.0.1 / :5433 / nex_dev (0.3816ms)
+✔ CFG12b · getPostgresUrl ACCEPTS dev-looking URLs when NODE_ENV !== production (0.1723ms)
+✔ CFG12c · getPostgresUrlOrNull ALSO applies the production dev-url rejection (0.1435ms)
+✔ CFG13 · assertProductionPostgresUrl is a no-op in dev/test (0.1329ms)
+✔ CFG13b · assertProductionPostgresUrl throws in production on missing / dev-url (0.2106ms)
+✔ CFG13c · assertProductionPostgresUrl PASSES for a real prod URL (Supabase pooler shape) (0.105ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 230.0424
+ ❯ src/lib/nex/config/tests/pg.test.mjs (0 test)
+
+✖ failing tests:
+
+test at src\lib\nex\config\tests\legacy-rls-coverage-drift.test.mjs:54:31
+✖ CD1 · legacy Supabase RLS-no-policy gap does not exceed baseline (103.2614ms)
+  Error: audit script exit 1: node:internal/modules/cjs/loader:1607
+    throw err;
+    ^
+  
+  Error: Cannot find module 'C:\Users\Victus\nexapp\scripts\verify-supabase-legacy-rls-coverage.mjs'
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1603:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)
+      at Module._load (node:internal/modules/cjs/loader:1370:5)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+      at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+      at node:internal/main/run_main_module:33:47 {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: []
+  }
+  
+  Node.js v26.13.1
+  
+      at runAudit (C:/Users/Victus/nexapp/src/lib/nex/config/tests/legacy-rls-coverage-drift.test.mjs:45:29)
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/config/tests/legacy-rls-coverage-drift.test.mjs:50:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+test at src\lib\nex\config\tests\legacy-rls-coverage-drift.test.mjs:62:31
+✖ CD2 · P0 (financial) + P1 (consent) gap counts do not exceed per-tier baseline (98.199ms)
+  Error: audit script exit 1: node:internal/modules/cjs/loader:1607
+    throw err;
+    ^
+  
+  Error: Cannot find module 'C:\Users\Victus\nexapp\scripts\verify-supabase-legacy-rls-coverage.mjs'
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1603:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)
+      at Module._load (node:internal/modules/cjs/loader:1370:5)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+      at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+      at node:internal/main/run_main_module:33:47 {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: []
+  }
+  
+  Node.js v26.13.1
+  
+      at runAudit (C:/Users/Victus/nexapp/src/lib/nex/config/tests/legacy-rls-coverage-drift.test.mjs:45:29)
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/config/tests/legacy-rls-coverage-drift.test.mjs:58:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 37.9586
+✔ WBRA1 · every previously-duplicated site imports from the shared module (3.6225ms)
+✔ WBRA2 · no MIGRATED site retains a local `async function withBrainRole<T>` definition (4.7488ms)
+✔ T1 · defaults returned when env vars unset (T-1/T-3/T-4 have sane defaults) (1.8481ms)
+✔ T2 · T-6 + T-7 DEFAULT to 0 · worker cycle and job budget disabled until opt-in (3.1364ms)
+✔ T3 · env-var overrides honoured when inside sanity range (0.2258ms)
+✔ T4 · out-of-range values fall back to default (T-1 max 600s · T-6 max 60m) (1.0916ms)
+✔ T5 · negative / non-numeric fall back to default (no throw) (0.5812ms)
+✔ T6 · TimeoutError carries stable .code + .timeout_class + .budget_ms (0.4528ms)
+✔ T7 · isTimeoutError matches instance AND duck-typed 'code' prefix (0.339ms)
+✔ T8 · snapshotTimeouts returns the 5-key shape (0.7945ms)
+ ❯ src/lib/nex/config/tests/timeouts.test.mjs (0 test)
+ ❯ src/lib/nex/db/tests/with-brain-role-adoption.test.mjs (0 test)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 38.2719
+✔ TI1 · withBrainRole emits SET LOCAL statement_timeout + SET LOCAL idle_in_transaction_session_timeout (2.2147ms)
+✔ TI2 · PostgresBrainStore::withTx emits the same two SET LOCALs (3.5401ms)
+✔ TI3 · both wrappers import from the shared timeouts config module (0.8709ms)
+✔ TI4 · shared pool at src/lib/nex/db.ts sets connectionTimeoutMillis (T-3) (0.6611ms)
+✔ TI5 · SET LOCAL statement_timeout appears AFTER SET LOCAL ROLE (order matters) (1.0786ms)
+ ❯ src/lib/nex/db/tests/timeout-injection.test.mjs (0 test)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 34.1307
+ ❯ src/lib/nex/est/trades/staircase.test.ts (0 test)
+ ❯ src/lib/nex/db/tests/with-brain-role.test.mjs (0 test)
+ ❯ src/lib/nex/hq/tests/system-aggregator.test.mjs (0 test)
+  FAIL SETUP · could not read HQShell.tsx: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\src\components\nex-head-quarters\HQShell.tsx'
+✔ CR1 · claimJobIfQueued exported AND uses atomic pg-claim first (Wave 11 F2 remediation) (1.3713ms)
+✔ CR2 · legacy fallback preserves the historical read → update → verify pattern (0.5931ms)
+✔ CR3 · both paths emit the correct reason codes (0.3241ms)
+ ❯ src/lib/nex/hq/tests/dashboard-singularity.test.mjs (0 test)
+ ❯ src/lib/nex/jobs/tests/claim-race.test.mjs (0 test)
+✔ CR4a · CURRENT BEHAVIOR · two concurrent claims of same job_id can BOTH succeed (proof of F2 race) (21.7765ms)
+  PASS A1_all_six_pass_is_GREEN · verdict=GREEN
+  PASS A2_heartbeat_alone_is_NOT_GREEN · verdict=PARTIAL (must not be GREEN)
+  PASS A3_stale_heartbeat_is_NOT_GREEN · verdict=PARTIAL (must not be GREEN)
+  PASS A4_consumed_no_output_is_NOT_GREEN · verdict=STUCK
+  PASS A5_no_state_advance_is_NOT_GREEN · verdict=STUCK
+  PASS A6_not_provable_is_NOT_GREEN · verdict=PARTIAL
+  PASS A7_nothing_is_NOT_RUNNING · verdict=NOT_RUNNING (expected NOT_RUNNING)
+  PASS A8_blocked_wins_over_all_pass · verdict=BLOCKED (expected BLOCKED)
+  PASS A9_recent_failures_forces_FAILED · verdict=FAILED (expected FAILED)
+  PASS A10_input_but_no_consumption_is_STUCK · verdict=STUCK (expected STUCK)
+  PASS A11_five_of_six_is_NOT_GREEN · verdict=PARTIAL
+  PASS A12_marked_standby_is_STANDBY · verdict=STANDBY (expected STANDBY · demand-driven with no demand)
+  PASS A13_marked_standby_overrides_partial_fallthrough · without=PARTIAL · with=STANDBY
+  PASS A14_blocked_wins_over_standby · verdict=BLOCKED (expected BLOCKED)
+  PASS A15_failed_wins_over_standby · verdict=FAILED (expected FAILED)
+  PASS A16_no_standby_without_spec_signal · verdict=PARTIAL (STANDBY must be spec-signalled · never inferred from heartbeat age alone)
+✔ A1 · stuck KJ + completed extractor + record_draft → Path A attests (10.7554ms)
+✔ A2 · two stuck KJs in one sweep → both attested (0.5151ms)
+✔ A3 · stuck KJ with NO worker jobs → Path A falls through to Path B (0.9514ms)
+✔ A4 · extractor exists but not completed → falls through (0.4127ms)
+✔ A5 · extractor completed but result output_kind ≠ record_draft → falls through with mark_failed (0.5639ms)
+✔ A6 · running sweep twice in a row → second run is idempotent no-op (0.804ms)
+✔ T1 · extractor source code writes output_kind='record_draft' with draft_record_ids (1.0257ms)
+ ❯ src/lib/nex/jobs/tests/supervisor-attest-sweep.test.mjs (0 test)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 34.9693
+✖ C1 · idempotent · same terminal called twice writes ONE audit row (7.5824ms)
+ ❯ src/lib/nex/jobs/tests/supervisor-idempotency.test.mjs (0 test)
+✖ C2 · failure cascade → status: failed (2.5677ms)
+✔ C3 · kjid does not exist → helper no-ops · no audit (2.2565ms)
+✖ C4 · audit-write throws → KJ still updated · warning logged (3.3686ms)
+✔ D1 · detectStuck filters exactly by (status='claimed' AND progress=0 AND updated<threshold) (9.0343ms)
+✔ D1b · readStuckDetectorConfig defaults + env override (1.2066ms)
+✔ N1 · MAX_PER_TICK=3 · 5 stuck jobs → detector returns exactly 3 (0.3698ms)
+ ❯ src/lib/nex/jobs/tests/supervisor-race.test.mjs (0 test)
+✔ B1 · zero WorkerJobs → recommended_action=requeue (9.3498ms)
+✔ B2 · partial chain (no completions) → recommended_action=manual_investigate (0.6798ms)
+✔ B3 · extractor completed but no drafts → recommended_action=mark_failed (0.9496ms)
+✔ B4 · second sweep does NOT duplicate the review-queue row (dedup) (0.8565ms)
+✔ B5 · KJ stuck > 72 h → escalation-required signal fires (0.7154ms)
+✖ T2 · nex.audit_log schema has NO CHECK constraint on action (0.9451ms)
+ ❯ src/lib/nex/jobs/tests/supervisor-review-queue.test.mjs (0 test)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35.7223
+✔ SB1 · probe_mode=true + only_kjids=undefined → throws synchronously (6.259ms)
+✔ SB2 · probe_mode=true + only_kjids=[] → throws synchronously (0.4898ms)
+✔ SB3 · probe_mode=true + only_kjids=[burner] → discovered real KJs are rejected (4.8064ms)
+✔ SB4 · probe_mode=true + only_kjids=[b1,b2] + 10 real KJs → only b1,b2 touched (1.1782ms)
+✔ SB5 · probe_mode omitted + only_kjids=undefined → full sweep (backward compat) (0.3443ms)
+✔ SB6 · probe_mode=false + only_kjids=[a] → filter applies even without probe_mode (0.3334ms)
+✔ SB7 · supervisor.ts source contains probe_mode + only_kjids guard (0.8221ms)
+✖ SB8 · the 10 preserved fixture kjids exist in the incident-report doc + drift-catcher scope (0.4018ms)
+ ❯ src/lib/nex/jobs/tests/supervisor-safety-boundary.test.mjs (0 test)
+
+✖ failing tests:
+
+test at src\lib\nex\jobs\tests\supervisor-review-queue.test.mjs:194:31
+✖ T2 · nex.audit_log schema has NO CHECK constraint on action (0.9451ms)
+  Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\deploy\postgres\init\041_nex_brain_schema.sql'
+      at readFileSync (node:fs:624:20)
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/jobs/tests/supervisor-review-queue.test.mjs:188:15)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: 'C:\\Users\\Victus\\nexapp\\deploy\\postgres\\init\\041_nex_brain_schema.sql'
+  }
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36.9087
+ ❯ src/lib/nex/knowledge-inbox/tests/path-traversal.test.mjs (0 test)
+✔ CID1 · getCorrelationId returns null outside any scope (2.3203ms)
+✔ CID2 · runWithCorrelationId establishes scope · inner read returns the CID (3.789ms)
+✔ CID3 · nested scopes · inner wins inside · outer restored outside (0.2984ms)
+✔ CID4 · parallel Promise.all inside scope · each read sees same CID (3.9786ms)
+ ❯ src/lib/nex/observability/tests/correlation.test.mjs (0 test)
+✔ CID5 · setTimeout callback scheduled inside scope reads correct CID (12.4071ms)
+✔ CID6 · emitSignal without explicit CID picks up ALS CID (contract present in source) (0.8301ms)
+✔ CID7 · emitSignal with explicit CID uses explicit not ALS (0.6296ms)
+✔ CID8 · runFromRequest with valid header + trustInbound=true adopts inbound (0.6306ms)
+✔ CID9 · runFromRequest with malformed header regenerates fresh CID even when trusted (4.0596ms)
+✔ CID10 · trust matrix · public route ignores inbound · cron route accepts (0.509ms)
+✔ Sanity · module exports match plan §2 public API (0.2343ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39.7039
+✔ F4-W1 · updateInboxItemStatuses returns WritebackOutcome (not bare number) (2.3643ms)
+✔ F4-W2 · caller surfaces writeback status in dispatch return (3.9322ms)
+✔ F5-W1 · readInboxIndex returns ReadInboxResult (sourceHealth: ok|degraded) (0.262ms)
+✔ F5-W2 · dispatchNewInboxItems surfaces inbox_source_health in return (0.1958ms)
+✔ F5-W3 · degraded path fires counter + signal (0.1521ms)
+✔ F6-W1 · routeJobSafe catch fires counter + route-failed signal (0.1418ms)
+✔ F7-W1 · runProcessInbox tracks enqueueFailed per-item (0.3134ms)
+✔ F7-W2 · enqueue failure fires counter + enqueue-failed signal (0.2001ms)
+✔ F7-W3 · ProcessingReport includes enqueueFailed field (0.7272ms)
+✔ F7-W4 · report populates enqueueFailed when failures occur (0.4535ms)
+✔ F8-W1 · createJobSafe catch fires counter + create-job-failed signal (0.2551ms)
+✔ F10-W1 · inbox readIndex fallback fires pg-read-fallback signal (0.1687ms)
+✔ F10-W2 · inbox readStats fallback also fires signal (both entrypoints) (0.6998ms)
+✔ F10-W3 · jobs pg reads share a fallback helper (0.4367ms)
+✔ F9-W1 · emitAuditEvent catch enqueues to retry buffer (0.2585ms)
+✔ F9-W2 · emitAuditEvents batch enqueues each event individually on failure (0.1887ms)
+✔ F9-W3 · drainAuditRetryBuffer is exported and returns 4-field summary (0.2955ms)
+✔ F9-W4 · drainAuditRetryBuffer emits audit-emit-retried + audit-emit-dropped signals (0.2179ms)
+ ❯ src/lib/nex/observability/tests/group-b-wireup.test.mjs (0 test)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 37.8438
+✔ O1 · success wraps value (1.2446ms)
+✔ O2 · skipped / rejected / failed / unavailable all carry a reason (0.3919ms)
+✔ O3 · fallback carries value AND reason (both dimensions) (0.9407ms)
+✔ O4 · failed carries optional error_code + detail (0.2411ms)
+✔ R1 · primitives pass through unchanged (2.1572ms)
+✔ R2 · redacts top-level sensitive keys (3.7676ms)
+✔ R3 · redacts nested sensitive keys (0.2827ms)
+✔ R4 · redacts through arrays (0.2173ms)
+✔ R5 · case-insensitive key matching (0.2117ms)
+✔ R6 · preserves shape and does not mutate input (0.2576ms)
+✔ R7 · handles stripe-prefixed keys and refresh/access tokens (0.289ms)
+ ❯ src/lib/nex/observability/tests/redact.test.mjs (0 test)
+✔ C1 · fresh counter reads zero with null last_at (1.2325ms)
+✔ C2 · incr bumps count and stamps last_at (0.9587ms)
+✔ C3 · snapshot returns every named counter, even zero ones (honest '—' doctrine) (0.449ms)
+✔ C4 · snapshot is a deep copy (mutation does not affect store) (0.3062ms)
+✔ S1 · emitSignal writes a structured console.warn line (1.4119ms)
+✔ S2 · emitSignal NEVER throws · even with garbage input (0.3599ms)
+✔ S3 · emitSignal truncates over-long detail (security: bounded log output) (0.3025ms)
+✔ S4 · emitSignal escapes double quotes in detail (log parsability) (0.3196ms)
+✔ V-VAL1 · all rows valid → returns full array, dropped=0 (0.7547ms)
+✔ V-VAL2 · mixed valid/invalid · valid returned · invalid dropped + counted + signalled (1.1826ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 28.1487
+✔ V-VAL3 · aggregate signal fires when drops exceed max_signals (3.8511ms)
+✔ V-VAL4 · positive path AND failure signal both testable in isolation (0.5325ms)
+ ❯ src/lib/nex/observability/tests/observability-core.test.mjs (0 test)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 45.6646
+✔ RB1 · fresh buffer starts empty · status reports size=0 · oldest_at=null (1.922ms)
+✔ RB2 · enqueue up to CAPACITY without dropping · size tracks (8.4404ms)
+✔ RB3 · overflow evicts OLDEST + fires audit-emit-dropped signal (4.397ms)
+✔ RB4 · drain returns snapshot AND empties internal ring atomically (0.3622ms)
+✔ RB5 · retryBufferStatus reports oldest_at ISO after first enqueue (0.4242ms)
+✔ RB6 · every enqueueForRetry increments audit.emit_failed (0.2048ms)
+✔ RB7 · enqueue NEVER throws on garbage input (0.1863ms)
+✔ RB8 · CAPACITY is a bounded compile-time constant (not caller-tunable) (0.1502ms)
+ ❯ src/lib/nex/observability/tests/retry-buffer.test.mjs (0 test)
+✖ TB1 · every allowlist entry exists in the repo (7.8094ms)
+✖ TB2 · no new mutation-adapter file appears outside the allowlist without opting into timeouts (1.7057ms)
+✔ TB3 · every allowlist entry has a non-empty reason (2.9875ms)
+ ❯ src/lib/nex/observability/tests/unbudgeted-mutations.test.mjs (0 test)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36.8964
+ℹ tests 3
+ℹ suites 0
+ℹ pass 1
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 47.7897
+
+✖ failing tests:
+
+test at src\lib\nex\observability\tests\unbudgeted-mutations.test.mjs:68:31
+✖ TB1 · every allowlist entry exists in the repo (7.8094ms)
+  AssertionError [ERR_ASSERTION]: T-5b allowlist references files that no longer exist: src/lib/nex/delivery/adapters/mailgun.ts · src/lib/nex/delivery/adapters/postmark.ts · src/lib/nex/delivery/adapters/sendgrid.ts · src/lib/nex/delivery/adapters/ses.ts · src/lib/nex/delivery/adapters/smtp.ts. Either the file was moved (update the allowlist) or retired (remove the entry).
+  
+  5 !== 0
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/observability/tests/unbudgeted-mutations.test.mjs:69:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 5,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at src\lib\nex\observability\tests\unbudgeted-mutations.test.mjs:78:31
+✖ TB2 · no new mutation-adapter file appears outside the allowlist without opting into timeouts (1.7057ms)
+  AssertionError [ERR_ASSERTION]: T-5b drift-catcher · new mutation-adapter file(s) appeared without a timeout-config import AND without an allowlist entry: src/lib/nex/notifications/adapters/resend_email.ts. Either add a timeout+idempotency-key AND import from @/lib/nex/config/timeouts, or add an allowlist entry with a justification.
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/observability/tests/unbudgeted-mutations.test.mjs:107:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+ ❯ src/lib/nex/storage/tests/object-postgres-contract.test.mjs (0 test)
+✔ FZ1 · minimal call fires insertResult → completeJob in order · returns result (2.8578ms)
+✔ FZ2 · full call fires insertResult → enqueueJob → insertAudit → completeJob in exact order (3.7402ms)
+✔ FZ3 · nextJob absent · skips enqueueJob but still fires audit + completeJob (0.8054ms)
+✔ FZ4 · finalAudit absent · skips insertAudit but still fires completeJob (image-analyst pattern) (0.2226ms)
+✔ FZ5 · betweenNextJobAndFinalAudit hook fires AFTER enqueueJob and BEFORE finalAudit (learning-context pattern) (0.2724ms)
+✔ FZ6 · betweenNextJobAndFinalAudit throw propagates · completeJob does NOT fire (0.2471ms)
+✔ FZ7 · caller must NOT pass job_id in resultInput (helper injects it) (0.1943ms)
+✔ FZ8 · failWorkerJob calls store.failJob with err.message · emits structured log · returns the message (0.952ms)
+✔ FZ9 · failWorkerJob handles non-Error input via String(err) coercion (0.6172ms)
+✔ FZ10 · failWorkerJob NEVER calls completeJob (failure path is distinct) (0.4955ms)
+✔ FZA1 · every worker imports finalizeWorkerJob + failWorkerJob from _finalize (1.8671ms)
+✔ FZA2 · no worker retains a direct store.insertResult call outside finalizeWorkerJob (2.1203ms)
+✔ FZA3 · no worker retains a direct store.completeJob(job.id, ...) call outside finalizeWorkerJob (2.1098ms)
+✔ FZA4 · no worker retains a direct store.failJob(...) call outside failWorkerJob (1.6156ms)
+✔ FZA5 · genuine convergence proof · exactly ONE finalizeWorkerJob call per worker success path (2.1794ms)
+ ❯ src/lib/nex/brain/workers/tests/finalize.test.mjs (0 test)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 43.4039
+✔ W1 · every worker file imports the F4 logger from @/lib/nex/observability/logger (4.1505ms)
+✔ W2 · every worker instantiates `const log = logger("worker.<name>")` (5.5578ms)
+✔ W3 · no worker file contains a bare console.log|warn|error (5.2399ms)
+✔ W4 · every job-processing worker calls enterJobCorrelationScope(job) after claimNextJob (1.819ms)
+ ❯ src/lib/nex/brain/workers/tests/worker-logger-adoption.test.mjs (0 test)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39.342
+✖ CADP1 · every Layer 1 adopted route wraps handler in runFromRequest (9.3157ms)
+✔ CADP2 · getCorrelationId + runWithCorrelationId + runFromRequest defined exactly once (1159.3517ms)
+✔ CADP3 · AsyncLocalStorage instantiated exactly once across src/lib/nex/** (337.7917ms)
+✖ CADP4 · middleware sets x-request-id on every response return (1.6475ms)
+✔ CADP5 · signals.ts implements explicit-wins-over-ALS via nullish coalescing (0.8564ms)
+ ❯ src/lib/nex/observability/tests/correlation-adoption.test.mjs (0 test)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1560.3823
+
+✖ failing tests:
+
+test at src\lib\nex\observability\tests\correlation-adoption.test.mjs:93:31
+✖ CADP1 · every Layer 1 adopted route wraps handler in runFromRequest (9.3157ms)
+  AssertionError [ERR_ASSERTION]: Layer 1 adoption regression · these routes lost their runFromRequest wrapper: src/app/api/nex/knowledge-inbox/upload/route.ts (file does not exist) · src/app/api/nex/knowledge-inbox/urls/route.ts (file does not exist) · src/app/api/nex/knowledge-inbox/dump/route.ts (file does not exist) · src/app/api/nex/knowledge-inbox/process/route.ts (file does not exist) · src/app/api/nex/storage/gates/route.ts (file does not exist) · src/app/api/nex/brain/supervisor-sweep/route.ts (file does not exist) · src/app/api/nex/brain/cron-tick/route.ts (file does not exist) · src/app/api/nex/brain/records/route.ts (file does not exist) · src/app/api/nex/brain/jobs/route.ts (file does not exist) · src/app/api/nex/brain/timeline/route.ts (file does not exist) · src/app/api/nex/brain/feedback/route.ts (file does not exist) · src/app/api/nex/alerts/evaluate/route.ts (file does not exist)
+  
+  12 !== 0
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/observability/tests/correlation-adoption.test.mjs:112:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 12,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at src\lib\nex\observability\tests\correlation-adoption.test.mjs:163:31
+✖ CADP4 · middleware sets x-request-id on every response return (1.6475ms)
+  AssertionError [ERR_ASSERTION]: middleware has 1 bare "return NextResponse.*" that bypass attachCid · every response return must attach the CID
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (C:/Users/Victus/nexapp/src/lib/nex/observability/tests/correlation-adoption.test.mjs:174:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+✔ RU1 · exactly one file references process.env.NEX_PROD_READONLY_URL (810.9827ms)
+✔ RU2 · only verification/** OR scripts/prove-production-*-readonly.* may import readOnlyProductionClient (708.5472ms)
+✔ RU3 · files under src/lib/nex/verification/** must not import withClient / withBrainRole / raw pg (1.0218ms)
+✔ RU4 · readonly-pg.ts encodes all Layer 2 rejection strings + Layer 3/4 primitives (0.7942ms)
+ ❯ src/lib/nex/verification/tests/readonly-usage-drift.test.mjs (0 test)
+ ❯ src/lib/nex/hq/tests/worker-criteria.test.mjs (0 test)
+ ❯ src/lib/nex-agent-runtime/process/__tests__/daemon-real-process.test.ts (4 tests | 4 failed) 60352ms
+     × R-1 · CLI spawns real detached process · PID file appears · PID is alive 15105ms
+     × R-2 · child SURVIVES parent-child handle unref (detached semantics) 15100ms
+     × R-3 · heartbeats accumulate in GB storage under agent identity · signature verifiable 15019ms
+     × R-4 · restart preserves SAME identity public key · new instance_id 15125ms
+ ❯ src/lib/nex/category-registry.db.test.ts (28 tests | 15 failed) 61229ms
+     × readCategoryRegistryRows returns the seed rows 818ms
+     × validateRegistryParity returns ok=true (TS ↔ DB aligned) 803ms
+     × rejects admin_decision != 'pending' with null reviewed_at/by (consistency CHECK) 5006ms
+     × category_candidate row without admin approval does NOT create a category_registry row (Phase 0 gate) 5013ms
+     × seed rows are stable across re-runs (ON CONFLICT DO NOTHING preserves timestamps) 5009ms
+     × approve writes admin_decision + reviewed_at + reviewed_by + notes 5008ms
+     × reject writes admin_decision='rejected' 5006ms
+     × duplicate writes duplicate_of_registry_id 5004ms
+     × cannot re-decide an already-decided candidate 5004ms
+     × approving does NOT create a category_registry row 5011ms
+     × annotation persists after candidate deletion · candidate_id becomes NULL · snapshot retained 5001ms
+     × FK definition is ON DELETE SET NULL (not CASCADE) 5010ms
+     × candidate_snapshot column exists with jsonb type + NOT NULL 5006ms
+     × HQ decide route never emits category_registry SQL 1ms
+     × Directory Factory page never emits category_registry SQL 1ms
+
+ Test Files  383 failed | 1051 passed | 5 skipped (1439)
+      Tests  366 failed | 23198 passed | 330 skipped | 9 todo (23903)
+     Errors  2 errors
+   Start at  19:10:13
+   Duration  109.05s (transform 50.02s, setup 31.98s, import 117.81s, tests 367.99s, environment 33.13s)
+

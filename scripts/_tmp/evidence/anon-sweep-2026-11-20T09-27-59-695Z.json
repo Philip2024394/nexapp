@@ -1,0 +1,139 @@
+{
+  "when": "2026-11-20T09:27:59.694Z",
+  "server": "http://localhost:3008",
+  "node": "v26.13.1",
+  "routes": [
+    {
+      "label": "root-splash",
+      "requested": "/",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native",
+      "has_main": true,
+      "has_sign_in_marker": false,
+      "body_len": 36532
+    },
+    {
+      "label": "nex-splash",
+      "requested": "/nex-native",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native",
+      "has_main": true,
+      "has_sign_in_marker": false,
+      "body_len": 37686
+    },
+    {
+      "label": "sign-in",
+      "requested": "/nex-native/sign-in",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/sign-in",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/sign-in",
+      "has_main": true,
+      "has_sign_in_marker": true,
+      "body_len": 63296
+    },
+    {
+      "label": "sign-up",
+      "requested": "/nex-native/sign-in?mode=signup",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/sign-in?mode=signup",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/sign-in?mode=signup",
+      "has_main": true,
+      "has_sign_in_marker": true,
+      "body_len": 61040
+    },
+    {
+      "label": "free-chat",
+      "requested": "/nex-native/free-chat",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/free-chat",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/free-chat",
+      "has_main": true,
+      "has_sign_in_marker": false,
+      "body_len": 62753
+    },
+    {
+      "label": "free-chat-themes",
+      "requested": "/nex-native/free-chat?show-themes=1",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/free-chat?show-themes=1",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/free-chat?show-themes=1",
+      "has_main": true,
+      "has_sign_in_marker": false,
+      "body_len": 62813
+    },
+    {
+      "label": "directory",
+      "requested": "/nex-native/directory",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/directory",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/directory",
+      "has_main": true,
+      "has_sign_in_marker": false,
+      "body_len": 229255
+    },
+    {
+      "label": "chat-locked",
+      "requested": "/nex-native/chat",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/chat",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/sign-in",
+      "has_main": true,
+      "has_sign_in_marker": true,
+      "body_len": 63488
+    },
+    {
+      "label": "contacts-locked",
+      "requested": "/nex-native/contacts",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/contacts",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/sign-in",
+      "has_main": true,
+      "has_sign_in_marker": true,
+      "body_len": 63299
+    },
+    {
+      "label": "vault-locked",
+      "requested": "/nex-native/vault/home",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/vault/home",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/sign-in?next=/nex-native/vault/home",
+      "has_main": true,
+      "has_sign_in_marker": true,
+      "body_len": 63976
+    },
+    {
+      "label": "manage-locked",
+      "requested": "/nex-native/manage",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/manage",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/sign-in?next=/nex-native/manage",
+      "has_main": true,
+      "has_sign_in_marker": true,
+      "body_len": 63932
+    },
+    {
+      "label": "themes-library",
+      "requested": "/nex-native/chat-themes-library",
+      "status": 200,
+      "final_url": "http://localhost:3008/nex-native/chat-themes-library",
+      "title": "NEX · Chat that's yours",
+      "settled_url": "http://localhost:3008/nex-native/chat-themes-library/all",
+      "has_main": false,
+      "has_sign_in_marker": false,
+      "body_len": 36136
+    }
+  ]
+}

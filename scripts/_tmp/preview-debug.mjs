@@ -1,0 +1,13 @@
+import { chromium } from "playwright";
+const b = await chromium.launch({ headless: true });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+const p = await ctx.newPage();
+const errors = [];
+p.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+p.on("console", (m) => { if (m.type() === "error") errors.push("console.error: " + m.text()); });
+await p.goto("http://localhost:3008/nex-native/product/preview", { waitUntil: "networkidle", timeout: 30000 });
+const titleText = await p.locator("[data-nex-product-title]").textContent();
+const titleBox = await p.locator("[data-nex-product-title]").boundingBox();
+const titleColor = await p.locator("[data-nex-product-title]").evaluate((el) => getComputedStyle(el).color);
+console.log(JSON.stringify({ titleText, titleBox, titleColor, errors }, null, 2));
+await b.close();
