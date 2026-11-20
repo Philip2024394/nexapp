@@ -1,0 +1,51 @@
+{
+  "when": "2026-11-17T10:17:35.643Z",
+  "buyer_q": "CPTEST-v4-mwkjglnf-buyerQ",
+  "seller_r": "CPTEST-v4-mwkjglnf-sellerR",
+  "pre_buyer_device_count": 24,
+  "pre_seller_device_count": 4,
+  "step1": {
+    "url": "http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990?product=47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "conversation_id": "6ad024dd-473e-4415-9ef2-8b714b0c3990",
+    "buyer_device_count_after_mount": 25,
+    "buyer_device_delta": 1
+  },
+  "step2": {
+    "url": "http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990",
+    "seller_device_count_after_mount": 5,
+    "seller_device_delta": 1
+  },
+  "step3": {
+    "db_msgs_before_send": 28,
+    "db_msgs_after_send": 28,
+    "db_rows_delta": 0,
+    "marker_in_buyer_dom_after_send": true,
+    "marker_in_buyer_dom_after_reload": false,
+    "marker_occurrences_after_reload": 0
+  },
+  "step4": {
+    "marker_in_seller_dom": false,
+    "message_rows_count": 2,
+    "product_card_count": 0,
+    "seller_sent": false
+  },
+  "step5": {
+    "buyer_sees_buyer_q": false,
+    "buyer_sees_seller_r": false,
+    "message_rows_count": 3,
+    "product_card_count": 0
+  },
+  "final_db_rows": 59,
+  "final_distinct_groups": 2,
+  "final_senders": [
+    "d977070d-6210-4cd5-a731-f4892dc7047f"
+  ],
+  "buyer_console": [
+    "Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math",
+    "Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math",
+    "Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math"
+  ],
+  "seller_console": [
+    "Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math"
+  ]
+}

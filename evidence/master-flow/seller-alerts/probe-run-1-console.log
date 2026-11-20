@@ -1,0 +1,28 @@
+{"ts":"2026-11-16T06:26:46.969Z","phase":"pre_signin_seller"}
+{"ts":"2026-11-16T06:26:56.925Z","phase":"seller_on_manage","url":"http://localhost:3008/nex-native/manage"}
+{"ts":"2026-11-16T06:26:56.936Z","phase":"pre_orders_card_text","text":"Orders Buyer orders · newest first"}
+{"ts":"2026-11-16T06:26:56.945Z","phase":"pre_badge_mounted","count":0}
+  📸 evidence\master-flow\seller-alerts\01-seller-manage-pre-order.png
+{"ts":"2026-11-16T06:27:02.879Z","phase":"pre_orders_list_rows","rowCount":0}
+  📸 evidence\master-flow\seller-alerts\02-seller-orders-list-pre.png
+{"ts":"2026-11-16T06:27:04.457Z","phase":"pre_unread_count_endpoint","result":{"status":200,"body":{"count":0,"chat":0,"orders":0}}}
+{"ts":"2026-11-16T06:27:04.559Z","phase":"pre_signin_buyer"}
+{"ts":"2026-11-16T06:27:11.003Z","phase":"buyer_signed_in"}
+{"ts":"2026-11-16T06:27:14.786Z","phase":"cart_seeded_as_setup","key":"nex_cart_v1","productId":"47bdf78e-84a9-4ca5-b33f-0676981df65b"}
+  📸 evidence\master-flow\seller-alerts\03a-buyer-cart-page.png
+{"ts":"2026-11-16T06:27:17.599Z","phase":"cart_page_rendered","productVisible":false}
+
+[cleanup] scoped by exact order ids created by this run
+  deleted cart_order messages: 0
+  deleted plain cart chat messages: 0
+  deleted orphan time-scoped orders: 0
+
+Evidence saved to evidence/master-flow/seller-alerts
+file:///C:/Users/Victus/nexapp/scripts/_tmp/seller-alerts-probe.mjs:219
+  if (!cartHasProduct) throw new Error("cart page did not render Product X");
+                             ^
+
+Error: cart page did not render Product X
+    at file:///C:/Users/Victus/nexapp/scripts/_tmp/seller-alerts-probe.mjs:219:30
+
+Node.js v26.13.1

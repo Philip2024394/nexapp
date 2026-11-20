@@ -222,15 +222,17 @@ describe("I · Phase 0 honest-flag corrections in _sections.ts", () => {
     expect(row?.href).not.toBe("/nex-native/vault/home");
   });
 
-  test("Affiliate row is registered in the Payments & NEX Wallet group", () => {
-    // Phase 0 promoted the previously-inline affiliate row into the
-    // IA so there is a single source of truth. The joined-state
-    // transform happens at render time inside page.tsx.
+  test("Affiliate row is NOT present in the IA (2026-11-17 Settings Correction removal)", () => {
+    // Founder-directed removal of the Affiliate Settings doorway in
+    // the 2026-11-17 Settings Correction (§2). Formerly registered in
+    // the Payments & NEX Wallet group · now absent. The affiliate
+    // service + dashboard surface are out of this removal's scope (UI
+    // doorway only). The joined-state transform in page.tsx is now a
+    // no-op for this row because the IA no longer produces it.
     const group = SETTINGS_GROUPS.find((g) => g.key === "payments-wallet");
     expect(group).toBeDefined();
     const affiliate = group?.rows.find((r) => r.key === "affiliate");
-    expect(affiliate).toBeDefined();
-    expect(affiliate?.href).toBe("/nex-native/settings/affiliate");
+    expect(affiliate).toBeUndefined();
   });
 
   // Stage 3 (2026-10-15 Notifications graduation) · five regression

@@ -1,0 +1,77 @@
+STEP A · buyer sign-in
+STEP B · open product page
+STEP C · click Add to Cart (rendered button)
+STEP D · open cart via header cart icon
+STEP E · persistence after reload
+STEP F · go to full cart page + submit no-gateway order
+  cart page loaded · waiting for Checkout button
+STEP G · DB verify nex_order row
+STEP H · seller sign-in + open order detail
+STEP I · seller reload · persistence
+
+DONE
+{
+  "when": "2026-11-17T11:10:52.922Z",
+  "unique_note": "CP-R4-1794913852922",
+  "product_id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+  "product_name": "E2E PLQ Widget X mwit8ina",
+  "step_B": {
+    "url": "http://localhost:3008/nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "product_title_visible": true,
+    "body_includes_product_name": true
+  },
+  "step_C": {
+    "add_btn_found": true,
+    "cart_items_after_click": 1,
+    "cart_first_product_id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "cart_first_qty": 1
+  },
+  "step_D": {
+    "header_cart_btn_present": true,
+    "dialog_count": 1,
+    "dialog_center_x": 195,
+    "viewport_mid": 195,
+    "off_center_px": 0
+  },
+  "step_E": {
+    "cart_items_after_reload": 1,
+    "persisted": true
+  },
+  "step_F": {
+    "checkout_btn_present": true,
+    "body_includes_product": true,
+    "body_sample": "← Back Your cart One shop · one checkout 🏪 E2E CK5 Seller Shop mwhyjc0c 1 item × E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × SUBTOTAL €17.99 CHECKOUT → Checkout sends your order into the shop’s chat with you · NEX never handles payments · the shop confirms + collects directly.",
+    "cart_localstorage_items": 1,
+    "redirected_to": "http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1"
+  },
+  "step_G": {
+    "order_id": "7911e1e2-bb62-49ec-95dd-26e060760397",
+    "state": "created",
+    "is_truthful_unpaid": true,
+    "product_id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "product_id_matches": true,
+    "price_pence": "1799",
+    "currency": "EUR",
+    "customer_note_matches": true,
+    "customer_note": "CP-R4-1794913852922"
+  },
+  "order_id": "7911e1e2-bb62-49ec-95dd-26e060760397",
+  "step_H": {
+    "url": "http://localhost:3008/nex-native/manage/orders/7911e1e2-bb62-49ec-95dd-26e060760397",
+    "detail_rendered": true,
+    "match_tier": "deterministic_order_id",
+    "body_includes_unique_note": true,
+    "body_includes_product_name": true,
+    "body_includes_paid_wrong": true,
+    "body_includes_pending_or_created": true
+  },
+  "step_I": {
+    "detail_still_rendered": true,
+    "unique_note_still_visible": true,
+    "still_not_paid": false
+  },
+  "buyer_console": [
+    "Cannot specify a encType or method for a form that specifies a function as the action. React provides those automatically. They will get overridden."
+  ],
+  "seller_console": []
+}

@@ -56,13 +56,21 @@ export interface IdentityWholesaleEditorProps {
   readonly onIdentityChange: (next: IdentityDraft) => void;
   readonly wholesale: WholesaleDraft;
   readonly onWholesaleChange: (next: WholesaleDraft) => void;
+  /**
+   * W14 (2026-11-18) · suppress the internal single-tier WholesaleBlock
+   * when the parent will render the multi-tier editor itself. Default
+   * false preserves the existing create-flow behaviour unchanged.
+   */
+  readonly hideWholesale?: boolean;
 }
 
 export function IdentityWholesaleEditor(props: IdentityWholesaleEditorProps): React.JSX.Element {
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <IdentityBlock value={props.identity} onChange={props.onIdentityChange} />
-      <WholesaleBlock value={props.wholesale} onChange={props.onWholesaleChange} />
+      {props.hideWholesale ? null : (
+        <WholesaleBlock value={props.wholesale} onChange={props.onWholesaleChange} />
+      )}
     </section>
   );
 }

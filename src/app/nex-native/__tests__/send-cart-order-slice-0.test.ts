@@ -191,6 +191,13 @@ function installHappyPath() {
     id: SHOP_ID,
     owner_account_id: SHOP_OWNER_ID,
     display_name: "Mock Shop",
+    // 2026-11-18 · R5 · G3-Server authoritative-distance guard now
+    // requires seller origin coords to be configured. Tests that don't
+    // send a delivery estimate don't engage G3-Server; tests that DO
+    // send an estimate must either supply matching buyer coords, drop
+    // fare/km so the guard short-circuits, or expect the refuse path.
+    location_lat: -6.2088,
+    location_lng: 106.8456,
   });
   getProductByIdMock.mockResolvedValue({
     id: PRODUCT_A,
@@ -240,7 +247,7 @@ function makeFormData(
     shop_id?: string;
     shop_display_name?: string;
     items?: CartLine[];
-    delivery_address?: Record<string, string> | null;
+    delivery_address?: Record<string, unknown> | null;
     delivery_quote?: unknown;
     direct_price?: unknown;
     buyer_notes?: unknown;
@@ -896,16 +903,41 @@ describe("sendCartOrderAction · Slice 0.6 · delivery_quote tampering", () => {
     expect(dq.eta_minutes).toBe(15);
   });
 
-  test("T0.6.1e · Fix A · legitimate positive estimate values propagate unchanged", async () => {
+  test("T0.6.1e · Fix A · legitimate positive estimate values propagate unchanged · uses authoritative coords+fare under R5 (2026-11-18)", async () => {
     installHappyPath();
+
+    // 2026-11-18 · R5 G3-Server · an `estimate` quote now requires
+    // buyer coords (matching the authoritative straight-line from
+    // the seller's configured origin). The happy path installs
+    // seller coords at -6.2088,106.8456 (central Jakarta). We send a
+    // matching buyer pin and compute the authoritative km + fare
+    // from the sealed rate card, then verify that these legitimate
+    // positive values flow through unchanged.
+    const { haversineKm, estimateBikeFare } = await import(
+      "@/lib/nex-native/bike-delivery-service"
+    );
+    const SELLER_LAT = -6.2088;
+    const SELLER_LNG = 106.8456;
+    const BUYER_LAT = -6.2358;
+    const BUYER_LNG = 106.8456;
+    const authKm = haversineKm(SELLER_LAT, SELLER_LNG, BUYER_LAT, BUYER_LNG);
+    const authFare = estimateBikeFare(authKm);
 
     const err = await runSendCart(
       makeFormData({
+        delivery_address: {
+          recipient_name: "Buyer",
+          phone: "081200000000",
+          street: "Jl Test 1",
+          city: "Jakarta",
+          lat: BUYER_LAT,
+          lng: BUYER_LNG,
+        },
         delivery_quote: {
           kind: "estimate",
-          fare_pence: 2500,
-          distance_km: 3.2,
-          eta_minutes: 12,
+          fare_pence: authFare.fare_pence,
+          distance_km: authKm,
+          eta_minutes: authFare.eta_minutes,
         },
       }),
     );
@@ -926,9 +958,9 @@ describe("sendCartOrderAction · Slice 0.6 · delivery_quote tampering", () => {
     };
     const dq = callArg.attachment_meta.cart.delivery_quote!;
     expect(dq.kind).toBe("estimate");
-    expect(dq.fare_pence).toBe(2500);
-    expect(dq.distance_km).toBeCloseTo(3.2);
-    expect(dq.eta_minutes).toBe(12);
+    expect(dq.fare_pence).toBe(authFare.fare_pence);
+    expect(dq.distance_km).toBeCloseTo(authKm, 5);
+    expect(dq.eta_minutes).toBe(authFare.eta_minutes);
     expect(dq.currency).toBe("IDR");
   });
 

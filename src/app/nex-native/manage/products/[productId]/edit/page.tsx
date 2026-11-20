@@ -124,7 +124,11 @@ export default async function EditProductPage({
     [COVER_VIDEO_SPEC_KEY]: _coverVideoBlock,
     ...categoryOnlySpec
   } = rawSpec;
-  void _marketBlock; void _deliveryBlock; void _identityBlock; void _wholesaleBlock; void _returnsBlock; void _colorsBlock; void _coverVideoBlock;
+  void _marketBlock; void _deliveryBlock; void _identityBlock; void _returnsBlock; void _colorsBlock; void _coverVideoBlock;
+  // W14 (2026-11-18) · preserve the raw __wholesale jsonb so the client
+  // can hydrate the multi-tier editor (tier array + W13 extensions · the
+  // legacy `extractWholesale` loses those fields).
+  const rawWholesaleBlock: unknown = _wholesaleBlock;
   const market = extractMarket(rawSpec);
   const delivery = extractDelivery(rawSpec);
   const identity = extractIdentity(rawSpec);
@@ -189,6 +193,7 @@ export default async function EditProductPage({
         delivery: initialDelivery,
         identity: initialIdentity,
         wholesale: initialWholesale,
+        rawWholesaleSpec: rawWholesaleBlock ?? null,
         returns: initialReturns,
         colors: initialColors,
         coverVideo: initialCoverVideo,

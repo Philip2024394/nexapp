@@ -41,6 +41,7 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import { ShopCheckoutButton } from "../../_shop-checkout-button";
 import { ShopCancelButton } from "../../_shop-cancel-button";
+import { ShopTrialPreDisclosure } from "../../_shop-trial-pre-disclosure";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { NexPageHeader } from "../../_page-header";
 import type { NexAccountRow } from "@/lib/nex-native/types";
@@ -292,7 +293,19 @@ function CurrentPlanCard({
         {hint}
       </p>
       {!isPaid ? (
-        <div style={{ marginTop: 10 }}>
+        <div
+          style={{
+            marginTop: 12,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          {/* A05 · 2026-11-18 · Guardrail 1 of 4 (Option B sealed
+              2026-11-08) · pre-trial disclosure MUST sit above the
+              checkout button so the user sees card-required + day-8
+              charge + price quad before any POST to Stripe. */}
+          <ShopTrialPreDisclosure id="shop-trial-disclosure" />
           <ShopCheckoutButton />
         </div>
       ) : (

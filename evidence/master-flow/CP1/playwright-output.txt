@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [session-persistence-390] › tests\e2e-p6-isolation\session-persistence.spec.ts:118:7 › Session persistence across context close + reopen (sandbox · Hammerex) › Test 1 · app session survives context close + reopen (24.0s)
+  ✓  2 [session-persistence-390] › tests\e2e-p6-isolation\session-persistence.spec.ts:189:7 › Session persistence across context close + reopen (sandbox · Hammerex) › Test 2 · Vault remains SEPARATELY locked after same context close + reopen (45.6s)
+  ✓  3 [session-persistence-390] › tests\e2e-p6-isolation\session-persistence.spec.ts:288:7 › Session persistence across context close + reopen (sandbox · Hammerex) › Test 3 · Vault-lock independence · locking Vault does NOT sign out of the app (36.0s)
+
+  3 passed (1.8m)

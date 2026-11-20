@@ -296,21 +296,18 @@ export function E2eComposerIntercept(
     fallbackFormRef.current = null;
     setFallbackPrompt(null);
   };
-  const confirmFallback = () => {
-    const form = fallbackFormRef.current;
-    const onSubmit = onSubmitRef.current;
-    setFallbackPrompt(null);
+  // Owner-authorised 2026-11-17 R3 · plaintext fallback RETIRED.
+  // The modal used to offer "Send anyway" which would detach the
+  // capture listener and call form.requestSubmit() to ship the body
+  // through sendPeerMessageAction. Under the sealed device-only E2E
+  // doctrine that path is now server-side-refused too (see the
+  // body/NEX1 check in _actions.ts). This handler is retained only
+  // as a dismiss shim so any stale subscribers still get a clean
+  // close · it never writes plaintext. The modal UI below no longer
+  // renders a "Send anyway" button.
+  const dismissFallback = () => {
     fallbackFormRef.current = null;
-    if (!form) return;
-    // Temporarily detach our capture listener so the user's confirmed
-    // plaintext submit actually reaches the Server Action.
-    if (onSubmit) form.removeEventListener("submit", onSubmit, true);
-    setStatus("fallback");
-    try {
-      form.requestSubmit();
-    } finally {
-      if (onSubmit) form.addEventListener("submit", onSubmit, true);
-    }
+    setFallbackPrompt(null);
   };
 
   return (
@@ -339,7 +336,7 @@ export function E2eComposerIntercept(
         <FallbackConfirmModal
           reason={fallbackPrompt.reason}
           onCancel={cancelFallback}
-          onConfirm={confirmFallback}
+          onDismiss={dismissFallback}
         />
       )}
     </>
@@ -349,11 +346,14 @@ export function E2eComposerIntercept(
 function FallbackConfirmModal({
   reason,
   onCancel,
-  onConfirm,
+  onDismiss,
 }: {
   reason: "no_peer_devices" | "no_self_devices";
   onCancel: () => void;
-  onConfirm: () => void;
+  // Owner-authorised 2026-11-17 R3 · plaintext fallback retired. The
+  // modal is now dismiss-only · no path exists to ship plaintext from
+  // this surface. The handler is passed in so parent state can clear.
+  onDismiss: () => void;
 }): React.JSX.Element {
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -367,10 +367,13 @@ function FallbackConfirmModal({
     reason === "no_peer_devices"
       ? "Secure chat isn't available yet"
       : "This device isn't ready for secure chat";
+  // Owner-authorised 2026-11-17 R3 · copy updated to reflect that
+  // plaintext fallback no longer exists on this surface. Private peer
+  // chat is end-to-end encrypted or it does not send.
   const body =
     reason === "no_peer_devices"
-      ? "This contact hasn't opened NEX on any device yet, so we can't encrypt for them. If you send now, this message goes as a standard message · not end-to-end encrypted."
-      : "This browser hasn't finished setting up your encryption key yet. If you send now, this message goes as a standard message · not end-to-end encrypted.";
+      ? "This contact hasn't opened NEX on any device yet, so we can't encrypt for them. Your message hasn't been sent. Try again once they've opened NEX on a device."
+      : "This browser hasn't finished setting up your encryption key yet. Your message hasn't been sent. Reload the chat and try again in a moment.";
 
   return (
     <>
@@ -445,30 +448,18 @@ function FallbackConfirmModal({
         >
           {body}
         </div>
+        {/* Owner-authorised 2026-11-17 R3 · "Send anyway" plaintext
+            button retired. The dialog is now dismiss-only. The server
+            action enforces the same boundary · even if a stale client
+            tried to force-submit, the server rejects. */}
         <div style={{ display: "flex", gap: 8 }}>
           <button
             type="button"
-            onClick={onCancel}
-            autoFocus
-            style={{
-              flex: 1,
-              minHeight: 44,
-              padding: "10px 14px",
-              borderRadius: 10,
-              background: "rgba(0,0,0,0.35)",
-              border: "1px solid rgba(139,169,209,0.30)",
-              color: "#F4F7FC",
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-              cursor: "pointer",
+            onClick={() => {
+              onCancel();
+              onDismiss();
             }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
+            autoFocus
             style={{
               flex: 1,
               minHeight: 44,
@@ -483,7 +474,7 @@ function FallbackConfirmModal({
               cursor: "pointer",
             }}
           >
-            Send anyway
+            OK
           </button>
         </div>
       </div>

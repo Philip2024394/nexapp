@@ -45,9 +45,14 @@ import { headers } from "next/headers";
 // /sign-in even though the viewer had a valid override.
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { NexPageHeader } from "../_page-header";
-import { signOutAction } from "../_actions";
+// Gap D wiring · 2026-11-17 continuation 3 (addendum round).
+// Server Component cannot carry an onSubmit handler directly; a tiny
+// client boundary owns the <form action={signOutAction}> + synchronous
+// translation-only cleanup. signOutAction is now imported only there.
+import { SettingsSignOutForm } from "./_sign-out-form";
 import { isAffiliateAccount } from "@/lib/nex-native/affiliate-service";
 import { SETTINGS_GROUPS, type SettingsRowDef } from "./_sections";
+import { NotificationsSettingsEntry } from "./_notifications-settings-entry";
 import { resolveServerLocale, tFor } from "@/lib/nex/i18n/server";
 import type { I18nKey } from "@/lib/nex/i18n/keys";
 
@@ -105,6 +110,7 @@ interface ResolvedRow {
   readonly subtitle: string;
   readonly comingSoon: boolean;
   readonly highlighted: boolean;
+  readonly actionKind?: "open-notifications-drawer";
 }
 
 export default async function SettingsIndex({
@@ -182,6 +188,7 @@ export default async function SettingsIndex({
       subtitle: t(subtitleKey),
       comingSoon: row.comingSoon === true,
       highlighted: row.highlighted === true,
+      actionKind: row.actionKind,
     };
   }
 
@@ -486,21 +493,10 @@ export default async function SettingsIndex({
             </Link>
           </div>
 
-          <form action={signOutAction} style={{ marginTop: 20, textAlign: "center" }}>
-            <button
-              type="submit"
-              style={{
-                background: "transparent",
-                color: NEX.textSecondary,
-                border: "none",
-                fontSize: 12,
-                cursor: "pointer",
-                textDecoration: "underline",
-              }}
-            >
-              {t("settings.page.signOut")}
-            </button>
-          </form>
+          <SettingsSignOutForm
+            label={t("settings.page.signOut")}
+            textSecondary={NEX.textSecondary}
+          />
           {/* close data-nex-settings-panel */}
           </div>
         </div>
@@ -682,6 +678,19 @@ function SettingsRowCard({ row, t }: { row: ResolvedRow; t: T }) {
       </div>
     </>
   );
+
+  // 2026-11-17 · Settings Correction §3 · when a row carries an
+  // actionKind, it is rendered as a button that fires a client-side
+  // trigger (e.g., opening the canonical LEFT notifications drawer)
+  // rather than navigating. The action wrapper owns the hidden drawer
+  // mount + CustomEvent dispatch (see _notifications-settings-entry.tsx).
+  if (row.actionKind === "open-notifications-drawer") {
+    return (
+      <NotificationsSettingsEntry rowKey={row.key} rowStyle={style}>
+        {body}
+      </NotificationsSettingsEntry>
+    );
+  }
 
   // Null-href rows are permanently non-navigable (e.g., Wallet which is
   // comingSoon with no backing route). ComingSoon rows WITH an href

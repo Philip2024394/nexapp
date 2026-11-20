@@ -51,6 +51,22 @@ import {
 } from "@/lib/nex-native/affiliate-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import * as businessService from "@/lib/nex-native/business-service";
+// Lane F · F-A sealed §16.19.7 · 2026-11-19 · per-ring vs rate-card
+// cart classification + server-side verification helpers. Imported
+// statically so the classifier is part of the module graph the
+// Slice 0 + G3-Server tests already mock with inert services.
+import {
+  classifyCartItemDelivery,
+  classifyCartDeliveryShape,
+  extractCartItemRadii,
+  unionPerRingRadii,
+  type CartItemDeliveryKind,
+} from "@/lib/nex-native/delivery/cart-delivery-shape";
+import {
+  quoteLocalDelivery,
+  isSubmittedLocalQuoteAuthentic,
+} from "@/lib/nex-native/delivery/local-delivery-quote";
+import type { LocalRadiusEntryT } from "@/lib/nex-native/catalogue/delivery-spec";
 // 2026-10-27 · admin-tier action code at lines ~6934 / 6939 / 6977 /
 // 7815 uses the NEX-native service-role client directly for auth
 // listing + nex_account updates. The import had been dropped; four
@@ -115,6 +131,17 @@ import { NEX_BANNER_PALETTES, NEX_BANNER_STATUSES } from "@/lib/nex-native/banne
 import * as liveService from "@/lib/nex-native/live-service";
 import { NEX_ACCOUNT_KINDS, NEX_ACCOUNT_TIERS, NEX_CHAT_THEMES, NEX_PRODUCT_STOCK_STATUSES, type NexAccountKind, type NexAccountTier, type NexChatTheme, type NexDailyActivity, type NexProductStockStatus } from "@/lib/nex-native/types";
 import { enqueueNexReply } from "@/lib/nex-native/intelligence/enqueue-nex-reply";
+// 2026-11-19 · Prompt-7 round 2 · owner-stated access policy:
+// when NEX_PRELAUNCH_MODE is on, the sign-in page is allowlisted so a
+// signed-out founder can reach it, but anonymous signups must still be
+// refused BEFORE they create an auth.users row. The guard fires at the
+// top of createNexAccountAction below. Pure imports · no I/O, no
+// supabase-admin dependency.
+import {
+  getFounderBypassUids,
+  isFounderUid,
+  isPrelaunchModeOn,
+} from "@/lib/nex-native/prelaunch/feature-flag";
 
 export type ActionResult =
   | { ok: true }
@@ -229,6 +256,41 @@ async function enforceAccountCreateRateLimit(
 }
 
 export async function createNexAccountAction(formData: FormData): Promise<never> {
+  // 2026-11-19 · Prompt-7 round 2 · prelaunch access guard. The owner's
+  // access-policy decision allowlists /nex-native/sign-in so a signed-
+  // OUT founder can reach the sign-in form during prelaunch (re-entry
+  // path), but NEW signups must be refused for non-founders. This runs
+  // BEFORE the rate limit so a flood of prelaunch-rejected attempts
+  // does not pollute the account_create ring and cannot consume the
+  // bot-flood budget intended for real signup spam. Founders currently
+  // signed in on this device fall through normally (their account
+  // already exists; the signup form is harmless for them). Anonymous
+  // visitors and non-founder signed-in users are redirected to the
+  // launching-soon surface. Typing an email in the form grants NO
+  // access; authentication is the only path through.
+  if (isPrelaunchModeOn()) {
+    try {
+      const session = await resolveNexAppSessionFromContext();
+      const uid = session?.supabaseUserId ?? null;
+      if (!isFounderUid(uid)) {
+        redirect("/nexcorner");
+      }
+    } catch (e) {
+      // Fail CLOSED on any auth read error during prelaunch. The redirect
+      // thrown by `redirect()` in the inner try is a NEXT_REDIRECT marker
+      // and must bubble, not be caught.
+      if (
+        typeof e === "object" &&
+        e !== null &&
+        "digest" in e &&
+        typeof (e as { digest?: unknown }).digest === "string" &&
+        (e as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw e;
+      }
+      redirect("/nexcorner");
+    }
+  }
   // Owner directive 2026-11-08 · Item 4 · per-IP throttle on account
   // creation (3 per hour per hashed IP) BEFORE any form parsing so
   // bot farms can't spin on bad input without cost.
@@ -954,6 +1016,76 @@ export async function signOutAction(): Promise<never> {
 }
 
 // ---------------------------------------------------------------------------
+// Google OAuth · "Continue with Google"
+// Authored 2026-11-19 · Prompt-7 round 3. Owner-authorised local
+// implementation. Provider enablement + client-id/secret +
+// authorised-redirect-URL configuration remain BLOCKED and must be
+// set by the operator on the Supabase project BEFORE any live
+// journey works. The server action below is still safe to ship — it
+// simply fails with a user-visible banner if the provider is not
+// enabled on the project.
+// ---------------------------------------------------------------------------
+
+export async function continueWithGoogleAction(formData: FormData): Promise<never> {
+  const { sanitiseOAuthReturnPath, buildGoogleOAuthRedirectUrl } = await import(
+    "@/lib/nex-native/auth/google-oauth"
+  );
+
+  // Pre-gate: during prelaunch, non-founder OAuth sign-ins are
+  // ultimately refused by the callback. We ALSO short-circuit here if
+  // we can cheaply detect "already-signed-in non-founder" to avoid a
+  // round-trip through Google. A genuinely signed-OUT visitor still
+  // runs the full Google flow and hits the callback gate — that path
+  // IS the public gate for Google.
+  const existing = await resolveNexAppSessionFromContext();
+  if (isPrelaunchModeOn()) {
+    const existingUid = existing?.supabaseUserId ?? null;
+    if (existing && !isFounderUid(existingUid)) {
+      // Already signed in as a non-founder somehow: bounce them out.
+      redirect("/nexcorner");
+    }
+  }
+
+  const rawNext = formData.get("next");
+  const nextSafe = sanitiseOAuthReturnPath(
+    typeof rawNext === "string" ? rawNext : null,
+  );
+
+  const h = await nextHeaders();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3008";
+  const origin = `${proto}://${host}`;
+  const redirectTo = buildGoogleOAuthRedirectUrl(origin, nextSafe);
+
+  const supabase = await nexAppSsrServerClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+      // skipBrowserRedirect: the Supabase JS client in the server
+      // context does NOT perform a browser redirect — we handle it
+      // via Next's redirect() below.
+      skipBrowserRedirect: true,
+    },
+  });
+
+  if (error || !data?.url) {
+    // Provider not enabled, misconfigured client-id, Supabase outage,
+    // etc. Surface honestly as a recoverable sign-in banner — NEVER
+    // claim success.
+    const message = error?.message || "Google sign-in is currently unavailable.";
+    const qs = new URLSearchParams({
+      e: "oauth_unavailable",
+      m: message,
+    });
+    redirect(`/nex-native/sign-in?${qs.toString()}`);
+  }
+
+  // Hand off to Google's consent page.
+  redirect(data.url);
+}
+
+// ---------------------------------------------------------------------------
 // Conversation · post a message · enqueues a NEX reply
 // ---------------------------------------------------------------------------
 
@@ -1099,6 +1231,41 @@ export async function sendPeerMessageAction(
   if (peerAccountId === session.account.id) {
     // Self-chat is not supported · bounce back.
     redirect(`/nex-native/chat`);
+  }
+
+  // Owner-authorised 2026-11-17 R3 · fail-closed privacy boundary.
+  // sendPeerMessageAction is the plaintext server action backing the
+  // composer `<form action={...}>`. Per the sealed 2026-11-09
+  // device-only E2E chat doctrine, peer-to-peer private chat bodies
+  // MUST NOT be persisted as plaintext. The authenticated encrypted
+  // path (`/api/nex-native/peer-message/encrypted` via the Bridge 76
+  // capture-phase submit interceptor) is the only legitimate transport
+  // for private peer-chat text. If the client-side interceptor is
+  // orphaned, detached, or bypassed (direct POST to the server action,
+  // re-render race, form replacement) a plaintext body would otherwise
+  // land here. Refuse at the server boundary regardless of client state.
+  //
+  // Exceptions preserved intentionally:
+  //   · NEX1 support chat (NEX_OFFICIAL_ACCOUNT_ID) is the official
+  //     plaintext support path · Bridge 76 is already disabled for
+  //     this peer by design (E2eComposerIntercept `disabled` prop).
+  //   · Attachment-only sends (image/video/audio/document) carry no
+  //     plaintext body · their encryption/public-URL contract is
+  //     handled by the dedicated attachment pipelines.
+  //
+  // Scope note: this check lives in sendPeerMessageAction only. Other
+  // callers of peerMessageService.sendPeerMessage (cart order emission,
+  // product inquiry, system messages) are separate server actions with
+  // their own semantics and are unaffected.
+  if (body) {
+    const { isNexOfficialAccount } = await import(
+      "@/lib/nex-native/nex-official"
+    );
+    if (!isNexOfficialAccount(peerAccountId)) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?message_error=e2e_required`,
+      );
+    }
   }
 
   // Slice 0.9 · Owner-approved 2026-10-18 · sender-aware conversation
@@ -2677,6 +2844,38 @@ export async function sendCartOrderAction(
     redirect("/nex-native/cart?send_error=" + encodeURIComponent("Empty cart payload"));
   }
   const p = parsed as Record<string, unknown>;
+
+  // 2026-11-18 · R4 retail refusal · wholesale carts MUST go through
+  // `initiateWholesaleOrderAction` (server-persisted discriminator via
+  // `nex_wholesale_quote` row existence). A retail cart carrying a
+  // `wholesale_quote_id` indicator at top-level or on any item is
+  // either a tampered client or wholesale UI mis-plumbed into the
+  // retail path · either way refuse hard so it never reaches order
+  // persistence. No new DB column required for this guard · we only
+  // read the incoming payload.
+  const carriesWholesaleIndicator =
+    (typeof p.wholesale_quote_id === "string" &&
+      p.wholesale_quote_id.trim().length > 0) ||
+    (Array.isArray(p.items) &&
+      p.items.some(
+        (it) =>
+          it !== null &&
+          typeof it === "object" &&
+          typeof (it as Record<string, unknown>).wholesale_quote_id ===
+            "string" &&
+          (
+            (it as Record<string, unknown>).wholesale_quote_id as string
+          ).trim().length > 0,
+      ));
+  if (carriesWholesaleIndicator) {
+    redirect(
+      "/nex-native/cart?send_error=" +
+        encodeURIComponent(
+          "Wholesale orders use a separate flow · retail checkout refused",
+        ),
+    );
+  }
+
   const peerAccountId = String(p.peer_account_id ?? "").trim();
   const shopId = String(p.shop_id ?? "").trim();
   const shopSlug = String(p.shop_slug ?? "").trim() || null;
@@ -2694,6 +2893,61 @@ export async function sendCartOrderAction(
     p.delivery_address && typeof p.delivery_address === "object"
       ? (p.delivery_address as Record<string, unknown>)
       : null;
+  // G3-Server · 2026-11-18 · OPTIONAL buyer-destination coordinate
+  // parse. Strict discipline matches the delivery_quote parse below:
+  // typeof === "number" AND Number.isFinite AND within valid earth
+  // ranges. ANY present-but-invalid value is a HARD REJECT (never
+  // silently dropped — a tampered client that sends a nonfinite lat
+  // alongside a honest distance is suspicious and must not be let
+  // through). If BOTH keys are absent the address path stays legacy
+  // and the downstream G4 fare-vs-claimed-km fallback preserves
+  // backward compatibility.
+  const rawLat = addressRaw ? addressRaw.lat : undefined;
+  const rawLng = addressRaw ? addressRaw.lng : undefined;
+  const latPresent = rawLat !== undefined && rawLat !== null;
+  const lngPresent = rawLng !== undefined && rawLng !== null;
+  let parsedBuyerLat: number | null = null;
+  let parsedBuyerLng: number | null = null;
+  if (latPresent || lngPresent) {
+    // Partial coords (only one of the two) is treated as malformed.
+    if (!latPresent || !lngPresent) {
+      redirect(
+        "/nex-native/cart?send_error=" +
+          encodeURIComponent(
+            "Delivery destination is incomplete · please re-pin your address",
+          ),
+      );
+    }
+    if (
+      typeof rawLat !== "number" ||
+      !Number.isFinite(rawLat) ||
+      rawLat < -90 ||
+      rawLat > 90
+    ) {
+      redirect(
+        "/nex-native/cart?send_error=" +
+          encodeURIComponent(
+            "Delivery destination is invalid · please re-pin your address",
+          ),
+      );
+    }
+    if (
+      typeof rawLng !== "number" ||
+      !Number.isFinite(rawLng) ||
+      rawLng < -180 ||
+      rawLng > 180
+    ) {
+      redirect(
+        "/nex-native/cart?send_error=" +
+          encodeURIComponent(
+            "Delivery destination is invalid · please re-pin your address",
+          ),
+      );
+    }
+    parsedBuyerLat = rawLat as number;
+    parsedBuyerLng = rawLng as number;
+  }
+
   const deliveryAddress: import("@/lib/nex-native/peer-message-service").NexPeerCartOrderDeliveryAddress | null =
     addressRaw
       ? {
@@ -2708,6 +2962,8 @@ export async function sendCartOrderAction(
           postal_code: String(addressRaw.postal_code ?? "").trim().slice(0, 24),
           country: String(addressRaw.country ?? "").trim().slice(0, 80),
           notes: String(addressRaw.notes ?? "").trim().slice(0, 500),
+          lat: parsedBuyerLat,
+          lng: parsedBuyerLng,
         }
       : null;
   const addressComplete = !!(
@@ -2765,6 +3021,14 @@ export async function sendCartOrderAction(
     }
   }
 
+  // 2026-11-18 · R4 · G3-Server + G4 combined fare-authentication
+  // guard has MOVED down to after the targetBusiness lookup — the
+  // G3-Server branch needs the seller's `location_lat`/`location_lng`
+  // from the resolved `nex_business` row to recompute authoritative
+  // straight-line distance. Keeping it here (before business lookup)
+  // would force a second DB round-trip just for coords. See the
+  // "G3-Server + G4" block immediately after the ownership check.
+
   if (!peerAccountId || peerAccountId === session.account.id || !shopId) {
     redirect("/nex-native/cart?send_error=" + encodeURIComponent("Bad shop or peer"));
   }
@@ -2818,6 +3082,20 @@ export async function sendCartOrderAction(
     redirect("/nex-native/cart?send_error=" + SHOP_VERIFY_ERROR);
   }
 
+  // Lane F · Decision F-A sealed §16.19.7 · 2026-11-19 · the former
+  // R4/R5 "G3-Server + G4 combined delivery distance + fare
+  // authentication" block was single-model (rate-card only); the F-A
+  // directive routes through `quoteLocalDelivery` when the cart is
+  // per-ring and `estimateBikeFare` only when the cart is rate-card.
+  // Classification needs the per-item `product.spec.__delivery.local.
+  // radii`, which is only known after the item-verification loop has
+  // fetched each product row. The validation is therefore DISPATCHED
+  // AFTER the loop (search for "Lane F · per-cart delivery-quote
+  // verification" below). Pre-loop we still parse + sanitise the
+  // quote shape (done above); we also still refuse buyer coords that
+  // are present but malformed (done above) so a hard-reject on
+  // nonfinite lat/lng happens before we spend a DB roundtrip.
+
   // Slice 0 · Owner-approved 2026-10-18 · fail-closed server-side
   // price + ownership verification for EVERY item line, both product
   // AND menu_item kinds.
@@ -2835,6 +3113,12 @@ export async function sendCartOrderAction(
     "Some items could not be verified. Please review your shop items and try again.",
   );
   const items: import("@/lib/nex-native/peer-message-service").NexPeerCartOrderItem[] = [];
+  // Lane F · F-A · collect per-item delivery kind + radii in step with
+  // `items` so the post-loop delivery-quote dispatch can classify the
+  // cart shape without a second product fetch. `itemDeliveryKinds[i]`
+  // pairs 1:1 with `items[i]`.
+  const itemDeliveryKinds: CartItemDeliveryKind[] = [];
+  const perItemRadii: (readonly LocalRadiusEntryT[])[] = [];
   let subtotal = 0;
   let firstImage: string | null = null;
   for (const raw of itemsRaw) {
@@ -2886,6 +3170,50 @@ export async function sendCartOrderAction(
         redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
       }
       price = product.price_pence;
+
+      // Lane F · F-A · classify this product's delivery kind from the
+      // sealed `spec.__delivery.local.radii` shape. Non-empty radii →
+      // per_ring; empty/absent/malformed → rate_card (same posture as
+      // the editor and `quoteLocalDelivery`'s own schema validation).
+      itemDeliveryKinds.push(classifyCartItemDelivery("product", product.spec));
+      perItemRadii.push(extractCartItemRadii("product", product.spec));
+
+      // 2026-11-18 · R4 G7 · export-destination multi-unit refusal.
+      //
+      // The sealed `delivery.export` row shape has no per-item rule
+      // (one price per destination country · no quantity multiplier).
+      // The pure library `isExportQuoteValidForQuantity` returns false
+      // for quantity ≥ 2 · the honest behaviour is to refuse at the
+      // cart boundary and ask the buyer to request a quote. This
+      // defence is server-side only · the buyer-side UI guard is a
+      // separate follow-up (noted in delivery handback §15 G7).
+      if (
+        quantity >= 2 &&
+        deliveryAddress &&
+        deliveryAddress.country.trim().length > 0
+      ) {
+        const { extractDelivery } = await import(
+          "@/lib/nex-native/catalogue/delivery-spec"
+        );
+        const d = extractDelivery(product.spec);
+        if (d && Array.isArray(d.export) && d.export.length > 0) {
+          const destIso = deliveryAddress.country.trim().toUpperCase();
+          const exportsIso = new Set(
+            d.export
+              .map((e) => e.iso.trim().toUpperCase())
+              .filter((iso) => /^[A-Z]{2}$/.test(iso)),
+          );
+          const isTwoLetter = /^[A-Z]{2}$/.test(destIso);
+          if (isTwoLetter && exportsIso.has(destIso)) {
+            redirect(
+              "/nex-native/cart?send_error=" +
+                encodeURIComponent(
+                  "International shipping is one unit at a time · message the seller to request a quote for larger orders",
+                ),
+            );
+          }
+        }
+      }
     } else if (kind === "menu_item") {
       let menuItem;
       try {
@@ -2905,6 +3233,13 @@ export async function sendCartOrderAction(
         redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
       }
       price = menuItem.price_pence;
+
+      // Lane F · F-A · menu items have no per-item per-ring config in
+      // the schema → always rate_card. A cart that mixes a per-ring
+      // product with a menu_item resolves to "mixed" and is rejected
+      // at the post-loop dispatch.
+      itemDeliveryKinds.push("rate_card");
+      perItemRadii.push([]);
     } else {
       // Unknown kind · future cross-category kinds (service ·
       // accommodation) land in Slice 6+ · for Slice 0 we reject any
@@ -2963,6 +3298,191 @@ export async function sendCartOrderAction(
     redirect("/nex-native/cart?send_error=" + encodeURIComponent("No valid items"));
   }
 
+  // Lane F · per-cart delivery-quote verification · Decision F-A
+  // sealed §16.19.7 (2026-11-18) · wired 2026-11-19.
+  //
+  //   per_ring cart  → quoteLocalDelivery + isSubmittedLocalQuoteAuthentic
+  //                    against the UNIONED radii across items (tightest
+  //                    price per ring, max of per-item largest rings).
+  //                    Seller coords and buyer coords are BOTH required.
+  //                    Missing seller coords → "Delivery is not
+  //                    configured for this shop". Missing buyer coords →
+  //                    "pin your address".
+  //   rate_card cart → the pre-F-A estimateBikeFare (R4/R5 G3-Server +
+  //                    G4) authentication, now relocated here so it
+  //                    runs after per-item verification. Buyer coords
+  //                    absent → refuse safely per owner R5 directive.
+  //   mixed cart     → reject at the boundary. Owner-exact §16.19.7:
+  //                    "Do not guess missing delivery data, change
+  //                    pricing policy silently or conflate retail with
+  //                    wholesale".
+  //   empty cart     → unreachable (upstream "No valid items" guard).
+  //
+  // Distance: STRAIGHT-LINE haversine · NOT road-measured · browser-
+  // reported buyer coords are NOT independently verified by a trusted
+  // geocoder. No new coordinate acquisition happens here; the server
+  // never contacts an external geocoder or map provider.
+  //
+  // Free + unknown quote kinds pass through untouched. Pickup (no
+  // `delivery_quote` object at all) is unaffected because the branch
+  // only runs when `deliveryQuote.kind === "estimate"`.
+  if (deliveryQuote && deliveryQuote.kind === "estimate") {
+    const claimedKm = deliveryQuote.distance_km;
+    const claimedFare = deliveryQuote.fare_pence;
+    // Both fields must be finite numbers after the pre-loop sanitise,
+    // otherwise the estimate had nothing to authenticate (fare was
+    // dropped at parse time) and we leave the snapshot as-is.
+    if (typeof claimedKm === "number" && typeof claimedFare === "number") {
+      const cartShape = classifyCartDeliveryShape(itemDeliveryKinds);
+      if (cartShape === "mixed") {
+        redirect(
+          "/nex-native/cart?send_error=" +
+            encodeURIComponent(
+              "Delivery mix not supported · split order or switch to pickup",
+            ),
+        );
+      }
+
+      // Seller coords are required for BOTH paths (straight-line
+      // haversine needs them). Refuse fail-closed when they're absent
+      // instead of silently trusting the client's km.
+      const sellerLat = targetBusiness.location_lat;
+      const sellerLng = targetBusiness.location_lng;
+      if (
+        sellerLat === null ||
+        sellerLng === null ||
+        typeof sellerLat !== "number" ||
+        typeof sellerLng !== "number" ||
+        !Number.isFinite(sellerLat) ||
+        !Number.isFinite(sellerLng)
+      ) {
+        redirect(
+          "/nex-native/cart?send_error=" +
+            encodeURIComponent(
+              "Delivery is not configured for this shop · please try pickup or contact the seller",
+            ),
+        );
+      }
+
+      // Buyer coords are required for BOTH paths after the R5 owner
+      // directive. Legacy carts that never pinned a destination see
+      // the honest refusal rather than a silent, unverifiable trust
+      // path. No geocoder is contacted.
+      if (parsedBuyerLat === null || parsedBuyerLng === null) {
+        redirect(
+          "/nex-native/cart?send_error=" +
+            encodeURIComponent(
+              "Delivery distance can't be verified without a pinned destination · please pin your address on the map or choose pickup",
+            ),
+        );
+      }
+
+      if (cartShape === "per_ring") {
+        // Per-ring branch · F-A primary. Union the radii across items,
+        // keep the tightest price per ring, then run the pure resolver.
+        const unionedRadii = unionPerRingRadii(perItemRadii);
+        if (unionedRadii.length === 0) {
+          // Defensive: classifier said per_ring but union collapsed to
+          // empty (malformed rows across items). Refuse rather than
+          // fall back to rate-card silently — that would be the
+          // "silently change pricing policy" posture the owner banned.
+          redirect(
+            "/nex-native/cart?send_error=" +
+              encodeURIComponent(
+                "Delivery is not configured for this shop · please try pickup or contact the seller",
+              ),
+          );
+        }
+
+        const authoritative = quoteLocalDelivery({
+          radii: unionedRadii,
+          origin: { lat: sellerLat as number, lng: sellerLng as number },
+          destination: {
+            lat: parsedBuyerLat as number,
+            lng: parsedBuyerLng as number,
+          },
+        });
+
+        if (!authoritative.ok) {
+          // The resolver has three structured refusal reasons at this
+          // point: out_of_range, missing_origin, missing_destination,
+          // no_rings_configured. origin + destination + rings were
+          // validated above, so in practice only out_of_range can
+          // reach this branch — but we refuse honestly for each.
+          if (authoritative.reason === "out_of_range") {
+            redirect(
+              "/nex-native/cart?send_error=" +
+                encodeURIComponent(
+                  "Delivery address is outside the shop's delivery range · please choose pickup or a nearer address",
+                ),
+            );
+          }
+          redirect(
+            "/nex-native/cart?send_error=" +
+              encodeURIComponent(
+                "Delivery is not configured for this shop · please try pickup or contact the seller",
+              ),
+          );
+        }
+
+        // Compare submitted fare + distance against the authoritative
+        // resolver output. `isSubmittedLocalQuoteAuthentic` enforces
+        // currency + fare match + integer-km truncation match.
+        const submittedOk = isSubmittedLocalQuoteAuthentic(
+          {
+            fareMinor: claimedFare,
+            currency:
+              typeof deliveryQuote.currency === "string"
+                ? deliveryQuote.currency
+                : "IDR",
+            distanceKm: claimedKm,
+          },
+          authoritative,
+        );
+        if (!submittedOk) {
+          redirect(
+            "/nex-native/cart?send_error=" +
+              encodeURIComponent(
+                "Delivery fare does not match this shop's rate card · please refresh the quote",
+              ),
+          );
+        }
+      } else {
+        // Rate-card branch · relocated from the pre-loop block so the
+        // classifier can run first. Logic unchanged: haversine against
+        // seller+buyer coords within ±0.6 km, then estimateBikeFare on
+        // the authoritative km must equal the claimed fare.
+        const { estimateBikeFare, haversineKm } = await import(
+          "@/lib/nex-native/bike-delivery-service"
+        );
+        const authoritativeKm = haversineKm(
+          sellerLat as number,
+          sellerLng as number,
+          parsedBuyerLat as number,
+          parsedBuyerLng as number,
+        );
+        const G3_TOLERANCE_KM = 0.6;
+        if (Math.abs(authoritativeKm - claimedKm) > G3_TOLERANCE_KM) {
+          redirect(
+            "/nex-native/cart?send_error=" +
+              encodeURIComponent(
+                "Delivery distance disputed · please refresh the quote",
+              ),
+          );
+        }
+        const authoritativeFare = estimateBikeFare(authoritativeKm);
+        if (authoritativeFare.fare_pence !== claimedFare) {
+          redirect(
+            "/nex-native/cart?send_error=" +
+              encodeURIComponent(
+                "Delivery fare does not match rate card · please refresh",
+              ),
+          );
+        }
+      }
+    }
+  }
+
   // Bridge 49b-final · NEX Direct Price · resolve buyer's tier +
   // best-applicable share grant + max cap · write result into the
   // cart snapshot so the seller sees the exact discount the buyer
@@ -3008,7 +3528,24 @@ export async function sendCartOrderAction(
   //
   // Scope: this UUID lives INSIDE the already-authorised cart JSON.
   // No schema change. No DDL. No historical backfill.
-  const futureOrderId: string = crypto.randomUUID();
+  //
+  // Lane E · prompt-7 round 11 · 2026-11-19 · cross-retry linkage fix.
+  // Previously `crypto.randomUUID()` minted a fresh UUID per request.
+  // If request X minted A and succeeded on sendPeerMessage but failed
+  // on createOrder, then buyer retry Y minted B, sendPeerMessage
+  // dedup via `send_intent_id` would return X's message (with
+  // attachment_meta.cart.order_id = A), while Y's createOrder would
+  // succeed with id = B → the cart snapshot references nonexistent
+  // order id A while the actual order row has id B. Deriving
+  // futureOrderId from sendIntentId when the client supplied a valid
+  // UUID makes the id deterministic across retries: both X and Y now
+  // mint the SAME id, so attachment_meta.cart.order_id always points
+  // at the canonical order row (or the id that createOrder's
+  // idempotency_key path converges on). sendIntentId already passed
+  // the UUID_SHAPE validation at this action's entry, so it is a
+  // valid UUID when non-null. Legacy clients that never send
+  // send_intent_id still get a fresh random UUID (pre-fix behaviour).
+  const futureOrderId: string = sendIntentId ?? crypto.randomUUID();
   const snapshot: import("@/lib/nex-native/peer-message-service").NexPeerCartOrderSnapshot = {
     shop_id: shopId,
     shop_slug: shopSlug,
@@ -3239,17 +3776,82 @@ export async function sendCartOrderAction(
   const primaryProductItem = items.find((it) => it.kind === "product");
   if (primaryProductItem?.id) {
     try {
-      await orderService.createOrder({
+      const createdOrder = await orderService.createOrder({
         id: futureOrderId,
         customer_account_id: session.account.id,
         product_id: primaryProductItem.id,
         source_conversation_id: null,
-        idempotency_key: null,
+        // Lane E · prompt-7 round 8 continuation · 2026-11-19. The
+        // send_intent_id UUID already gates nex_peer_message against
+        // double-tap via UNIQUE (sender_account_id, send_intent_id)
+        // (Migration 102 Part C). Propagate it to nex_order as the
+        // idempotency_key so a double-tap that races past the message
+        // dedupe still converges on ONE order row instead of two.
+        // Fail-soft: when the client did not supply a valid UUID (per
+        // the UUID_SHAPE check above), sendIntentId is undefined and
+        // we fall back to the pre-existing null behaviour — matching
+        // the sendPeerMessage branch that treats absent send_intent_id
+        // as "no idempotency requested" instead of throwing.
+        idempotency_key: sendIntentId ?? null,
         customer_note:
           typeof buyerNotes === "string" && buyerNotes.trim().length > 0
             ? buyerNotes.trim().slice(0, 500)
             : null,
       });
+
+      // Lane E · round 17 · E-NOTIFY · 2026-11-19. Wire the supported
+      // seller push-notification path (same one placeOrderAction uses
+      // at _actions.ts:~7707) into the cart-send flow, ONLY after the
+      // nex_order row is confirmed present. Privacy-safe generic copy
+      // ("You have received a new order.") · no PII in visible body ·
+      // dispatched via notifications/notification-dispatch-service.
+      //
+      // Retry/dedup safeguard: `createOrder` is idempotent on
+      // `idempotency_key = sendIntentId` and returns the EXISTING row
+      // on a race / retry. Without a dedup check, the second tap would
+      // re-notify the seller for the same cart. Before notifying, we
+      // check `nex_order_event` for a prior `seller_notified` marker
+      // on this order.id · if present, skip · else notify then record
+      // the marker. The check-then-write is not atomic · a concurrent
+      // double-tap CAN still double-notify in the narrow window before
+      // the event row lands. That residual race is acknowledged · the
+      // push-subscription + browser layers already deduplicate on
+      // `eventKind + orderId` so this is defence-in-depth, not a
+      // guarantee.
+      //
+      // Fail-soft: notification failure MUST NOT reverse the cart send
+      // or the order row · both are already persisted. Matches the
+      // placeOrderAction pattern exactly.
+      try {
+        const priorEvents = await orderService.listOrderEvents(createdOrder.id);
+        const alreadyNotified = priorEvents.some(
+          (ev) => ev.event === "seller_notified",
+        );
+        if (!alreadyNotified) {
+          await notifySellerNewOrder(createdOrder);
+          try {
+            await orderService.recordOrderEvent({
+              order_id: createdOrder.id,
+              event: "seller_notified",
+              actor_account_id: null,
+              metadata: {
+                source: "cart_order",
+                send_intent_id: sendIntentId ?? null,
+              },
+            });
+          } catch (markErr) {
+            console.warn(
+              "[cart-order E-NOTIFY] seller_notified marker write failed · notify did fire",
+              markErr instanceof Error ? markErr.message : markErr,
+            );
+          }
+        }
+      } catch (notifyErr) {
+        console.warn(
+          "[cart-order E-NOTIFY] seller notification failed · order persisted",
+          notifyErr instanceof Error ? notifyErr.message : notifyErr,
+        );
+      }
     } catch (e) {
       console.warn(
         "[cart-order #14] deterministic nex_order insert failed · cart message retained",
@@ -4839,7 +5441,11 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
   // write fails · the seller can retry from /manage/shop.
   if (logoUrlInput.length > 0) {
     try {
-      await businessService.updateBusinessLogo(business.id, logoUrlInput);
+      // Lane C · prompt-7 round 11 · 2026-11-19 · service-layer owner
+      // scope. `business.owner_account_id` was set on the row we just
+      // created · pass it through so the write matches the writer's
+      // required-owner contract.
+      await businessService.updateBusinessLogo(business.id, business.owner_account_id, logoUrlInput);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(
@@ -5211,7 +5817,12 @@ export async function updateBusinessProfileAction(formData: FormData): Promise<n
   }
 
   try {
-    await businessService.updateBusinessProfile(business.id, patch);
+    // Lane C · prompt-7 round 11 · 2026-11-19 · service-layer owner
+    // scope. `session.account.id` is the authenticated owner who
+    // already proved ownership via `listBusinessesByOwner(session)`
+    // above · passing it to the writer closes the "future caller
+    // bypasses requireBusiness()" gap.
+    await businessService.updateBusinessProfile(business.id, session.account.id, patch);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     redirectToManageWithBanner("business_profile_update_failed", msg);
@@ -7041,6 +7652,20 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
   const productId = String(formData.get("product_id") ?? "").trim();
   const idempotencyKey = String(formData.get("idempotency_key") ?? "").trim() || undefined;
   const customerNoteRaw = String(formData.get("customer_note") ?? "");
+
+  // 2026-11-18 · R4 retail refusal · wholesale orders use
+  // `initiateWholesaleOrderAction` behind a server-persisted
+  // discriminator · never the retail product-page checkout. A
+  // formData indicator is either tampering or mis-wired UI · refuse.
+  const wholesaleIndicator = String(
+    formData.get("wholesale_quote_id") ?? "",
+  ).trim();
+  if (wholesaleIndicator.length > 0) {
+    redirectToInboxWithError(
+      "wholesale_wrong_entry_point",
+      "wholesale orders use a separate flow",
+    );
+  }
 
   const session = await resolveNexAppSessionFromContext();
   if (!session) {

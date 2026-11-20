@@ -1,0 +1,23 @@
+
+Running 16 tests using 1 worker
+
+  ✓   1 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:349:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 1 · buyer signs in · lands outside sign-in (6.8s)
+  ✓   2 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:356:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 2 · buyer visits seller's public shop by slug (3.2s)
+  ✓   3 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:366:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 3 · buyer writes BOTH cart items via sealed localStorage contract (10ms)
+  ✓   4 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:417:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 4 · buyer checks out IMAGED cart · redirect to /chat/peer/<seller>?cart_sent=1 (14.2s)
+  ✓   5 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:466:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 5 · buyer writes + checks out IMAGELESS cart (14.9s)
+  ✓   6 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:545:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 6 · DB confirms D2 write shape · attachment_type NULL + meta.cart populated for BOTH carts (1.2s)
+  ✓   7 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:591:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 7 · fixture-insert two nex_order rows · DISCLOSED · source_conversation_id SET NULL (1.2s)
+  ✓   8 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:634:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 8 · seller signs in · /manage/orders page shows BOTH orders (not just one) (6.1s)
+  ✓   9 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:653:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 9 · open IMAGED order detail · Items card shows product name + price (4.2s)
+  ✓  10 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:671:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 10 · open IMAGELESS order detail · Items card shows product name + price (2.5s)
+  ✓  11 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:683:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 10b · reload IMAGED order detail · Items card content persists (4.8s)
+  ✓  12 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:696:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 11 · reload /manage/orders LIST · shell persists (3.5s)
+[gap1 cleanup] deleted products=1 (before=2026-11-16T05:55:42.651Z)
+  ✓  13 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:738:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › GAP1 · repeat same-product orders retain their own snapshots (30.1s)
+  ✓  14 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:1084:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › GAP14 · ambiguous identical-cart orders render explicit unavailable state (never another order's items) (18.4s)
+  ✓  15 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:1323:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › GAP14-DETER · deterministic link proves identical-cart orders retain their own snapshots (36.4s)
+[d2 cleanup] deleted products=2 cart_messages=2
+  ✓  16 [order-visibility-390] › tests\e2e-p6-isolation\order-visibility.spec.ts:1684:7 › D2 · Order visibility (imaged + imageless) · CK5 disposable · fixture-assisted › 12 · cross-account denial · buyer context cannot see seller's /manage/orders/<id> (1.8s)
+
+  16 passed (2.7m)

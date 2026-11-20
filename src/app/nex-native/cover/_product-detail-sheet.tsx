@@ -91,10 +91,29 @@ export function ProductDetailSheet({
   const searchParams = useSearchParams();
   const productId = searchParams?.get("product") ?? null;
 
+  // Owner-authorised 2026-11-16 · the product-detail SLIDER is
+  // retired on the shop surface in favour of the dedicated full
+  // product page at `/nex-native/product/<id>`. When the shop URL
+  // carries `?product=<id>` (deep-link, share-return, legacy caller)
+  // we redirect to the full page instead of mounting the sheet. The
+  // sheet code below stays in place for any remaining callers that
+  // might still mount it directly (none found in the current repo)
+  // · the useEffect redirect is the single switch flip.
+  React.useEffect(() => {
+    if (!productId) return;
+    const target = `/nex-native/product/${encodeURIComponent(productId)}`;
+    router.replace(target);
+  }, [productId, router]);
+
   const product = React.useMemo(
     () => (productId ? products.find((p) => p.id === productId) : null),
     [productId, products],
   );
+
+  // Owner-authorised 2026-11-16 · while the client-side redirect is
+  // in flight, render nothing so the slider never flashes on top of
+  // the shop. No sheet ever paints on the shop surface again.
+  if (productId) return null;
 
   const [qty, setQty] = React.useState(1);
   const [status, setStatus] = React.useState<

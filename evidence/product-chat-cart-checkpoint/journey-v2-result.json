@@ -1,0 +1,99 @@
+{
+  "when": "2026-11-17T09:47:22.657Z",
+  "fixture": {
+    "seller": "e2e-vault-ck5-A-mwhyjav3@nex.invalid",
+    "buyer": "e2e-vault-ck5-B-mwhyjbaa@nex.invalid",
+    "product_x": "47bdf78e-84a9-4ca5-b33f-0676981df65b"
+  },
+  "distinctive_marker": "CPTEST-mwkidqqp-portugal-shipping",
+  "baseline_seller_orders": 0,
+  "product_page": {
+    "url": "http://localhost:3008/nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "add_to_cart": 1,
+    "ask_seller": 1,
+    "cart_header_button": 1
+  },
+  "cart": {
+    "add_btn_count_after_reload": 1,
+    "after_add": [
+      {
+        "key": "32fcf200-5245-4640-92a7-2e1007cc1b6a",
+        "kind": "product",
+        "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget X mwit8ina",
+        "price_pence": 1799,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794908919155
+      }
+    ],
+    "badge_count": 1,
+    "badge_text": "1",
+    "popup": {
+      "url_changed": false,
+      "popup_count": 1,
+      "popup_dialog_count": 1,
+      "backdrop_count": 1,
+      "line_count": 1
+    },
+    "snapshot_text": "Your cart1 item × 🏪 E2E CK5 Seller Shop mwhyjc0c 1 line E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional) SUBTOTAL €17.99 CHECKOUT → Open full cart → NEX never handles payments.",
+    "snapshot_contains_product": true,
+    "popup_after_escape": 0,
+    "after_reload": [
+      {
+        "key": "32fcf200-5245-4640-92a7-2e1007cc1b6a",
+        "kind": "product",
+        "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget X mwit8ina",
+        "price_pence": 1799,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794908919155
+      }
+    ],
+    "badge_after_reload": 1
+  },
+  "chat": {
+    "url": "http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990?product=47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "conversation_id": "6ad024dd-473e-4415-9ef2-8b714b0c3990",
+    "product_chip_count": 1,
+    "db_msgs_before": 0,
+    "composer_count": 1,
+    "send_btn_count": 1,
+    "marker_in_dom_after_send": true,
+    "marker_in_dom_after_reload": false,
+    "marker_occurrences_after_reload": 0,
+    "db_msgs_after": 0,
+    "db_sample": []
+  },
+  "buyer_page_errors": [],
+  "seller": {
+    "url": "http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990",
+    "marker_in_dom": false,
+    "product_card_count": 0,
+    "message_rows": 0
+  },
+  "seller_page_errors": []
+}

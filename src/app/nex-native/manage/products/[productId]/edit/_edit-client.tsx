@@ -43,6 +43,12 @@ import {
   type WholesaleDraft,
 } from "@/components/nex-native/product-create/IdentityWholesaleEditor";
 import {
+  MultiTierWholesaleEditor,
+  hydrateMultiTierDraft,
+  multiTierDraftToPayload,
+  type MultiTierWholesaleDraft,
+} from "@/components/nex-native/catalogue/multi-tier-wholesale-editor";
+import {
   ReturnsEditor,
   type ReturnsDraft,
 } from "@/components/nex-native/product-create/ReturnsEditor";
@@ -56,6 +62,7 @@ import {
   type CoverVideoDraft,
 } from "@/components/nex-native/product-create/CoverVideoEditor";
 import { updateProductAction } from "@/app/nex-native/manage/products/[productId]/edit/_actions";
+import { NexInput, NexTextarea } from "@/lib/nex-native/nex-keyboard";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
@@ -106,6 +113,14 @@ export interface EditProductFormClientProps {
     readonly delivery: DeliveryEditorValue;
     readonly identity: IdentityDraft;
     readonly wholesale: WholesaleDraft;
+    /**
+     * W14 (2026-11-18) · raw `__wholesale` jsonb from the DB (may be
+     * null/undefined for products without wholesale). Used to hydrate the
+     * multi-tier editor; the legacy `wholesale` draft is retained only
+     * for the single-tier IdentityWholesaleEditor contract (currently
+     * hidden in the edit flow).
+     */
+    readonly rawWholesaleSpec?: unknown;
     readonly returns: ReturnsDraft;
     readonly colors: ColorsEditorValue;
     readonly coverVideo: CoverVideoDraft;
@@ -130,6 +145,13 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [delivery, setDelivery] = React.useState<DeliveryEditorValue>(props.initial.delivery);
   const [identity, setIdentity] = React.useState<IdentityDraft>(props.initial.identity);
   const [wholesale, setWholesale] = React.useState<WholesaleDraft>(props.initial.wholesale);
+  // W14 (2026-11-18) · multi-tier draft hydrated from the raw jsonb so
+  // existing tier arrays + W13 capability flags + dispatch range survive
+  // the round-trip. Falls back to legacy single-tier shape when the raw
+  // spec carries only min_qty + price_per_piece_pence.
+  const [multiTierDraft, setMultiTierDraft] = React.useState<MultiTierWholesaleDraft>(
+    () => hydrateMultiTierDraft(props.initial.rawWholesaleSpec ?? null),
+  );
   const [returns, setReturns] = React.useState<ReturnsDraft>(props.initial.returns);
   const [colors, setColors] = React.useState<ColorsEditorValue>(props.initial.colors);
   const [coverVideo, setCoverVideo] = React.useState<CoverVideoDraft>(props.initial.coverVideo);
@@ -182,7 +204,13 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         market: toMarketPayload(market),
         delivery: toDeliveryPayload(delivery, market.scope, currency),
         identity: toIdentityPayload(identity),
-        wholesale: toWholesalePayload(wholesale),
+        // W14 (2026-11-18) · multiTierDraft is authoritative. The legacy
+        // single-tier `wholesale` state remains hydrated so the shared
+        // IdentityWholesaleEditor prop contract stays intact, but is NOT
+        // persisted. multiTierDraftToPayload emits tiers[] plus a legacy
+        // min_qty/price mirror derived from the lowest tier so older readers
+        // still render; the server validates via WholesaleSpecWithTiers.
+        wholesale: multiTierDraftToPayload(multiTierDraft),
         returns: toReturnsPayload(returns),
         colors:
           variantType === "colour"
@@ -252,7 +280,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Field label="Product name" required>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} style={COMMON_INPUT} />
+            <NexInput type="text" value={name} onChange={(next) => setName(next)} maxLength={120} style={COMMON_INPUT} />
           </Field>
           <Field label="Stock status">
             <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
@@ -263,19 +291,19 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
             </select>
           </Field>
           <Field label="Dispatch time">
-            <input
+            <NexInput
               type="text"
               value={dispatchTime}
-              onChange={(e) => setDispatchTime(e.target.value)}
+              onChange={(next) => setDispatchTime(next)}
               placeholder="e.g. Ships within 2 business days"
               maxLength={120}
               style={COMMON_INPUT}
             />
           </Field>
           <Field label="Description">
-            <textarea
+            <NexTextarea
               value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+              onChange={(next) => setDescription(next.slice(0, 500))}
               rows={3}
               maxLength={500}
               style={{ ...COMMON_INPUT, resize: "vertical", minHeight: 70 }}
@@ -294,7 +322,15 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
           </Field>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
             <Field label="Price" required>
-              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} min={0} step="0.01" style={COMMON_INPUT} />
+              <NexInput
+                type="number"
+                value={price}
+                onChange={(next) => setPrice(next)}
+                min={0}
+                step="0.01"
+                planes={["numbers"]}
+                style={COMMON_INPUT}
+              />
             </Field>
             <Field label="Price">
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={COMMON_INPUT}>
@@ -360,9 +396,23 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
             <DeliveryEditor scope={market.scope} value={delivery} onChange={setDelivery} productCurrency={currency} />
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            {/* W14 (2026-11-18) · hide the legacy single-tier
+                WholesaleBlock and render the multi-tier editor instead.
+                The identity sub-block of IdentityWholesaleEditor stays
+                active. The `wholesale`/setWholesale state remains wired
+                to keep the IdentityWholesaleEditor prop contract intact
+                but is unused on save · multiTierDraft is authoritative. */}
             <IdentityWholesaleEditor
               identity={identity} onIdentityChange={setIdentity}
               wholesale={wholesale} onWholesaleChange={setWholesale}
+              hideWholesale
+            />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <MultiTierWholesaleEditor
+              value={multiTierDraft}
+              onChange={setMultiTierDraft}
+              currency={currency}
             />
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>

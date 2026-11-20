@@ -620,6 +620,16 @@
   width: 22px;
   height: 22px;
 }
+/* Bare image icon (no tile) · used by image-based GroupIcon returns.
+   2026-11-19 r5: owner requested enlarged image + removed container
+   for Rolex + Mobile Phone icons. Line-icon categories keep the
+   tinted .indexCardIcon tile. */
+.indexCardIconBare {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .indexCardBody {
   display: block;
   min-width: 0;

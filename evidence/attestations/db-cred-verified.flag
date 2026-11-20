@@ -1,0 +1,6 @@
+{
+  "verdict": "DB_CRED_PROBE_PASS",
+  "probe_version": "§16.48.20",
+  "checked_at": "2026-11-20T01:42:13.965Z",
+  "current_database": "postgres"
+}

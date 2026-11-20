@@ -73,6 +73,13 @@ const NAV: readonly NavItem[] = [
     match: (p) => p.startsWith("/nex-native/hq/pages"),
   },
   {
+    kind: "leaf",
+    href: "/nex-native/hq/journey-map",
+    label: "Journey Map",
+    glyph: "🗺",
+    match: (p) => p.startsWith("/nex-native/hq/journey-map"),
+  },
+  {
     kind: "section",
     key: "members",
     label: "Members",
@@ -170,6 +177,13 @@ const NAV: readonly NavItem[] = [
     label: "Alerts",
     glyph: "🚨",
     match: (p) => p.startsWith("/nex-native/hq/alerts"),
+  },
+  {
+    kind: "leaf",
+    href: "/nex-native/hq/translation",
+    label: "Translation",
+    glyph: "🌐",
+    match: (p) => p.startsWith("/nex-native/hq/translation"),
   },
   {
     kind: "section",

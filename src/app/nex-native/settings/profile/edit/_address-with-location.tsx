@@ -18,6 +18,7 @@
 
 import { useState } from "react";
 import { reverseGeocodeAddressAction } from "./_reverse-geocode-address";
+import { NexTextarea } from "@/lib/nex-native/nex-keyboard";
 
 const ORANGE = "#FF7200";
 const GREEN = "#16D66B";
@@ -101,11 +102,11 @@ export function AddressWithLocation({ defaultValue }: Props): React.ReactElement
 
   return (
     <>
-      <textarea
+      <NexTextarea
         name="address"
         value={value}
-        onChange={(e) => {
-          setValue(e.target.value.slice(0, 300));
+        onChange={(next) => {
+          setValue(next.slice(0, 300));
           if (status === "set") setStatus("idle");
         }}
         maxLength={300}

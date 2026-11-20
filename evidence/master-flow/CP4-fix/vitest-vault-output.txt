@@ -1,0 +1,1203 @@
+
+ RUN  v4.1.11 C:/Users/Victus/nexapp
+
+ ❯ src/lib/nex-native/__tests__/vault-contacts.test.ts (36 tests | 2 failed) 67ms
+     × Vault Home mounts the Contacts entry tile 8ms
+     × the tile sits in the Vault navigation stream (Chats → Contacts → Settings via header) 2ms
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts (28 tests | 5 failed) 462ms
+     × 404 when recovery not configured 8ms
+     × happy path returns opaque materials 1ms
+     × 429 and NO envelope leak when rate-limited 2ms
+     × success=true marks unlocked + logs vault_unlock 50ms
+     × success=false logs vault_unlock_failed + returns rate verdict 1ms
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts (38 tests | 7 failed) 474ms
+     × 404 when vault is not configured 8ms
+     × 429 and no envelope leak when rate-limited 1ms
+     × happy path returns opaque envelope + non-secret derivation params 1ms
+     × 403 when device has no envelope (device not authorised for vault) 1ms
+     × success=true marks unlocked + logs vault_unlock event 2ms
+     × success=false records failure + logs vault_unlock_failed 1ms
+     × 5 failures exposes 'window_exceeded' in rate.reason 1ms
+ ❯ tests/e2e-p6-isolation/vault-surfaces.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-chat-behavior.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-chat-ui-behavior.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-lockout-threshold.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-landing-tiles.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-reset-flow.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-cross-account-reset.spec.ts (0 test)
+ ❯ tests/e2e-p6-isolation/vault-acceptance.spec.ts (0 test)
+ ❯ scripts/_tmp/verify-vault-longer.spec.ts (0 test)
+ ❯ src/lib/nex-native/__tests__/vault-lock-and-leave-recover.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 10 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-acceptance.spec.ts [ tests/e2e-p6-isolation/vault-acceptance.spec.ts ]
+Error: vault-acceptance · missing env CUSTOMER_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-acceptance.spec.ts:95:17
+     93|   F4_ACC: F4.accountId,
+     94| })) {
+     95|   if (!v) throw new Error(`vault-acceptance · missing env ${k}`);
+       |                 ^
+     96| }
+     97|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-chat-behavior.spec.ts [ tests/e2e-p6-isolation/vault-chat-behavior.spec.ts ]
+Error: vault-chat-behavior · missing env CUSTOMER_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-chat-behavior.spec.ts:63:17
+     61|   F2_CONV_ID,
+     62| })) {
+     63|   if (!v) throw new Error(`vault-chat-behavior · missing env ${k}`);
+       |                 ^
+     64| }
+     65|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-chat-ui-behavior.spec.ts [ tests/e2e-p6-isolation/vault-chat-ui-behavior.spec.ts ]
+Error: vault-chat-ui-behavior · missing env CUSTOMER_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-chat-ui-behavior.spec.ts:85:17
+     83|   SELLER_ACCOUNT_ID,
+     84| })) {
+     85|   if (!v) throw new Error(`vault-chat-ui-behavior · missing env ${k}`);
+       |                 ^
+     86| }
+     87|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-cross-account-reset.spec.ts [ tests/e2e-p6-isolation/vault-cross-account-reset.spec.ts ]
+Error: vault-cross-account-reset · missing env A_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-cross-account-reset.spec.ts:95:17
+     93|   B_ACCOUNT_ID,
+     94| })) {
+     95|   if (!v) throw new Error(`vault-cross-account-reset · missing env ${k…
+       |                 ^
+     96| }
+     97|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-landing-tiles.spec.ts [ tests/e2e-p6-isolation/vault-landing-tiles.spec.ts ]
+Error: vault-landing-tiles · missing env CUSTOMER_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-landing-tiles.spec.ts:43:17
+     41|   CUSTOMER_ACCOUNT_ID,
+     42| })) {
+     43|   if (!v) throw new Error(`vault-landing-tiles · missing env ${k}`);
+       |                 ^
+     44| }
+     45|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-lockout-threshold.spec.ts [ tests/e2e-p6-isolation/vault-lockout-threshold.spec.ts ]
+Error: vault-lockout-threshold · missing env CUSTOMER_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-lockout-threshold.spec.ts:64:17
+     62|   CUSTOMER_ACCOUNT_ID,
+     63| })) {
+     64|   if (!v) throw new Error(`vault-lockout-threshold · missing env ${k}`…
+       |                 ^
+     65| }
+     66|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-reset-flow.spec.ts [ tests/e2e-p6-isolation/vault-reset-flow.spec.ts ]
+Error: vault-reset-flow · missing env CUSTOMER_EMAIL
+ ❯ tests/e2e-p6-isolation/vault-reset-flow.spec.ts:80:17
+     78|   CUSTOMER_ACCOUNT_ID,
+     79| })) {
+     80|   if (!v) throw new Error(`vault-reset-flow · missing env ${k}`);
+       |                 ^
+     81| }
+     82|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/24]⎯
+
+ FAIL  tests/e2e-p6-isolation/vault-surfaces.spec.ts [ tests/e2e-p6-isolation/vault-surfaces.spec.ts ]
+Error: P6 fixture env vars missing · run scripts/_tmp/provision-playwright-auth-fixtures.mjs then source .env.playwright.p6
+ ❯ tests/e2e-p6-isolation/vault-surfaces.spec.ts:31:9
+     29|
+     30| if (!CUSTOMER_EMAIL || !CUSTOMER_PASSWORD || !SELLER_EMAIL || !SELLER_…
+     31|   throw new Error(
+       |         ^
+     32|     "P6 fixture env vars missing · run scripts/_tmp/provision-playwrig…
+     33|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/24]⎯
+
+ FAIL  scripts/_tmp/verify-vault-longer.spec.ts [ scripts/_tmp/verify-vault-longer.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+- You are calling test() from an async test.describe() block. Only sync ones are supported.
+ ❯ _TestTypeImpl._currentSuite node_modules/playwright/lib/common/index.js:2235:13
+ ❯ _TestTypeImpl._createTest node_modules/playwright/lib/common/index.js:2249:24
+ ❯ node_modules/playwright/lib/common/index.js:1169:12
+ ❯ scripts/_tmp/verify-vault-longer.spec.ts:3:1
+      1| import { test } from "@playwright/test";
+      2|
+      3| test("vault · longer wait for streaming", async ({ page }, testInfo) =…
+       | ^
+      4|   await page.setViewportSize({ width: 390, height: 844 });
+      5|   await page.context().addCookies([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-lock-and-leave-recover.test.ts [ src/lib/nex-native/__tests__/vault-lock-and-leave-recover.test.ts ]
+Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\src\app\nex-native\vault\recover\_recover-unlock-client.tsx'
+ ❯ src/lib/nex-native/__tests__/vault-lock-and-leave-recover.test.ts:69:21
+     67| const src = {
+     68|   shared: fs.readFileSync(F.shared, "utf-8"),
+     69|   recoverClient: fs.readFileSync(F.recoverClient, "utf-8"),
+       |                     ^
+     70|   recoverPage: fs.readFileSync(F.recoverPage, "utf-8"),
+     71|   setupClient: fs.readFileSync(F.setupClient, "utf-8"),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/24]⎯
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-contacts.test.ts > Vault Contacts · Vault Home navigation > Vault Home mounts the Contacts entry tile
+AssertionError: expected '// src/app/nex-native/vault/home/page…' to match /<ContactsEntryTile\s+t=\{t\}\s*\/>/>
+
+- Expected:
+/<ContactsEntryTile\s+t=\{t\}\s*\/>/
+
++ Received:
+"// src/app/nex-native/vault/home/page.tsx
+//
+// NEX Vault · workspace home (post-unlock).
+//
+// Full-screen mobile-first secure-storage workspace. No bottom navigation
+// footer. Content scrolls under a sticky glass header.
+//
+// Governed by:
+//   · vault-research.md §10.0 · one-line simplicity principle at unlock
+//   · vault-research.md §10.0.1 · one doorway per theme
+//   · vault-research.md §10.0.2 · one-interior rule (interior palette locked)
+//   · founder spec 2026-10-03 · dark + glass + modern iconography
+
+import Link from \"next/link\";
+import { headers } from \"next/headers\";
+import { redirect } from \"next/navigation\";
+import { ChevronRight, Lock, Settings, Users } from \"lucide-react\";
+import { resolveServerLocale, tFor } from \"@/lib/nex/i18n/server\";
+import type { I18nKey } from \"@/lib/nex/i18n/keys\";
+import { resolveNexAppSessionFromContext } from \"@/lib/nex-native/app/session\";
+import { nexSupabaseAdmin } from \"@/lib/nex-native/supabase-admin\";
+import * as vaultEntryService from \"@/lib/nex-native/vault-entry-service\";
+import * as accountService from \"@/lib/nex-native/account-service\";
+import { mapChatThemeToDoorwaySlug } from \"./_resolve-theme\";
+import { NEX, GLASS, GLASS_CHIP } from \"./_palette\";
+import { VaultQuickActions } from \"./_upload-dialog\";
+import { LockVaultNowButton } from \"./_lock-button-client\";
+import { MigrationRunner } from \"./_migration-runner-client\";
+import {
+  IconChats,
+  IconVideo,
+  IconBlueprint,
+  IconArchive,
+} from \"./_room-icons\";
+
+export const runtime = \"nodejs\";
+export const dynamic = \"force-dynamic\";
+
+interface VaultSection {
+  key: string;
+  labelKey: I18nKey;
+  /** Optional i18n blurb key · fall back to `blurb` plain string. */
+  blurbKey?: I18nKey;
+  /** Plain-string blurb · used when no i18n key is available yet.
+   *  Owner-authorised 2026-11-15 to unblock the 6-tile landing without
+   *  adding new i18n enum values. */
+  blurb?: string;
+  icon: React.ReactNode;
+  href: string;
+}
+
+/** Owner-authorised 2026-11-15 · the Vault landing page surfaces
+ *  EXACTLY SIX tiles, each linking to an existing Vault section that
+ *  currently renders content. Broken placeholders (documents, photos,
+ *  important · which have no page.tsx and 404) are retired from the
+ *  landing · they can return once their routes are built.
+ *  The order groups Vault-social first (Chats, Contacts), then Vault-
+ *  files (Videos, Plans, Archived), then Vault-management (Settings). */
+const VAULT_SECTIONS: VaultSection[] = [
+  {
+    key: \"chats\",
+    labelKey: \"vault.home.chats.sectionTitle\",
+    blurb: \"Protected conversations · unlock to read\",
+    icon: <IconChats />,
+    href: \"/nex-native/vault/home/chats\",
+  },
+  {
+    key: \"contacts\",
+    labelKey: \"vault.home.contacts.rowTitle\",
+    blurbKey: \"vault.home.contacts.rowBlurb\",
+    icon: <Users size={20} strokeWidth={1.8} aria-hidden />,
+    href: \"/nex-native/vault/home/contacts\",
+  },
+  {
+    key: \"videos\",
+    labelKey: \"vault.home.cat.videos.label\",
+    blurbKey: \"vault.home.cat.videos.blurb\",
+    icon: <IconVideo />,
+    href: \"/nex-native/vault/home/videos\",
+  },
+  {
+    key: \"plans\",
+    labelKey: \"vault.home.cat.plans.label\",
+    blurbKey: \"vault.home.cat.plans.blurb\",
+    icon: <IconBlueprint />,
+    href: \"/nex-native/vault/home/plans\",
+  },
+  {
+    key: \"archived\",
+    labelKey: \"vault.home.cat.archived.label\",
+    blurbKey: \"vault.home.cat.archived.blurb\",
+    icon: <IconArchive />,
+    href: \"/nex-native/vault/home/archived\",
+  },
+  {
+    key: \"settings\",
+    labelKey: \"vault.home.settingsLinkLabel\",
+    blurb: \"Lock Vault Now, devices, password status\",
+    icon: <Settings size={20} strokeWidth={1.8} aria-hidden />,
+    href: \"/nex-native/vault/settings\",
+  },
+];
+
+export default async function VaultWorkspaceHomePage() {
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) {
+    redirect(\"/nex-native/sign-in?next=/nex-native/vault/home\");
+  }
+
+  // Vault Phase A · require configured Vault to view home. Server-side
+  // \"unlocked\" state is tracked by nex_session.last_vault_unlock_at but
+  // the authoritative in-tab state is the client VMK singleton. We route
+  // based on the configured flag only here; the Lock Vault Now button
+  // reflects live client state.
+  const { data: setup } = await nexSupabaseAdmin
+    .from(\"nex_vault_setup\")
+    .select(\"account_id\")
+    .eq(\"account_id\", session.account.id)
+    .maybeSingle();
+  if (!setup) {
+    redirect(\"/nex-native/vault/setup\");
+  }
+
+  const chatTheme = (session.account.chat_theme as string | null) ?? null;
+  const doorwaySlug = mapChatThemeToDoorwaySlug(chatTheme);
+
+  // Phase B.7 · Vault surfaces consume the universal NEX i18n pipe.
+  const headerBag = await headers();
+  const locale = resolveServerLocale({
+    accountLocale: (session.account.locale as string | null) ?? null,
+    acceptLanguage: headerBag.get(\"accept-language\"),
+  });
+  const t = tFor(locale);
+
+  // B.4 follow-up (2026-10-07) · the Vaulted Chats section replaces
+  // the Phase-A ChatsFriendsCard doorway so each row navigates
+  // directly to the sealed B.4 Vault chat route at /vault/home/chats/
+  // [conversationId] (one click into the actual conversation · no
+  // extra drill-down page). Peer display names + a count are
+  // metadata-only · no protected message content is revealed by Vault
+  // Home rendering alone · the per-conversation chat page gates
+  // plaintext behind VMK unlock.
+  const [vaultedConversations, vaultedFriendIds] = await Promise.all([
+    vaultEntryService.listVaultedConversationsForAccount(session.account.id),
+    vaultEntryService.listVaultedFriendIdsForAccount(session.account.id),
+  ]);
+  // Stage 9 · item 6 · 2026-11-14 · N+1 collapse. Was N round-trips
+  // to getAccountById per vaulted conversation · now ONE batched
+  // getAccountsByIds call that hydrates every peer in a single
+  // PostgREST request.
+  const peerById = await accountService.getAccountsByIds(
+    vaultedConversations.map((v) => v.peerAccountId),
+  );
+  const vaultedChatsRows: Array<{
+    conversationId: string;
+    peerAccountId: string;
+    displayName: string;
+    handle: string | null;
+  }> = vaultedConversations.map((v) => {
+    const peer = peerById.get(v.peerAccountId);
+    return {
+      conversationId: v.conversation.id,
+      peerAccountId: v.peerAccountId,
+      displayName: peer?.display_name ?? \"Private contact\",
+      handle: peer?.nex_handle ?? null,
+    };
+  });
+
+  return (
+    <>
+      <style>{`
+        html, body { background: ${NEX.bg} !important; }
+        [data-nex-vault-home] * { box-sizing: border-box; }
+        [data-nex-vault-home] button { font-family: inherit; }
+        [data-nex-vault-home] a { text-decoration: none; color: inherit; }
+      `}</style>
+      <div
+        data-nex-vault-home
+        data-nex-vault-theme-source={doorwaySlug}
+        style={{
+          minHeight: \"100dvh\",
+          background: NEX.bg,
+          color: NEX.textPrimary,
+          fontFamily: NEX.sans,
+          position: \"relative\",
+        }}
+      >
+        {/* Owner-authorised 2026-11-15 · the NEX Vault \"Your Private
+            Space\" branded hero graphic is now the fixed full-page
+            backdrop. A dark-to-transparent gradient overlay maintains
+            contrast for the sticky header and the glass tile grid
+            below · the image itself carries the NEX Vault title + the
+            padlock + the folder/photo/card iconography that the Hero
+            component previously duplicated in text. */}
+        <div
+          aria-hidden
+          data-nex-vault-home-backdrop
+          style={{
+            position: \"fixed\",
+            inset: 0,
+            backgroundImage: \"url(/nex-native/vault/your-private-space.webp)\",
+            backgroundSize: \"cover\",
+            backgroundPosition: \"center top\",
+            backgroundRepeat: \"no-repeat\",
+            pointerEvents: \"none\",
+            zIndex: 0,
+          }}
+        />
+        <div
+          aria-hidden
+          data-nex-vault-home-backdrop-overlay
+          style={{
+            position: \"fixed\",
+            inset: 0,
+            background:
+              \"linear-gradient(180deg, rgba(6,23,16,0.35) 0%, rgba(6,23,16,0.55) 45%, rgba(6,23,16,0.86) 100%)\",
+            pointerEvents: \"none\",
+            zIndex: 0,
+          }}
+        />
+        <HomeHeader t={t} />
+        <main
+          id=\"main\"
+          style={{
+            position: \"relative\",
+            padding: \"16px 16px 32px\",
+            maxWidth: 480,
+            margin: \"0 auto\",
+            zIndex: 1,
+          }}
+        >
+          <MigrationRunner />
+          {/* Owner-authorised 2026-11-15 · the sealed Hero banner is
+              retired now that the \"NEX Vault · Your Private Space\"
+              branded image is the fixed backdrop. Its title + safe
+              iconography were duplicating what the Hero text panel
+              surfaced. The six-tile grid now sits closer to the
+              viewport top so the landing's primary nav is above the
+              fold on 844h handsets. */}
+          {/* Owner-authorised 2026-11-15 · the Vault landing now shows
+              the sealed six-tile grid (Chats, Contacts, Videos, Plans,
+              Archived, Settings). The direct vaulted-chats list is
+              still reachable from the Chats tile · the old separate
+              VaultedChatsSection + ContactsEntryTile cards are retired
+              to avoid duplicating navigation. The Chats tile also
+              carries the live count of vaulted conversations so the
+              signal isn't lost. */}
+          <VaultSectionsGrid
+            t={t}
+            vaultedChatCount={vaultedChatsRows.length}
+            vaultedFriendCount={vaultedFriendIds.length}
+          />
+          <VaultPasswordLimitsPanel />
+          <VaultQuickActions />
+        </main>
+      </div>
+    </>
+  );
+}
+
+function HomeHeader({ t }: { t: (k: I18nKey) => string }) {
+  return (
+    <header
+      data-nex-vault-home-header
+      style={{
+        position: \"sticky\",
+        top: 0,
+        zIndex: 10,
+        padding: \"14px 16px 12px\",
+        background: \"rgba(6, 4, 10, 0.72)\",
+        backdropFilter: NEX.backdropBlur,
+        WebkitBackdropFilter: NEX.backdropBlur,
+        borderBottom: `1px solid ${NEX.glassBorder}`,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 480,
+          margin: \"0 auto\",
+          display: \"flex\",
+          alignItems: \"center\",
+          justifyContent: \"space-between\",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: \"flex\", flexDirection: \"column\", gap: 2 }}>
+          <div style={{ display: \"flex\", alignItems: \"baseline\", gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: \"0.14em\", color: NEX.accent }}>{t(\"vault.home.brandNex\")}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: \"0.18em\", color: NEX.textPrimary }}>{t(\"vault.home.brandVault\")}</span>
+          </div>
+          <p style={{ margin: 0, fontSize: 11.5, color: NEX.textSecondary, letterSpacing: \"0.005em\" }}>
+            {t(\"vault.home.tagline\")}
+          </p>
+        </div>
+
+        <div style={{ display: \"flex\", alignItems: \"center\", gap: 10 }}>
+          <LockVaultNowButton />
+          <Link
+            href=\"/nex-native/vault/settings\"
+            aria-label={t(\"vault.home.settingsLinkLabel\")}
+            data-nex-vault-settings-link
+            style={{
+              ...GLASS_CHIP,
+              width: 40,
+              height: 40,
+              borderRadius: 999,
+              display: \"flex\",
+              alignItems: \"center\",
+              justifyContent: \"center\",
+              color: NEX.textPrimary,
+            }}
+          >
+            <Settings size={18} strokeWidth={1.6} aria-hidden />
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function VaultedChatsSection(props: {
+  rows: Array<{
+    conversationId: string;
+    peerAccountId: string;
+    displayName: string;
+    handle: string | null;
+  }>;
+  vaultedFriendCount: number;
+  t: (k: I18nKey) => string;
+}) {
+  const { t } = props;
+  // Section header
+  const header = (
+    <h2
+      data-nex-vault-chats-section-title
+      style={{
+        fontSize: 11,
+        letterSpacing: \"0.22em\",
+        textTransform: \"uppercase\",
+        color: NEX.accent,
+        fontWeight: 700,
+        margin: \"0 2px 10px\",
+      }}
+    >
+      {t(\"vault.home.chats.sectionTitle\")}
+    </h2>
+  );
+
+  if (props.rows.length === 0) {
+    // Empty state · the Vault is set up but nothing has been moved
+    // in yet · we do NOT reveal protected content so this message is
+    // safe to show regardless of lock state.
+    return (
+      <section
+        data-nex-vault-chats-section
+        data-nex-vault-chats-empty=\"true\"
+        aria-label={t(\"vault.home.chats.sectionTitle\")}
+        style={{ marginTop: 20 }}
+      >
+        {header}
+        <div
+          style={{
+            ...GLASS,
+            display: \"flex\",
+            alignItems: \"center\",
+            gap: 14,
+            padding: \"16px 16px\",
+            borderRadius: 20,
+            minHeight: 72,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              background: NEX.accentSoft,
+              color: NEX.accent,
+              display: \"flex\",
+              alignItems: \"center\",
+              justifyContent: \"center\",
+              flexShrink: 0,
+              border: `1px solid ${NEX.accentStrong}`,
+            }}
+          >
+            <IconChats />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 15,
+                fontWeight: 600,
+                color: NEX.textPrimary,
+              }}
+            >
+              {t(\"vault.home.chats.empty.title\")}
+            </p>
+            <p
+              style={{
+                margin: \"2px 0 0\",
+                fontSize: 12.5,
+                color: NEX.textSecondary,
+                lineHeight: 1.35,
+              }}
+            >
+              {t(\"vault.home.chats.empty.body\")}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      data-nex-vault-chats-section
+      data-nex-vault-chats-empty=\"false\"
+      aria-label={t(\"vault.home.chats.sectionTitle\")}
+      style={{
+        marginTop: 20,
+        display: \"flex\",
+        flexDirection: \"column\",
+        gap: 8,
+      }}
+    >
+      {header}
+      {props.rows.map((r) => (
+        <Link
+          key={`vconv-${r.conversationId}`}
+          href={`/nex-native/vault/home/chats/${r.conversationId}`}
+          data-nex-vault-home-chat-link
+          data-nex-vault-home-chat-conversation-id={r.conversationId}
+          style={{
+            ...GLASS,
+            display: \"flex\",
+            alignItems: \"center\",
+            gap: 14,
+            padding: \"14px 16px\",
+            borderRadius: 18,
+            minHeight: 64,
+            color: NEX.textPrimary,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 999,
+              background: NEX.accentSoft,
+              color: NEX.accent,
+              display: \"flex\",
+              alignItems: \"center\",
+              justifyContent: \"center\",
+              flexShrink: 0,
+              border: `1px solid ${NEX.accentStrong}`,
+            }}
+          >
+            <IconChats />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span
+              style={{
+                display: \"block\",
+                fontSize: 15,
+                fontWeight: 600,
+                color: NEX.textPrimary,
+                whiteSpace: \"nowrap\",
+                overflow: \"hidden\",
+                textOverflow: \"ellipsis\",
+              }}
+            >
+              {r.displayName}
+            </span>
+            <span
+              style={{
+                display: \"block\",
+                marginTop: 2,
+                fontSize: 12,
+                color: NEX.textSecondary,
+                lineHeight: 1.3,
+                whiteSpace: \"nowrap\",
+                overflow: \"hidden\",
+                textOverflow: \"ellipsis\",
+              }}
+            >
+              {r.handle ?? t(\"vault.home.chatRow.handleFallback\")}
+            </span>
+          </span>
+          <span
+            aria-hidden
+            data-nex-vault-home-chat-badge
+            style={{
+              display: \"inline-flex\",
+              alignItems: \"center\",
+              gap: 4,
+              padding: \"4px 8px\",
+              borderRadius: 999,
+              background: NEX.secureSoft,
+              color: NEX.secure,
+              border: `1px solid ${NEX.secureStrong}`,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: \"0.14em\",
+              marginRight: 4,
+            }}
+          >
+            <Lock size={11} strokeWidth={2} />
+            {t(\"vault.contacts.vaultBadge\")}
+          </span>
+          <ChevronRight size={18} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
+        </Link>
+      ))}
+      {props.vaultedFriendCount > 0 ? (
+        // The whole-friend-vault path still has its own doorway page ·
+        // link here so users with vaulted friends can still reach it.
+        <Link
+          href=\"/nex-native/vault/home/chats\"
+          data-nex-vault-home-friends-doorway
+          style={{
+            ...GLASS_CHIP,
+            display: \"flex\",
+            alignItems: \"center\",
+            gap: 14,
+            padding: \"12px 16px\",
+            borderRadius: 18,
+            minHeight: 52,
+            color: NEX.textPrimary,
+            marginTop: 2,
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: NEX.textSecondary }}>
+            {props.vaultedFriendCount === 1
+              ? t(\"vault.home.friendsVaulted.one\")
+              : t(\"vault.home.friendsVaulted.many\").replace(
+                  \"{count}\",
+                  String(props.vaultedFriendCount),
+                )}
+          </span>
+          <ChevronRight size={16} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
+        </Link>
+      ) : null}
+    </section>
+  );
+}
+
+/** Vault Home · Contacts navigation tile. First-class entry at the
+ *  same level as Chats + Settings · routes to the sealed Vault
+ *  Contacts page which reuses the existing NEX friends system (zero
+ *  duplicate contacts, zero duplicate conversation). */
+function ContactsEntryTile({ t }: { t: (k: I18nKey) => string }) {
+  return (
+    <section
+      data-nex-vault-contacts-entry
+      aria-label={t(\"vault.home.contacts.sectionTitle\")}
+      style={{ marginTop: 24 }}
+    >
+      <h2
+        data-nex-vault-contacts-entry-title
+        style={{
+          fontSize: 11,
+          letterSpacing: \"0.22em\",
+          textTransform: \"uppercase\",
+          color: NEX.accent,
+          fontWeight: 700,
+          margin: \"0 2px 10px\",
+        }}
+      >
+        {t(\"vault.home.contacts.sectionTitle\")}
+      </h2>
+      <Link
+        href=\"/nex-native/vault/home/contacts\"
+        data-nex-vault-contacts-entry-link
+        style={{
+          ...GLASS,
+          display: \"flex\",
+          alignItems: \"center\",
+          gap: 14,
+          padding: \"14px 16px\",
+          borderRadius: 18,
+          minHeight: 64,
+          color: NEX.textPrimary,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            background: NEX.accentSoft,
+            color: NEX.accent,
+            display: \"flex\",
+            alignItems: \"center\",
+            justifyContent: \"center\",
+            flexShrink: 0,
+            border: `1px solid ${NEX.accentStrong}`,
+          }}
+        >
+          <Users size={20} strokeWidth={1.8} aria-hidden />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span
+            style={{
+              display: \"block\",
+              fontSize: 15,
+              fontWeight: 600,
+              color: NEX.textPrimary,
+            }}
+          >
+            {t(\"vault.home.contacts.rowTitle\")}
+          </span>
+          <span
+            style={{
+              display: \"block\",
+              marginTop: 2,
+              fontSize: 12.5,
+              color: NEX.textSecondary,
+              lineHeight: 1.3,
+            }}
+          >
+            {t(\"vault.home.contacts.rowBlurb\")}
+          </span>
+        </span>
+        <ChevronRight size={18} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
+      </Link>
+    </section>
+  );
+}
+
+/** Owner-authorised 2026-11-15 · the sealed six-tile grid for the
+ *  Vault landing page. Each tile has a stable test hook
+ *  `data-nex-vault-section={key}` so Playwright can assert the exact
+ *  six sections render. The Chats tile shows a live count of
+ *  vaulted conversations as a secondary line to preserve the Phase-A
+ *  \"how much is in your Vault\" signal. */
+function VaultSectionsGrid({
+  t,
+  vaultedChatCount,
+  vaultedFriendCount,
+}: {
+  t: (k: I18nKey) => string;
+  vaultedChatCount: number;
+  vaultedFriendCount: number;
+}) {
+  return (
+    <section
+      data-nex-vault-sections
+      aria-label=\"Vault sections\"
+      style={{
+        marginTop: 24,
+        display: \"flex\",
+        flexDirection: \"column\",
+        gap: 10,
+      }}
+    >
+      {VAULT_SECTIONS.map((c) => {
+        const blurb = c.blurbKey ? t(c.blurbKey) : (c.blurb ?? \"\");
+        const liveCountLabel =
+          c.key === \"chats\"
+            ? vaultedChatCount + vaultedFriendCount > 0
+              ? ` (${vaultedChatCount + vaultedFriendCount})`
+              : \"\"
+            : \"\";
+        return (
+          <Link
+            key={c.key}
+            href={c.href}
+            data-nex-vault-section={c.key}
+            style={{
+              ...GLASS_CHIP,
+              display: \"flex\",
+              alignItems: \"center\",
+              gap: 14,
+              padding: \"14px 16px\",
+              borderRadius: 18,
+              minHeight: 64,
+              color: NEX.textPrimary,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: NEX.accentSoft,
+                color: NEX.accent,
+                display: \"flex\",
+                alignItems: \"center\",
+                justifyContent: \"center\",
+                flexShrink: 0,
+                border: `1px solid ${NEX.accentStrong}`,
+              }}
+            >
+              {c.icon}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span
+                style={{
+                  display: \"block\",
+                  fontSize: 14.5,
+                  fontWeight: 600,
+                  color: NEX.textPrimary,
+                }}
+              >
+                {t(c.labelKey)}
+                {liveCountLabel}
+              </span>
+              <span
+                style={{
+                  display: \"block\",
+                  fontSize: 12,
+                  color: NEX.textSecondary,
+                  marginTop: 2,
+                  lineHeight: 1.3,
+                }}
+              >
+                {blurb}
+              </span>
+            </span>
+            <ChevronRight size={18} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
+          </Link>
+        );
+      })}
+    </section>
+  );
+}
+
+/** Owner-authorised 2026-11-15 · honest-limits panel for the Vault
+ *  landing page. States plainly what the password / recovery situation
+ *  is TODAY. Reset-password and Forgot-password full flows are NOT
+ *  implemented in this pass (would require new backend + new UI for
+ *  recovery-key creation at setup time · that is a separate pass).
+ *  The settings tile is the destination for the status detail · this
+ *  panel is the plain-language disclosure. */
+function VaultPasswordLimitsPanel() {
+  return (
+    <section
+      data-nex-vault-password-limits
+      aria-label=\"Vault password and recovery\"
+      style={{
+        marginTop: 20,
+        padding: \"16px 18px\",
+        borderRadius: 18,
+        background: \"rgba(255, 171, 64, 0.06)\",
+        border: \"1px solid rgba(255, 171, 64, 0.22)\",
+        color: NEX.textPrimary,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12.5,
+          fontWeight: 700,
+          letterSpacing: \"0.14em\",
+          textTransform: \"uppercase\",
+          color: \"rgba(255, 171, 64, 0.95)\",
+        }}
+      >
+        Password and recovery
+      </p>
+      <ul
+        data-nex-vault-password-limits-list
+        style={{
+          margin: \"10px 0 0\",
+          padding: 0,
+          listStyle: \"none\",
+          display: \"flex\",
+          flexDirection: \"column\",
+          gap: 8,
+          fontSize: 12.5,
+          lineHeight: 1.45,
+          color: NEX.textSecondary,
+        }}
+      >
+        <li data-nex-vault-password-limit=\"create\">
+          <strong style={{ color: NEX.textPrimary }}>
+            Create password
+          </strong>
+          {\" · \"}set during first Vault setup.{\" \"}
+          <Link
+            href=\"/nex-native/vault/setup\"
+            data-nex-vault-create-password-link
+            style={{ color: NEX.accent, fontWeight: 600 }}
+          >
+            Go to setup
+          </Link>
+          .
+        </li>
+        <li data-nex-vault-password-limit=\"reset\">
+          <strong style={{ color: NEX.textPrimary }}>
+            Reset password
+          </strong>
+          {\" · \"}change the password while you still know the current one
+          is <em>not yet available</em> in this release. Server-side
+          crypto for swapping the wrapped-VMK envelope has not shipped.
+        </li>
+        <li data-nex-vault-password-limit=\"forgot\">
+          <strong style={{ color: NEX.textPrimary }}>
+            Forgot password
+          </strong>
+          {\" · \"}recovery via a recovery key is also <em>not yet
+          available</em>: the recovery-envelope setup step has not been
+          added to the Vault setup wizard, so there is no recovery key
+          on file for anyone today.
+        </li>
+        <li
+          data-nex-vault-password-limit=\"honest-loss\"
+          style={{ color: \"rgba(255, 171, 64, 0.95)\", fontWeight: 600 }}
+        >
+          If you lose your password and no recovery key is on file,
+          your Vault content cannot be recovered. NEX does not keep a
+          copy and cannot unlock it for you.
+        </li>
+      </ul>
+    </section>
+  );
+}
+"
+
+ ❯ src/lib/nex-native/__tests__/vault-contacts.test.ts:44:17
+     42|     // locale resolver so the Vault Home surface renders through the
+     43|     // universal NEX i18n pipe.
+     44|     expect(src).toMatch(/<ContactsEntryTile\s+t=\{t\}\s*\/>/);
+       |                 ^
+     45|     expect(src).toMatch(/function\s+ContactsEntryTile\s*\(/);
+     46|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-contacts.test.ts > Vault Contacts · Vault Home navigation > the tile sits in the Vault navigation stream (Chats → Contacts → Settings via header)
+AssertionError: expected -1 to be greater than -1
+ ❯ src/lib/nex-native/__tests__/vault-contacts.test.ts:61:19
+     59|     const chats = src.indexOf("<VaultedChatsSection");
+     60|     const contacts = src.indexOf("<ContactsEntryTile");
+     61|     expect(chats).toBeGreaterThan(-1);
+       |                   ^
+     62|     expect(contacts).toBeGreaterThan(chats);
+     63|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts > POST /vault/unlock/recovery/materials > 404 when recovery not configured
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:117:10
+    115|     async maybeSingle() {
+    116|       const rows = store[table]
+    117|         .filter((r) => matches(r, { equals, negatives }))
+       |          ^
+    118|         .filter((r) => passesExpiryGuard(r, expiryGuardIso))
+    119|         .filter((r) => {
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock/recovery/materials/route.ts:45:25
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:510:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts > POST /vault/unlock/recovery/materials > happy path returns opaque materials
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:117:10
+    115|     async maybeSingle() {
+    116|       const rows = store[table]
+    117|         .filter((r) => matches(r, { equals, negatives }))
+       |          ^
+    118|         .filter((r) => passesExpiryGuard(r, expiryGuardIso))
+    119|         .filter((r) => {
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock/recovery/materials/route.ts:45:25
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:520:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts > POST /vault/unlock/recovery/materials > 429 and NO envelope leak when rate-limited
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:117:10
+    115|     async maybeSingle() {
+    116|       const rows = store[table]
+    117|         .filter((r) => matches(r, { equals, negatives }))
+       |          ^
+    118|         .filter((r) => passesExpiryGuard(r, expiryGuardIso))
+    119|         .filter((r) => {
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock/recovery/materials/route.ts:45:25
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:541:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts > POST /vault/unlock/recovery/attempt > success=true marks unlocked + logs vault_unlock
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:117:10
+    115|     async maybeSingle() {
+    116|       const rows = store[table]
+    117|         .filter((r) => matches(r, { equals, negatives }))
+       |          ^
+    118|         .filter((r) => passesExpiryGuard(r, expiryGuardIso))
+    119|         .filter((r) => {
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock/recovery/attempt/route.ts:80:31
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:560:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts > POST /vault/unlock/recovery/attempt > success=false logs vault_unlock_failed + returns rate verdict
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:117:10
+    115|     async maybeSingle() {
+    116|       const rows = store[table]
+    117|         .filter((r) => matches(r, { equals, negatives }))
+       |          ^
+    118|         .filter((r) => passesExpiryGuard(r, expiryGuardIso))
+    119|         .filter((r) => {
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock/recovery/attempt/route.ts:80:31
+ ❯ src/lib/nex-native/__tests__/vault-recovery-rotation.test.ts:573:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-materials > 404 when vault is not configured
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-materials/route.ts:97:25
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:619:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-materials > 429 and no envelope leak when rate-limited
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-materials/route.ts:97:25
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:635:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-materials > happy path returns opaque envelope + non-secret derivation params
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-materials/route.ts:97:25
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:649:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-materials > 403 when device has no envelope (device not authorised for vault)
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-materials/route.ts:97:25
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:675:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-attempt > success=true marks unlocked + logs vault_unlock event
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-attempt/route.ts:124:31
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:702:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-attempt > success=false records failure + logs vault_unlock_failed
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-attempt/route.ts:124:31
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:720:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/24]⎯
+
+ FAIL  src/lib/nex-native/__tests__/vault-routes.test.ts > POST /api/nex-native/vault/unlock-attempt > 5 failures exposes 'window_exceeded' in rate.reason
+TypeError: Cannot read properties of undefined (reading 'filter')
+ ❯ Object.maybeSingle src/lib/nex-native/__tests__/vault-routes.test.ts:116:33
+    114|     },
+    115|     async maybeSingle() {
+    116|       const rows = store[table].filter((r) => matches(r, filters));
+       |                                 ^
+    117|       return { data: rows[0] ?? null, error: null };
+    118|     },
+ ❯ getLockoutStatus src/lib/nex-native/vault/security-service.ts:154:6
+ ❯ Module.POST src/app/api/nex-native/vault/unlock-attempt/route.ts:124:31
+ ❯ src/lib/nex-native/__tests__/vault-routes.test.ts:756:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/24]⎯
+
+
+ Test Files  13 failed | 21 passed (34)
+      Tests  14 failed | 878 passed (892)
+   Start at  13:01:06
+   Duration  20.40s (transform 2.86s, setup 1.01s, import 2.65s, tests 21.28s, environment 5ms)
+

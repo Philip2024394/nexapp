@@ -87,6 +87,7 @@ import { PeerPresenceClient } from "./_presence-client";
 import { PeerMessageEventsClient } from "./_message-events-client";
 import { DeviceKeyHub } from "./_device-key-hub";
 import { E2eDecryptor } from "./_e2e-decryptor";
+import { ChatTranslationLayer } from "./_translation-layer";
 import { E2eComposerIntercept } from "./_e2e-composer-intercept";
 // Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
 // Standard /chat/peer/* now enforces the viewer's Vault unlock state
@@ -126,6 +127,14 @@ import type {
   PendingInvite,
 } from "../../_side-nav-panel";
 import * as businessService from "@/lib/nex-native/business-service";
+// Owner directive 2026-11-17 · Seller FAQ "Quick answers" strip in
+// peer chat. Reads nex_business.info_pages.faq_items for the peer's
+// shop (if any) and threads published + answered entries down to the
+// local-only client renderer. Does NOT touch the encrypted send path
+// or create any message rows.
+import { getInfoPages } from "@/lib/nex-native/info-pages-service";
+import { isFaqItemEnabled } from "@/lib/nex-native/info-pages";
+import { PeerChatFaqQuickAnswers } from "./_shop-faq-quick-answers-client";
 import {
   hasCurrentSafeTradeConsent,
   CURRENT_SAFE_TRADE_TERMS_VERSION,
@@ -387,7 +396,7 @@ export default async function PeerChatPage({
   // safe-trade consent are all independent of each other. Run in
   // parallel. Non-business chats short-circuit to empty arrays
   // without incurring a DB round-trip.
-  const [peerProducts, peerMenuItems, needsSafeTradeConsent] =
+  const [peerProducts, peerMenuItems, needsSafeTradeConsent, peerInfoPages] =
     await Promise.all([
       peerBusiness
         ? productService
@@ -422,7 +431,27 @@ export default async function PeerChatPage({
             .then((v) => !v)
             .catch(() => false)
         : Promise.resolve(false),
+      // Owner directive 2026-11-17 · Seller FAQ feed. Fetches the peer
+      // shop's info_pages.faq_items so the Quick-answers strip can
+      // render published + answered entries. Non-seller chats skip
+      // the call entirely (no DB round-trip).
+      peerBusiness
+        ? getInfoPages(peerBusiness.id).catch(() => null)
+        : Promise.resolve(null),
     ]);
+
+  // Owner directive 2026-11-17 · publish filter mirrors the burger-
+  // menu customer FAQ sheet: only enabled rows with non-empty
+  // question AND non-empty answer survive. Everything else stays
+  // hidden from the customer.
+  const peerPublishedFaqItems = (peerInfoPages?.faq_items ?? [])
+    .filter(
+      (row) =>
+        isFaqItemEnabled(row) &&
+        row.question.trim().length > 0 &&
+        row.answer.trim().length > 0,
+    )
+    .map((row) => ({ id: row.id, question: row.question, answer: row.answer }));
 
   // Bridge 17e · report affordance moved to /nex-native/report/[id]
   // and surfaced from the /friends list next to Remove / Block · no
@@ -1925,6 +1954,16 @@ export default async function PeerChatPage({
         conversationId={conversation.id}
         isVaultedForViewer={!!isVaultedForViewer}
       />
+      {/* Chat-translation pilot 2026-11-17 · founder-only, bubble-level
+          toggle. Sibling to E2eDecryptor; reads already-decrypted
+          plaintext from the DOM and renders translations in a sibling
+          slot without ever mutating the original body. Vault-gated
+          conversations are excluded inside the layer. */}
+      <ChatTranslationLayer
+        selfAccountId={session.account.id}
+        conversationId={conversation.id}
+        isVaultedForViewer={!!isVaultedForViewer}
+      />
       {/* Bridge 76 · intercept composer submits · encrypt + POST when
           both parties have device keys · silent plaintext fallback
           when they don't. Disabled for NEX1 per doctrine. */}
@@ -2011,6 +2050,19 @@ export default async function PeerChatPage({
         />
       ) : null}
       <ScrollToBottomButton />
+      {/* Owner directive 2026-11-17 · Seller FAQ Quick-answers strip.
+          Local-only · reads the peer shop's info_pages.faq_items
+          (fetched server-side above) and lets the viewer tap a pill
+          to see the seller's own answer inline. No message rows are
+          created, no DB writes happen, and the encrypted send path
+          is untouched. Renders only when the peer is a shop owner
+          with at least one published + answered entry. */}
+      {peerBusiness && peerPublishedFaqItems.length > 0 ? (
+        <PeerChatFaqQuickAnswers
+          items={peerPublishedFaqItems}
+          shopDisplayName={peerBusiness.display_name}
+        />
+      ) : null}
     </div>
   );
 }

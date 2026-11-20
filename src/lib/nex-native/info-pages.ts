@@ -118,8 +118,14 @@ export const NEX_INFO_BODY_MAX = 400;
 
 /** FAQ sealed 2026-09-30 · answers can be longer than a body since the
  *  question already sets short context · seller writes the answer once,
- *  buyer reads it once. */
-export const NEX_INFO_MAX_FAQ_ITEMS = 6;
+ *  buyer reads it once.
+ *
+ *  Cap raised from 6 → 60 on 2026-11-17 to hold the sealed starter
+ *  bank (17 core + 13 optional = 30) plus owner-authored custom
+ *  questions. This is a client-side validation cap; the underlying
+ *  `nex_business.info_pages` JSONB column has no array-length
+ *  constraint, so this is a code change only, not a migration. */
+export const NEX_INFO_MAX_FAQ_ITEMS = 60;
 export const NEX_INFO_FAQ_QUESTION_MAX = 140;
 export const NEX_INFO_FAQ_ANSWER_MAX = 800;
 

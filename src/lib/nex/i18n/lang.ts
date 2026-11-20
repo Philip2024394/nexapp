@@ -58,7 +58,13 @@ export const DEFAULT_LANG: Lang = REGISTRY_DEFAULT;
  *   1. URL query `?lang=<code>` (only when the code is in the
  *      supported-locale registry)
  *   2. localStorage `nex_user_lang`
- *   3. DEFAULT_LANG (`"id"`)
+ *   3. `navigator.language` / `navigator.languages[]` primary subtag
+ *      (added 2026-11-18 · owner-directed browser-preference init)
+ *   4. DEFAULT_LANG (`"id"`)
+ *
+ * Country is NOT consulted here · country and language are separate
+ * axes (sealed 2026-10-07). A user in Indonesia preferring English is
+ * a legitimate configuration and is honoured.
  */
 export function resolveClientLang(): Lang {
   if (typeof window === "undefined") return DEFAULT_LANG;
@@ -70,10 +76,48 @@ export function resolveClientLang(): Lang {
       window.localStorage.getItem("nex_user_lang"),
     );
     if (stored) return stored;
+    const nav = narrowBrowserPreference();
+    if (nav) return nav;
   } catch {
     // Private-mode / cross-origin frame — fall through.
   }
   return DEFAULT_LANG;
+}
+
+/**
+ * Walk `navigator.languages` (ordered by user preference) and the
+ * single-value `navigator.language` fallback, extract the primary
+ * subtag, and return the first one that matches the supported-locale
+ * registry. Exported for the client-side `I18nProvider` and settings
+ * page to render a browser-preferred hint. Pure · returns null when
+ * nothing matches or `navigator` is unavailable.
+ */
+export function narrowBrowserPreference(): Lang | null {
+  if (typeof navigator === "undefined") return null;
+  const candidates: string[] = [];
+  try {
+    const list = (navigator as Navigator & { languages?: readonly string[] })
+      .languages;
+    if (Array.isArray(list)) {
+      for (const tag of list) {
+        if (typeof tag === "string") candidates.push(tag);
+      }
+    }
+  } catch {
+    /* noop */
+  }
+  try {
+    const single = (navigator as Navigator & { language?: string }).language;
+    if (typeof single === "string") candidates.push(single);
+  } catch {
+    /* noop */
+  }
+  for (const tag of candidates) {
+    const primary = tag.split(/[-_]/)[0];
+    const narrowed = narrowToSupportedLang(primary);
+    if (narrowed) return narrowed;
+  }
+  return null;
 }
 
 /**

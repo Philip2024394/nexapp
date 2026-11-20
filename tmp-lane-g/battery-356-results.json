@@ -1,0 +1,47 @@
+[
+  {
+    "case": "A",
+    "verdict": "PASS",
+    "detail": "anon RPC denied at permission boundary · code=42501 msg=permission denied for function nex_invite_to_call_tx"
+  },
+  {
+    "case": "B",
+    "verdict": "UNVERIFIED",
+    "detail": "Grants are authenticated-only (REVOKE anon, REVOKE service_role, GRANT authenticated).\nExercising the `IF v_caller_sb_user_id IS NULL` body guard requires an authenticated-grant caller\nwith NULL auth.uid(), which does not occur in Supabase runtime without weakening controls\n(forged JWT, fake claim, or grant to a role with no auth.uid()).  The directive forbids all three.\nEvidence tier: SOURCE_INSPECTED · mig-356 lines 176-180:\n  v_caller_sb_user_id := auth.uid();\n  IF v_caller_sb_user_id IS NULL THEN\n    RAISE EXCEPTION 'caller_identity_required · auth.uid() is NULL' USING ERRCODE = '42501';\nPermission-boundary denial (case A) does NOT independently prove the body guard executed."
+  },
+  {
+    "case": "C",
+    "verdict": "INAPPLICABLE",
+    "detail": "The new signature nex_invite_to_call_tx(p_invitee_account_id, p_media_type, p_host_country,\np_attachment_meta, p_invite_body, p_attachment_url, p_existing_session_id) contains NO\nsupplied-identity parameter (p_self_supabase_user_id was removed at DROP of the mig-353\n7-param signature).  Identity is derived from auth.uid() ONLY.\nA supplied-identity mismatch test is therefore structurally impossible against the new RPC\nwithout re-adding a supplied-identity parameter (prohibited · no wrapper/signature change).\nSession-ownership negative IS available: p_existing_session_id owned by someone else\nraises 'session_not_owned' (ERRCODE 42501) at mig-356 line 224.  That is exercised\nunder case E as a targeted sub-assertion once we have A's own session to compare against."
+  },
+  {
+    "case": "D",
+    "verdict": "FAIL",
+    "detail": "sub-cases:\n{\"label\":\"null\",\"result\":\"PASS\",\"code\":\"22023\",\"msg\":\"attachment_url_required · call_invite needs an accept_href\"}\n{\"label\":\"empty-string\",\"result\":\"PASS\",\"code\":\"22023\",\"msg\":\"attachment_url_required · call_invite needs an accept_href\"}\n{\"label\":\"whitespace-only\",\"result\":\"PASS\",\"code\":\"22023\",\"msg\":\"attachment_url_required · call_invite needs an accept_href\"}\n{\"label\":\"tab-newline\",\"result\":\"FAIL_ACCEPTED\",\"data\":\"[{\\\"out_session_id\\\":\\\"c0aab923-3080-46ef-bbc0-79ee22017540\\\",\\\"out_participant_id\\\":\\\"6d3911dd-eaed-4396-937f-9a18bc6a34db\\\",\\\"out_conversation_id\\\":\\\"4a250371-ec53-45b4-9879-dfb93c88380a\\\",\\\"out_message_id\\\":\\\"c139ce5b-3eb1-48ab-a983-992971cedb81\\\",\\\"out_skipped\\\":null}]\"}"
+  },
+  {
+    "case": "D-partial-writes",
+    "verdict": "FAIL",
+    "detail": "found 1 partial write(s) from rejected D sub-cases"
+  },
+  {
+    "case": "E",
+    "verdict": "PASS",
+    "detail": "{\n  \"sess\": [\n    {\n      \"id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"host_account_id\": \"bfcd2a0b-7c94-43d2-83c8-cc548bcf9f66\",\n      \"media_type\": \"audio\",\n      \"state\": \"ringing\",\n      \"host_country\": \"ireland\"\n    }\n  ],\n  \"part\": [\n    {\n      \"id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n      \"session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"account_id\": \"c6ad3b74-75a6-4d01-9f78-77ce5122b32d\"\n    }\n  ],\n  \"conv\": [\n    {\n      \"id\": \"4a250371-ec53-45b4-9879-dfb93c88380a\",\n      \"participant_a_id\": \"bfcd2a0b-7c94-43d2-83c8-cc548bcf9f66\",\n      \"participant_b_id\": \"c6ad3b74-75a6-4d01-9f78-77ce5122b32d\"\n    }\n  ],\n  \"msg\": [\n    {\n      \"id\": \"002bac4d-5455-43b9-bfa2-417455c5f061\",\n      \"conversation_id\": \"4a250371-ec53-45b4-9879-dfb93c88380a\",\n      \"sender_account_id\": \"bfcd2a0b-7c94-43d2-83c8-cc548bcf9f66\",\n      \"attachment_type\": \"call_invite\",\n      \"attachment_url\": \"/nex-native/call/preview?session=00000000-0000-0000-0000-000000000000&accept=1\",\n      \"body\": \"lane-g case E happy path\"\n    }\n  ],\n  \"flags\": {\n    \"sOK\": true,\n    \"pOK\": true,\n    \"cOK\": true,\n    \"mOK\": true\n  }\n}"
+  },
+  {
+    "case": "C-sub",
+    "verdict": "PASS",
+    "detail": "B cannot reuse A's session · code=42501 msg=session_not_owned"
+  },
+  {
+    "case": "F",
+    "verdict": "PASS",
+    "detail": "{\n  \"seqRow\": {\n    \"out_session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n    \"out_participant_id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n    \"out_conversation_id\": null,\n    \"out_message_id\": null,\n    \"out_skipped\": \"already_invited\"\n  },\n  \"concRows\": [\n    {\n      \"out_session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"out_participant_id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n      \"out_conversation_id\": null,\n      \"out_message_id\": null,\n      \"out_skipped\": \"already_invited\"\n    },\n    {\n      \"out_session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"out_participant_id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n      \"out_conversation_id\": null,\n      \"out_message_id\": null,\n      \"out_skipped\": \"already_invited\"\n    },\n    {\n      \"out_session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"out_participant_id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n      \"out_conversation_id\": null,\n      \"out_message_id\": null,\n      \"out_skipped\": \"already_invited\"\n    },\n    {\n      \"out_session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"out_participant_id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n      \"out_conversation_id\": null,\n      \"out_message_id\": null,\n      \"out_skipped\": \"already_invited\"\n    },\n    {\n      \"out_session_id\": \"fc4c9b83-97c7-4926-baaa-c55e6cdfeeec\",\n      \"out_participant_id\": \"abfbdde2-a03b-439b-b4b5-9c29dea8293b\",\n      \"out_conversation_id\": null,\n      \"out_message_id\": null,\n      \"out_skipped\": \"already_invited\"\n    }\n  ],\n  \"participantSingleton\": true,\n  \"noDuplicateMessages\": true\n}"
+  },
+  {
+    "case": "G",
+    "verdict": "STATE_BLOCKER",
+    "detail": "After mig-356 the function body has NO remaining safe failure window between the session INSERT\nand the participant INSERT: both p_media_type and p_attachment_url are validated BEFORE any write,\nand the attachment-pair invariant is now satisfied by construction (attachment_type='call_invite'\nAND attachment_url=p_attachment_url inserted together).\n\nThe directive forbids installing persistent fault hooks, changing shared triggers, or weakening\ncontrols.  No authorised mid-chain fault can therefore be injected against these fixtures in the\ncurrent sandbox state.  Residual options would all require a prohibited change:\n  · temporary trigger on nex_peer_conversation (weakens shared behaviour)\n  · artificial constraint flip on nex_peer_message (same)\n  · race against GB-4CAP participant cap (explicitly out of scope; GB-4CAP stays OPEN)\n  · service_role bypass path (grants withdrawn)\n\nPartial evidence retained: §16.39.5 ledger entry captured a NATURAL mid-chain rollback under the\npre-mig-356 attachment-pair CHECK violation · participant INSERT succeeded then message INSERT\nfailed and the subtransaction rolled the participant back.  That evidence is NOT a mig-356 proof;\nit demonstrates the Postgres atomicity primitive that mig-356 continues to rely on.\n\nClassification: PARTIAL_PRIOR_EVIDENCE + STATE_BLOCKER_FOR_NEW_FAULT_INJECTION."
+  }
+]

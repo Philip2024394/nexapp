@@ -1,0 +1,31 @@
+{
+  "_comment": "This file documents the structure written by 20_signup_disposable_identities.mjs to 99_identity_capture.json.OUTPUT. No passwords or JWTs are written to this file or its .OUTPUT counterpart. Passwords are held in process.env GATE_A_TEST_PASSWORD_{A,B,C} only during the runner's lifetime.",
+  "_placeholder": true,
+  "A": {
+    "status": "OK | BLOCKED",
+    "email": "nex-gate-a-{timestamp}-A@test.kdstoyyeygcopkogqsyv.sandbox.invalid",
+    "supabase_user_id": "<uuid>",
+    "nex_account_id": "<uuid or null>",
+    "nex_account_found": true
+  },
+  "B": {
+    "status": "OK | BLOCKED",
+    "email": "nex-gate-a-{timestamp}-B@test.kdstoyyeygcopkogqsyv.sandbox.invalid",
+    "supabase_user_id": "<uuid>",
+    "nex_account_id": "<uuid or null>",
+    "nex_account_found": true
+  },
+  "C": {
+    "status": "OK | BLOCKED",
+    "email": "nex-gate-a-{timestamp}-C@test.kdstoyyeygcopkogqsyv.sandbox.invalid",
+    "supabase_user_id": "<uuid>",
+    "nex_account_id": "<uuid or null>",
+    "nex_account_found": true
+  },
+  "_blocked_example": {
+    "status": "BLOCKED",
+    "email": "nex-gate-a-{timestamp}-A@test.kdstoyyeygcopkogqsyv.sandbox.invalid",
+    "error_class": "email_confirm_required | rate_limit_cascade | no_user_id | unknown",
+    "error_message": "<Supabase error message>"
+  }
+}

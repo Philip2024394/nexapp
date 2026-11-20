@@ -1,0 +1,37 @@
+{
+  "when": "2026-11-17T09:04:58.059Z",
+  "viewport": {
+    "w": 390,
+    "h": 844
+  },
+  "findings": {
+    "bell_trigger_count": 1,
+    "bell_opens_notifications_drawer": true,
+    "bell_drawer_position": {
+      "side": "center",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 341,
+        "height": 844
+      }
+    },
+    "plus_trigger_selector": "[data-nex-control-drawer-trigger]",
+    "plus_result": {
+      "control_drawer": 1,
+      "notifications_drawer_visible": 0
+    },
+    "plus_drawer_position": {
+      "side": "center",
+      "box": {
+        "x": 116,
+        "y": 0,
+        "width": 274,
+        "height": 844
+      }
+    },
+    "cart_trigger_selector": null,
+    "feed_shop_drawer_trigger_count": 0
+  },
+  "pageErrors": []
+}

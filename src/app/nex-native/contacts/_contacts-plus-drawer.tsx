@@ -25,22 +25,41 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { signOutAction } from "../_actions";
+// Owner directive 2026-11-17 · Settings Correction §3 · the
+// "Notifications" entry on this "+" drawer previously linked to
+// /nex-native/settings/notifications, which was never built. It now
+// opens the canonical LEFT notifications drawer via a window
+// CustomEvent. The hidden drawer mount is instantiated inside this
+// component so the event has a listener on the Contacts surface (the
+// Contacts page itself doesn't mount the drawer separately).
+import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
+// Gap D wiring · 2026-11-17 continuation 3 (addendum round).
+// Pre-sign-out synchronous translation-only cache + DOM sweep. Does not
+// touch session / Supabase / Vault / IDB / encryption. Never calls
+// preventDefault; the server action always runs.
+import { runTranslationLogoutCleanup } from "@/lib/nex-native/translation/client/translation-logout-cleanup";
 
 interface MenuRow {
-  readonly href: string;
   readonly icon: string;
   readonly label: string;
   readonly sub?: string;
+  // Exactly one of `href` or `action` is set. `href` renders a <Link>;
+  // `action` renders a <button> that invokes a client-side trigger.
+  readonly href?: string;
+  readonly action?: "open-notifications-drawer";
 }
 
 // Owner directive 2026-11-03 · drawer menu for the "+" button in the
 // Contacts/Chat header. No HQ admin row (shipped via /hq nav). No
 // My Community row (already a card on the Groups tab).
+// 2026-11-17 · the "Notifications" row dropped its dead link to
+// /nex-native/settings/notifications; it now fires the canonical LEFT
+// notifications drawer via window CustomEvent (§3 Settings Correction).
 const MENU: readonly MenuRow[] = [
   { href: "/nex-native/settings/profile/edit", icon: "👤", label: "Profile", sub: "Edit name · country · interests · socials" },
   { href: "/nex-native/chat-themes-library", icon: "🎨", label: "Chat themes", sub: "Wallpapers · bubbles · intros" },
   { href: "/nex-native/settings/privacy", icon: "🔒", label: "Privacy", sub: "Presence · blocked · read receipts" },
-  { href: "/nex-native/settings/notifications", icon: "🔔", label: "Notifications", sub: "Chat · community · live" },
+  { action: "open-notifications-drawer", icon: "🔔", label: "Notifications", sub: "Chat · community · live" },
   { href: "/nex-native/vault", icon: "💾", label: "Vault", sub: "Secure storage · 5 GB" },
   { href: "/nex-native/live-commerce/go-live", icon: "📺", label: "Live", sub: "Broadcast to your contacts" },
   { href: "/nex-native/settings/tier", icon: "💳", label: "Package & billing", sub: "Your plan · trial · invoices" },
@@ -214,44 +233,91 @@ export function ContactsPlusDrawer(): React.JSX.Element {
                   flexDirection: "column",
                 }}
               >
-                {MENU.map((row) => (
-                  <Link
-                    key={row.href}
-                    href={row.href}
-                    onClick={close}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                      padding: "12px 20px",
-                      color: "#F2F5F8",
-                      textDecoration: "none",
-                      fontSize: 15,
-                      fontWeight: 600,
-                      borderLeft: "3px solid transparent",
-                      transition: "background 150ms ease-out",
-                    }}
-                  >
-                    <span style={{ fontSize: 20, lineHeight: 1, width: 24, textAlign: "center" }} aria-hidden>
-                      {row.icon}
-                    </span>
-                    <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span>{row.label}</span>
-                      {row.sub ? (
-                        <span style={{ fontSize: 11, fontWeight: 500, color: "var(--nex-world-primary-ink, #AFC5B5)", opacity: 0.75 }}>
-                          {row.sub}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span aria-hidden style={{ fontSize: 14, color: "var(--nex-world-secondary, #C6A15B)", opacity: 0.5 }}>›</span>
-                  </Link>
-                ))}
+                {MENU.map((row) => {
+                  const rowStyle: React.CSSProperties = {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "12px 20px",
+                    color: "#F2F5F8",
+                    textDecoration: "none",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    borderLeft: "3px solid transparent",
+                    transition: "background 150ms ease-out",
+                  };
+                  const rowBody = (
+                    <>
+                      <span style={{ fontSize: 20, lineHeight: 1, width: 24, textAlign: "center" }} aria-hidden>
+                        {row.icon}
+                      </span>
+                      <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span>{row.label}</span>
+                        {row.sub ? (
+                          <span style={{ fontSize: 11, fontWeight: 500, color: "var(--nex-world-primary-ink, #AFC5B5)", opacity: 0.75 }}>
+                            {row.sub}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span aria-hidden style={{ fontSize: 14, color: "var(--nex-world-secondary, #C6A15B)", opacity: 0.5 }}>›</span>
+                    </>
+                  );
+                  // Action row · fires the canonical notifications drawer
+                  // via window CustomEvent (see import note). Close the
+                  // "+" drawer so the user sees the LEFT drawer cleanly.
+                  if (row.action === "open-notifications-drawer") {
+                    return (
+                      <button
+                        key={`action:${row.action}`}
+                        type="button"
+                        onClick={() => {
+                          close();
+                          if (typeof window !== "undefined") {
+                            window.dispatchEvent(
+                              new CustomEvent("nex:open-notifications-drawer"),
+                            );
+                          }
+                        }}
+                        style={{
+                          ...rowStyle,
+                          width: "100%",
+                          background: "transparent",
+                          border: "none",
+                          fontFamily: "inherit",
+                          textAlign: "left",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {rowBody}
+                      </button>
+                    );
+                  }
+                  // Standard navigation row.
+                  return (
+                    <Link
+                      key={row.href}
+                      href={row.href!}
+                      onClick={close}
+                      style={rowStyle}
+                    >
+                      {rowBody}
+                    </Link>
+                  );
+                })}
 
                 {/* Sign out · server action · clears the sealed Supabase
                     session (nexAppSsrServerClient) + redirects to /sign-in.
                     Rendered as a form button (not a Link) so the action
                     actually fires server-side. */}
-                <form action={signOutAction} style={{ margin: 0 }}>
+                <form
+                  action={signOutAction}
+                  style={{ margin: 0 }}
+                  onSubmit={() => {
+                    // Gap D · translation-only pre-sign-out cleanup. Never
+                    // preventDefault — the server action must still fire.
+                    try { runTranslationLogoutCleanup(null); } catch { /* ignore */ }
+                  }}
+                >
                   <button
                     type="submit"
                     onClick={close}
@@ -326,6 +392,12 @@ export function ContactsPlusDrawer(): React.JSX.Element {
         +
       </button>
       {overlay}
+      {/* 2026-11-17 · hidden canonical notifications drawer mount ·
+          its bell button is suppressed via hideTrigger so it does not
+          collide with the "+" button or the existing header bell.
+          Listens for `nex:open-notifications-drawer` fired by the
+          Notifications menu row above. */}
+      <NotificationsDrawer hideTrigger />
     </>
   );
 }

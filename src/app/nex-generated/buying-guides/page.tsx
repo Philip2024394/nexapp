@@ -22,8 +22,6 @@ import type * as React from "react";
 import Link from "next/link";
 import {
   BookOpen,
-  Watch,
-  Smartphone,
   Laptop,
   Footprints,
   ShoppingBag,
@@ -47,12 +45,37 @@ export const metadata = {
  * we actually ship. New groups should add a case; otherwise they fall
  * back to <BookOpen />.
  */
+/** Groups whose icon is a photographic cutout image (rendered bare,
+ * no tinted tile). Line-icon categories render inside the standard
+ * .indexCardIcon tile. */
+function isImageIconGroup(id: string): boolean {
+  return id === "watches" || id === "mobile_phones";
+}
+
 function GroupIcon({ id }: { id: string }): React.JSX.Element {
   switch (id) {
     case "watches":
-      return <Watch />;
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/buying-guides/rolex.png"
+          alt=""
+          width={54}
+          height={54}
+          style={{ objectFit: "contain", display: "block" }}
+        />
+      );
     case "mobile_phones":
-      return <Smartphone />;
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/buying-guides/phone.png"
+          alt=""
+          width={54}
+          height={54}
+          style={{ objectFit: "contain", display: "block" }}
+        />
+      );
     case "computers_laptops":
       return <Laptop />;
     case "shoes":
@@ -120,7 +143,11 @@ export default async function BuyingGuidesIndexPage(): Promise<React.JSX.Element
                       href={`/nex-generated/buying-guides/${guide.slug}`}
                     >
                       <span
-                        className={styles.indexCardIcon}
+                        className={
+                          isImageIconGroup(guide.categoryGroupId)
+                            ? styles.indexCardIconBare
+                            : styles.indexCardIcon
+                        }
                         aria-hidden="true"
                       >
                         <GroupIcon id={guide.categoryGroupId} />

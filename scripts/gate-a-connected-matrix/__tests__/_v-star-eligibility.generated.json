@@ -1,0 +1,232 @@
+{
+  "_generated_by": "scripts/gate-a-connected-matrix/__tests__/_v-star-eligibility.generated.json",
+  "_generator": "HARNESS-2USER · Lane G Gate A · 2026-11-19 · A/B-only mode adaptation",
+  "_contract": {
+    "file": "basename of the V-* script",
+    "required_identity_count": "number of distinct identities the script's reachable code paths read / sign in as",
+    "required_labels": "ordered list of identity labels referenced in code paths",
+    "two_mode_status": "ELIGIBLE | BLOCKED_NEEDS_C | BLOCKED_NEEDS_MORE_THAN_3 | MIXED",
+    "two_mode_blocker_reason": "string naming the missing role/count",
+    "assertions_covered_in_two_mode": "count of assertions reachable with A/B only",
+    "assertions_blocked_in_two_mode": "count of assertions requiring C or more"
+  },
+  "scripts": [
+    {
+      "file": "30_v_auth_null.mjs",
+      "required_identity_count": 0,
+      "required_labels": [],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 2,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "Pure anon call; no identities touched."
+    },
+    {
+      "file": "31_v_auth_unknown.mjs",
+      "required_identity_count": 1,
+      "required_labels": ["A|B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 2,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "Scans capture for any OK identity with nex_account_found=false; A or B suffices. BLOCKED outcome if auto-create is on is pre-existing and independent of mode."
+    },
+    {
+      "file": "32_v_auth_unauthorized_diff.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 3,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "A creates session; B attempts unauthorized invite to A's session. No C reference."
+    },
+    {
+      "file": "40_v_w1_new.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 5,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "A invites B into new session. No C reference."
+    },
+    {
+      "file": "41_v_w1_exist.mjs",
+      "required_identity_count": 3,
+      "required_labels": ["A", "B", "C"],
+      "two_mode_status": "BLOCKED_NEEDS_C",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 3 identities including label C — A invites B, then A invites C to the same session",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 7,
+      "notes": "Second invite requires an unused third invitee (C) in the same existing session."
+    },
+    {
+      "file": "42_v_w1_cap.mjs",
+      "required_identity_count": 4,
+      "required_labels": ["A", "B", "C", "D"],
+      "two_mode_status": "BLOCKED_NEEDS_MORE_THAN_3",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 4+ identities (A host + B/C/D fill rows 2-4 so a 5th invite trips the cap)",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 4,
+      "notes": "Hard-requires A,B,C minimum; D attempted for P0001 cap. Would BLOCK in three-mode as well; in two-mode it is BLOCKED earlier for lack of C."
+    },
+    {
+      "file": "43_v_w1_cap_race.mjs",
+      "required_identity_count": 5,
+      "required_labels": ["A", "B", "C", "D", "E"],
+      "two_mode_status": "BLOCKED_NEEDS_MORE_THAN_3",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 5 identities (A host + 2 setup rows + 2 concurrent callers)",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 3,
+      "notes": "Script already reports PARTIAL for fewer than 5."
+    },
+    {
+      "file": "44_v_w1_whitespace.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 4,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "Whitespace-handling assertions; A invites B only."
+    },
+    {
+      "file": "45_v_w1_dup.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 4,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "A invites B twice to same session — dup detection."
+    },
+    {
+      "file": "50_v_w2_ok.mjs",
+      "required_identity_count": 3,
+      "required_labels": ["A", "B", "C"],
+      "two_mode_status": "BLOCKED_NEEDS_C",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 3 identities including label C — W2 host-plus-two-invitees happy path",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 11,
+      "notes": "All W2 assertions (host + B + C + C-role + C-joined-at-null) are gated on three identities."
+    },
+    {
+      "file": "51_v_w2_over.mjs",
+      "required_identity_count": 4,
+      "required_labels": ["A", "B", "C", "D"],
+      "two_mode_status": "BLOCKED_NEEDS_MORE_THAN_3",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 4 invitees (plus host A) to exceed the W2 slice-at-3 cap",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 4,
+      "notes": "Script accepts A+B minimum but PARTIAL-only; the OVER semantic requires >=4 invitees."
+    },
+    {
+      "file": "52_v_w2_dup.mjs",
+      "required_identity_count": 3,
+      "required_labels": ["A", "B", "C"],
+      "two_mode_status": "BLOCKED_NEEDS_C",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 3 identities including label C — [B,B,C] dedup path",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 5,
+      "notes": "Dup-detection payload is specifically [B,B,C]; cannot form without C."
+    },
+    {
+      "file": "53_v_w2_auth.mjs",
+      "required_identity_count": 0,
+      "required_labels": [],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 1,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "Anon W2 ACL block. No identities needed."
+    },
+    {
+      "file": "60_v_w3_update.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 4,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "A invites B, then B joins (W3 UPDATE path). No C."
+    },
+    {
+      "file": "61_v_w3_insert.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "MIXED",
+      "two_mode_blocker_reason": "primary W2 host-only setup path uses A+B only; fallback path (if W2 missing) requires C — marked BLOCKED because the harness does not support a partial-run flag to force the primary path",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 5,
+      "notes": "Per owner directive: default to BLOCKED when partial-run support does not exist; do not edit V-* to add it. Primary path needs only A+B, but the script auto-falls-back to C when W2 is unavailable."
+    },
+    {
+      "file": "62_v_w3_role.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "MIXED",
+      "two_mode_blocker_reason": "same MIXED pattern as 61: primary path A+B, fallback C",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 4,
+      "notes": "BLOCKED per owner directive on MIXED-without-partial-run-flag."
+    },
+    {
+      "file": "63_v_w3_cap.mjs",
+      "required_identity_count": 5,
+      "required_labels": ["A", "B", "C", "D", "E"],
+      "two_mode_status": "BLOCKED_NEEDS_MORE_THAN_3",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 5 identities to fill 4 rows and attempt a 5th join for P0001",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 4,
+      "notes": "A+B+C is script's declared minimum; actual cap probe needs 5."
+    },
+    {
+      "file": "64_v_w3_race.mjs",
+      "required_identity_count": 5,
+      "required_labels": ["A", "B", "C", "D", "E"],
+      "two_mode_status": "BLOCKED_NEEDS_MORE_THAN_3",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 5 identities for concurrent-join race",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 3,
+      "notes": "Script already PARTIAL for <5."
+    },
+    {
+      "file": "65_v_w3_promote.mjs",
+      "required_identity_count": 2,
+      "required_labels": ["A", "B"],
+      "two_mode_status": "ELIGIBLE",
+      "two_mode_blocker_reason": "",
+      "assertions_covered_in_two_mode": 3,
+      "assertions_blocked_in_two_mode": 0,
+      "notes": "A invites B; B joins; verify state=active + joined_at set. No C."
+    },
+    {
+      "file": "66_v_w3_nopromote.mjs",
+      "required_identity_count": 3,
+      "required_labels": ["A", "B", "C"],
+      "two_mode_status": "BLOCKED_NEEDS_C",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 3 identities including label C — second guest C joins and must NOT promote session state",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 4,
+      "notes": "Hard three-identity requirement."
+    },
+    {
+      "file": "70_v_atomic.mjs",
+      "required_identity_count": 4,
+      "required_labels": ["A", "B", "C", "D"],
+      "two_mode_status": "BLOCKED_NEEDS_MORE_THAN_3",
+      "two_mode_blocker_reason": "two-identity mode: this case requires 4 identities to build a session with 4 participants for atomic assertions",
+      "assertions_covered_in_two_mode": 0,
+      "assertions_blocked_in_two_mode": 6,
+      "notes": "Hard-requires A+B+C minimum; D attempted for full coverage."
+    }
+  ],
+  "summary": {
+    "total": 21,
+    "eligible": 9,
+    "blocked_needs_c": 4,
+    "blocked_needs_more_than_3": 6,
+    "mixed": 2
+  }
+}

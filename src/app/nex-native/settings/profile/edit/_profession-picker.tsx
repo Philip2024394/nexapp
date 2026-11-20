@@ -20,6 +20,7 @@
 //                                 with current custom value)
 
 import { useState } from "react";
+import { NexInput } from "@/lib/nex-native/nex-keyboard";
 import {
   PROFESSION_DIRECTORY,
   findCategoryForProfession,
@@ -143,11 +144,11 @@ export function ProfessionPicker({ defaultValue }: Props): React.ReactElement {
 
       {/* Free-text input · appears for Other at either level */}
       {showOtherText ? (
-        <input
+        <NexInput
           type="text"
           aria-label="Enter your profession"
           value={otherText}
-          onChange={(e) => setOtherText(e.target.value.slice(0, 80))}
+          onChange={(next) => setOtherText(next.slice(0, 80))}
           maxLength={80}
           placeholder={otherPlaceholder}
           style={{ marginTop: 6 }}

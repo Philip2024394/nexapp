@@ -307,11 +307,30 @@ function generateBusinessSlug(displayName: string, attempt: number): string {
  * Fields NOT touched by the caller (undefined) are left alone. Fields
  * explicitly set to null are cleared. Fields set to a string are trimmed
  * and validated.
+ *
+ * Lane C · prompt-7 round 11 · 2026-11-19 · service-layer ownership.
+ * `ownerAccountId` is REQUIRED and scopes the UPDATE to rows where
+ * `owner_account_id = ownerAccountId` AND `id = id`. Callers that hold
+ * a session MUST pass its account id. The service refuses to execute
+ * when `ownerAccountId` is missing or empty · never trust an unchecked
+ * client value. If the row doesn't match (business doesn't exist OR
+ * belongs to a different owner), the update silently affects zero rows
+ * and we throw `owner-mismatch` so the action layer surfaces a safe
+ * copy instead of pretending the save succeeded. Defence-in-depth
+ * only · server actions already call `listBusinessesByOwner(session)`
+ * via `requireBusiness()` and pass the resolved business id, so this
+ * guard catches future callers that bypass the action-layer gate.
  */
 export async function updateBusinessProfile(
   id: NexUuid,
+  ownerAccountId: NexUuid,
   patch: NexBusinessProfilePatch
 ): Promise<NexBusinessRow> {
+  if (!ownerAccountId || typeof ownerAccountId !== "string" || ownerAccountId.length === 0) {
+    throw new Error(
+      "business-service.updateBusinessProfile: ownerAccountId is required · refusing to update without authenticated owner context",
+    );
+  }
   const update: Record<string, string | boolean | null> = {};
   const textFields: Array<keyof NexBusinessProfilePatch> = [
     "description", "logo_url", "address",
@@ -394,10 +413,16 @@ export async function updateBusinessProfile(
   }
 
   if (Object.keys(update).length === 0) {
-    // No-op · return current row · idempotent.
+    // No-op · return current row · idempotent. Owner scope enforced:
+    // row must exist AND be owned by ownerAccountId.
     const current = await getBusinessById(id);
     if (!current) {
       throw new Error(`business-service.updateBusinessProfile: business ${id} not found`);
+    }
+    if (current.owner_account_id !== ownerAccountId) {
+      throw new Error(
+        `business-service.updateBusinessProfile: owner-mismatch · business ${id} is not owned by ${ownerAccountId}`,
+      );
     }
     return current;
   }
@@ -406,11 +431,92 @@ export async function updateBusinessProfile(
     .from("nex_business")
     .update(update)
     .eq("id", id)
+    .eq("owner_account_id", ownerAccountId)
     .select("*")
-    .single();
-  if (error || !data) {
+    .maybeSingle();
+  if (error) {
     throw new Error(
-      `business-service.updateBusinessProfile(${id}): ${error?.message ?? "no row returned"}`
+      `business-service.updateBusinessProfile(${id}): ${error.message}`
+    );
+  }
+  if (!data) {
+    // Zero rows matched · either the business id doesn't exist OR it
+    // belongs to a different owner. Fail closed · never report a
+    // false-positive save.
+    throw new Error(
+      `business-service.updateBusinessProfile: owner-mismatch · business ${id} not found for owner ${ownerAccountId}`,
+    );
+  }
+  return data as NexBusinessRow;
+}
+
+// ---------------------------------------------------------------------------
+// updateBusinessDisplayName · Lane C · prompt-7 round 18 · 2026-11-19
+// ---------------------------------------------------------------------------
+//
+// `display_name` is intentionally NOT part of `NexBusinessProfilePatch`
+// (the typed patch covers description/logo/address/contact/socials only,
+// see types.ts around line 758). The 2026-11-12 Shop Setup re-work needed
+// to persist the seller's typed shop name on both the legacy 8-step
+// identity action AND the new 4-step business-details action, which the
+// typed writer would silently drop.
+//
+// Round 17 fixed the silent-drop at the ACTION layer by inlining a
+// direct `nexSupabaseAdmin.from("nex_business").update(...)` with the
+// owner_account_id scope. Round 18 moves that query into a dedicated
+// service-layer writer so BOTH actions share one enforcement surface
+// and future callers cannot forget the owner clause. Enforcement model
+// mirrors `updateBusinessProfile`:
+//   · `ownerAccountId` is REQUIRED; empty/missing refuses to execute.
+//   · UPDATE is scoped `.eq("id", id).eq("owner_account_id",
+//     ownerAccountId)`. A concurrent ownership transfer between the
+//     action's `requireBusiness()` check and this write cannot slip
+//     through.
+//   · Zero rows affected throws an Error whose message contains the
+//     `owner-mismatch` token so the action layer can convert it into
+//     the stable `owner-scope-denied` wire code without inspecting
+//     raw driver strings.
+//   · displayName is normalised (trim) and length-gated 2-40 chars
+//     here so there is no gap if a future caller forgets the action-
+//     layer length check.
+export async function updateBusinessDisplayName(
+  id: NexUuid,
+  ownerAccountId: NexUuid,
+  displayName: string,
+): Promise<NexBusinessRow> {
+  if (!ownerAccountId || typeof ownerAccountId !== "string" || ownerAccountId.length === 0) {
+    throw new Error(
+      "business-service.updateBusinessDisplayName: ownerAccountId is required · refusing to update without authenticated owner context",
+    );
+  }
+  if (typeof displayName !== "string") {
+    throw new Error(
+      "business-service.updateBusinessDisplayName: displayName must be a string",
+    );
+  }
+  const trimmed = displayName.trim();
+  if (trimmed.length < 2 || trimmed.length > 40) {
+    throw new Error(
+      `business-service.updateBusinessDisplayName: displayName must be 2-40 chars · got ${trimmed.length}`,
+    );
+  }
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .update({ display_name: trimmed })
+    .eq("id", id)
+    .eq("owner_account_id", ownerAccountId)
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    throw new Error(
+      `business-service.updateBusinessDisplayName(${id}): ${error.message}`,
+    );
+  }
+  if (!data) {
+    // Zero rows matched · either the business id doesn't exist OR it
+    // belongs to a different owner · never report a false-positive save.
+    throw new Error(
+      `business-service.updateBusinessDisplayName: owner-mismatch · business ${id} not found for owner ${ownerAccountId}`,
     );
   }
   return data as NexBusinessRow;
@@ -1266,9 +1372,13 @@ export async function uploadSizeChartImage(
  *  Sealed 2026-10-01. */
 export async function updateBusinessLogo(
   businessId: NexUuid,
+  ownerAccountId: NexUuid,
   logoUrl: string | null,
 ): Promise<NexBusinessRow> {
-  return updateBusinessProfile(businessId, { logo_url: logoUrl });
+  // Lane C · prompt-7 round 11 · 2026-11-19 · owner scope threaded
+  // through the thin wrapper so the service-layer guard applies
+  // uniformly regardless of which writer the caller chose.
+  return updateBusinessProfile(businessId, ownerAccountId, { logo_url: logoUrl });
 }
 
 /** Seller Central onboarding · upload a business logo DURING onboarding

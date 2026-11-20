@@ -170,6 +170,14 @@ export interface ShopCoverContent {
   readonly websiteUrl: string | null;
   readonly publicPhone: string | null;
   readonly publicEmail: string | null;
+  /** Owner directive 2026-11-17 · lets the BurgerMenu render the
+   *  published Seller FAQ sheet when this shop has one. Shape sealed
+   *  at src/lib/nex-native/info-pages.ts. */
+  readonly infoPages: import("./info-pages").NexInfoPagesJson | null;
+  /** Owner directive 2026-11-17 · owner account id so the "Message
+   *  the seller" CTA on the FAQ sheet can deep-link into the sealed
+   *  peer chat at /nex-native/chat/peer/<accountId>. */
+  readonly ownerAccountId: string | null;
 }
 
 interface ShopCoverContentRow {
@@ -186,6 +194,8 @@ interface ShopCoverContentRow {
   website_url: string | null;
   public_phone: string | null;
   public_email: string | null;
+  info_pages: unknown | null;
+  owner_account_id: string | null;
 }
 
 /** Load the owner-authored cover content for one business. Returns
@@ -199,7 +209,7 @@ export async function getShopCoverContent(
   const { data, error } = await nexSupabaseAdmin
     .from("nex_business")
     .select(
-      "display_name, slug, city, description, address, hours_display, logo_url, instagram_handle, facebook_handle, tiktok_handle, website_url, public_phone, public_email",
+      "display_name, slug, city, description, address, hours_display, logo_url, instagram_handle, facebook_handle, tiktok_handle, website_url, public_phone, public_email, info_pages, owner_account_id",
     )
     .eq("id", businessId)
     .maybeSingle<ShopCoverContentRow>();
@@ -218,5 +228,9 @@ export async function getShopCoverContent(
     websiteUrl: data.website_url,
     publicPhone: data.public_phone,
     publicEmail: data.public_email,
+    infoPages:
+      (data.info_pages as import("./info-pages").NexInfoPagesJson | null) ??
+      null,
+    ownerAccountId: data.owner_account_id,
   };
 }

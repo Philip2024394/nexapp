@@ -1,0 +1,38 @@
+{
+  "when": "2026-11-17T09:42:02.912Z",
+  "base": "http://localhost:3008",
+  "product_x_id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+  "distinctive_marker": "CP-JOURNEY-mwki6w0w-ships-to-portugal-question",
+  "baseline_buyer_msgs_for_product": 0,
+  "baseline_seller_orders": 0,
+  "buyer_product_url": "http://localhost:3008/nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+  "buyer_product_page": {
+    "url": "http://localhost:3008/nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "product_image_count": 0,
+    "add_to_cart_count": 1,
+    "ask_seller_count": 1,
+    "ask_more_details_count": 0,
+    "back_button_count": 1,
+    "cart_header_button_count": 1,
+    "is_404": false
+  },
+  "cart": {
+    "add_btn_visible": false
+  },
+  "chat": {
+    "has_inquiry_btn": false,
+    "has_ask_seller_btn": true,
+    "url_after_askseller": "http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990?product=47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "chat_url": "http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990?product=47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "db_product_msgs_after": 0,
+    "db_sample_latest": [],
+    "marker_rows": 0,
+    "marker_samples": []
+  },
+  "buyer_page_errors": [],
+  "seller_chat_url": "http://localhost:3008/nex-native/chat/peer/d977070d-6210-4cd5-a731-f4892dc7047f",
+  "seller_receives_marker": false,
+  "seller_product_chip_count": 0,
+  "seller_page_errors": [],
+  "final_seller_orders": 0
+}

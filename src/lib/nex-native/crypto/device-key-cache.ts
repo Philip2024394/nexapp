@@ -36,6 +36,16 @@ export type DeviceKeyResult =
   | { ok: true; devices: CachedDevices["devices"]; cached: boolean }
   | { ok: false; error: string };
 
+export interface CachedListOptions {
+  /** Bypass the TTL hit for this call. Still writes the fresh
+   *  result back into the cache on success so future reads benefit.
+   *  Used at send-time (R4 chat-race bounded fix 2026-11-17) so the
+   *  peer-device list cannot be up to 60 s stale when the ciphertext
+   *  fan-out plan is built. The 60 s TTL for compose-time reads is
+   *  preserved; only the final pre-send fetch bypasses. */
+  forceRefresh?: boolean;
+}
+
 /**
  * Cached wrapper. Returns devices from cache if fresh, otherwise
  * dedupes concurrent fetches so a burst of parallel encrypted sends
@@ -43,10 +53,11 @@ export type DeviceKeyResult =
  */
 export async function cachedListDeviceKeys(
   accountId: string,
+  options: CachedListOptions = {},
 ): Promise<DeviceKeyResult> {
   const now = Date.now();
   const hit = cache.get(accountId);
-  if (hit && now - hit.fetchedAt < TTL_MS) {
+  if (!options.forceRefresh && hit && now - hit.fetchedAt < TTL_MS) {
     return { ok: true, devices: hit.devices, cached: true };
   }
 

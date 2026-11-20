@@ -1,0 +1,12 @@
+[
+  {
+    "email": "g-fixture-A@nex-sandbox.invalid",
+    "supabase_user_id": "12e42d55-52ba-4b2e-8746-9636c6aa7050",
+    "nex_account_id": "3cad1131-df47-4fdf-a719-60b16e657b03"
+  },
+  {
+    "email": "g-fixture-B@nex-sandbox.invalid",
+    "supabase_user_id": "a1d2a88f-80f3-478e-9ab7-12faa48172a3",
+    "nex_account_id": "a0683876-0913-4f5b-9a1c-2b5b55d6613b"
+  }
+]

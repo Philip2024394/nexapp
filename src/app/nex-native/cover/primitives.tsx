@@ -733,12 +733,19 @@ export function CoverProductCard({
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
   const priceLabel = formatMoney(product.currency, product.price_pence);
+  // Owner-authorised 2026-11-16 · product-detail-slider → full
+  // product page migration. Tapping a product card now opens the
+  // dedicated product page (`/nex-native/product/<id>`) carrying
+  // gallery, read-more description, real specs, Ask Seller (which
+  // still routes back into the sealed product-context chat), and
+  // Add to Cart. The old `/chat/peer/<accountId>` routing is kept
+  // as a fallback when product.id is somehow missing (defensive).
   // Owner directive 2026-11-14 · pending_product share-to-chat flow
-  // retired. Tapping a product card opens the plain peer-chat with no
-  // product chip pre-attached. The 2026-10-22 slice-5 chip pipeline
-  // (pending_product → server-fetched snapshot → composer chip →
-  // shareProductToContactAction) is no longer wired from this entry.
-  const chatHref = `/nex-native/chat/peer/${peerAccountId}`;
+  // retired on the previous iteration; the new product page offers
+  // the explicit Ask Seller CTA instead.
+  const chatHref = product.id
+    ? `/nex-native/product/${product.id}`
+    : `/nex-native/chat/peer/${peerAccountId}`;
   const isLandscape = variant === "landscape";
   const isRound = variant === "round";
   if (isRound) {

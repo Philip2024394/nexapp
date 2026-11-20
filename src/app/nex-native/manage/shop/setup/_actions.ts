@@ -25,6 +25,7 @@ import {
   listBusinessesByOwner,
   provisionDefaultBusiness,
   updateBusinessProfile,
+  updateBusinessDisplayName,
   updateBusinessCityAndHours,
   updateBusinessHours,
   setBusinessPrimaryProfile,
@@ -37,7 +38,10 @@ import {
 // legacy-only import at line ~510 so the new saveShopBusinessDetails
 // action can persist display_name directly (that field is missing
 // from NexBusinessProfilePatch so updateBusinessProfile silently
-// drops it).
+// drops it).  Round 18 (2026-11-19) moved the display_name write
+// behind the typed `updateBusinessDisplayName` service helper, so
+// this admin import is now only used by legacy fields (hours,
+// shipping, etc.) · it is retained for those callers below.
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { NEX_WEEK_DAYS } from "@/lib/nex-native/types";
 import type { NexWeeklyHours } from "@/lib/nex-native/types";
@@ -107,23 +111,31 @@ export async function saveShopIdentityAction(
     // Owner directive 2026-11-12 · legacy identity action used to pass
     // display_name through updateBusinessProfile, but NexBusinessProfilePatch
     // doesn't include that field (types.ts:758) · so the typed writer
-    // silently dropped renamed shop names. Direct nex_business update
-    // fixes the silent-drop without touching the shared type (backward-
-    // compatible with every other caller of updateBusinessProfile).
-    // businessId was resolved by requireBusiness() which only returns
-    // businesses owned by the authenticated session · the write is
-    // scoped to that row via .eq("id", ...).
-    const { error: nameErr } = await nexSupabaseAdmin
-      .from("nex_business")
-      .update({ display_name: displayName })
-      .eq("id", biz.businessId);
-    if (nameErr) {
-      return { ok: false, error: nameErr.message };
+    // silently dropped renamed shop names. Round 17 inlined the write
+    // here with an owner_account_id scope. Round 18 (2026-11-19) moved
+    // that inline write behind `updateBusinessDisplayName` so BOTH the
+    // legacy identity action AND the new business-details action share
+    // ONE service-boundary enforcement surface. The service helper
+    // refuses to execute without ownerAccountId, scopes the UPDATE to
+    // `.eq("owner_account_id", biz.accountId)`, and throws an Error
+    // whose message contains `owner-mismatch` when zero rows match.
+    // The action converts that into the stable `owner-scope-denied`
+    // wire code the UI mapper (`errorCopy` in `_client.tsx`) renders
+    // as a user-safe banner.
+    try {
+      await updateBusinessDisplayName(biz.businessId, biz.accountId, displayName);
+    } catch (nameErr) {
+      const msg = nameErr instanceof Error ? nameErr.message : String(nameErr);
+      if (/owner-mismatch/.test(msg)) {
+        return { ok: false, error: "owner-scope-denied" };
+      }
+      throw nameErr;
     }
     // logo_url stays on updateBusinessProfile · it validates URL shape
     // and handles the null-clear case. null explicit clear is passed
-    // through when the seller removed the logo.
-    await updateBusinessProfile(biz.businessId, { logo_url: logoUrl });
+    // through when the seller removed the logo. Owner scope passed
+    // for service-layer defence-in-depth (Lane C · round 11 · 2026-11-19).
+    await updateBusinessProfile(biz.businessId, biz.accountId, { logo_url: logoUrl });
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -197,31 +209,38 @@ export async function saveShopBusinessDetailsAction(
   try {
     // Identity · display_name is NOT part of NexBusinessProfilePatch
     // (confirmed in types.ts line 758 · the legacy identity action
-    // was silently dropping this field). Use a direct nex_business
-    // update to persist the name the seller actually typed. Logo
-    // URL continues to flow through updateBusinessProfile which
-    // validates URL shape.
-    const { error: nameErr } = await nexSupabaseAdmin
-      .from("nex_business")
-      .update({ display_name: displayName })
-      .eq("id", biz.businessId);
-    if (nameErr) {
-      return { ok: false, error: nameErr.message };
+    // was silently dropping this field). Round 17 inlined a direct
+    // nex_business update with owner scope. Round 18 (2026-11-19)
+    // moved that inline write behind the typed
+    // `updateBusinessDisplayName` service helper so the ownership
+    // check lives next to every other business writer. The helper
+    // throws Error("...owner-mismatch...") on zero-row matches; we
+    // convert to the stable `owner-scope-denied` wire code for the
+    // UI mapper. Logo URL continues to flow through
+    // updateBusinessProfile which validates URL shape.
+    try {
+      await updateBusinessDisplayName(biz.businessId, biz.accountId, displayName);
+    } catch (nameErr) {
+      const msg = nameErr instanceof Error ? nameErr.message : String(nameErr);
+      if (/owner-mismatch/.test(msg)) {
+        return { ok: false, error: "owner-scope-denied" };
+      }
+      throw nameErr;
     }
     if (logoUrl !== null) {
-      await updateBusinessProfile(biz.businessId, { logo_url: logoUrl });
+      await updateBusinessProfile(biz.businessId, biz.accountId, { logo_url: logoUrl });
     } else if (logoUrl === null) {
       // Explicit null clears the stored logo · seller removed it.
-      await updateBusinessProfile(biz.businessId, { logo_url: null });
+      await updateBusinessProfile(biz.businessId, biz.accountId, { logo_url: null });
     }
     // Location · country + address go via updateBusinessProfile;
     // city goes via updateBusinessCityAndHours to keep the hours-
     // display derivation intact. Matches saveShopLocationAction.
-    const locationPatch: Parameters<typeof updateBusinessProfile>[1] = {};
+    const locationPatch: Parameters<typeof updateBusinessProfile>[2] = {};
     if (country !== null) locationPatch.operating_country_code = country;
     if (address !== null) locationPatch.address = address;
     if (Object.keys(locationPatch).length > 0) {
-      await updateBusinessProfile(biz.businessId, locationPatch);
+      await updateBusinessProfile(biz.businessId, biz.accountId, locationPatch);
     }
     if (city !== null) {
       await updateBusinessCityAndHours(biz.businessId, { city });
@@ -293,11 +312,11 @@ export async function saveShopLocationAction(
     // updateBusinessProfile call · the service layer column-probes
     // operating_country_code so pre-migration production silently
     // drops that field without failing the whole save.
-    const patch: Parameters<typeof updateBusinessProfile>[1] = {};
+    const patch: Parameters<typeof updateBusinessProfile>[2] = {};
     if (country !== null) patch.operating_country_code = country;
     if (address !== null) patch.address = address;
     if (Object.keys(patch).length > 0) {
-      await updateBusinessProfile(biz.businessId, patch);
+      await updateBusinessProfile(biz.businessId, biz.accountId, patch);
     }
     if (city !== null) {
       await updateBusinessCityAndHours(biz.businessId, { city });
@@ -451,7 +470,7 @@ export async function saveShopStoryAction(
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
-    await updateBusinessProfile(biz.businessId, {
+    await updateBusinessProfile(biz.businessId, biz.accountId, {
       description: description.length > 0 ? description : null,
     });
   } catch (e) {
@@ -639,7 +658,7 @@ export async function saveShopContactAction(
     // nex_business, extend this writer in step. All writes go through
     // updateBusinessProfile which only touches nex_business · the chat
     // profile at nex_account_profile is never modified by this action.
-    await updateBusinessProfile(biz.businessId, {
+    await updateBusinessProfile(biz.businessId, biz.accountId, {
       instagram_handle: str("instagramHandle"),
       facebook_handle: str("facebookHandle"),
       tiktok_handle: str("tiktokHandle"),

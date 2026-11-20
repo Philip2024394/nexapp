@@ -1,0 +1,53 @@
+{
+  "when": "2026-11-17T09:02:32.086Z",
+  "buyer": {
+    "role": "buyer",
+    "email": "cp2026-11-17-v2-buyer-497d9859@nex-cpcheckpoint.invalid",
+    "password": "cp-32d36ddc164d321a-X!",
+    "fullName": "CP Buyer V2 0ccd"
+  },
+  "postUrl": "http://localhost:3008/nex-native/sign-in?e=sign_up_failed&m=Email+address+%22cp2026-11-17-v2-buyer-497d9859%40nex-cpcheckpoint.invalid%22+is+invalid&preserve_email=cp2026-11-17-v2-buyer-497d9859%40nex-cpcheckpoint.invalid&mode=signup",
+  "bannerCode": "sign_up_failed",
+  "bannerText": "Email address \"cp2026-11-17-v2-buyer-497d9859@nex-cpcheckpoint.invalid\" is invalid",
+  "cookies": [
+    "sb-kdstoyyeygcopkogqsyv-auth-token-code-verifier"
+  ],
+  "netEvents": [
+    {
+      "type": "res",
+      "status": 200,
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    },
+    {
+      "type": "req",
+      "method": "POST",
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    },
+    {
+      "type": "res",
+      "status": 200,
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    },
+    {
+      "type": "req",
+      "method": "POST",
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    },
+    {
+      "type": "res",
+      "status": 200,
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    },
+    {
+      "type": "req",
+      "method": "POST",
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    },
+    {
+      "type": "res",
+      "status": 200,
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup"
+    }
+  ],
+  "consoleErr": []
+}

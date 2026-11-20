@@ -1,0 +1,291 @@
+/*
+ * src/app/nexcorner/_nexcorner.css
+ *
+ * Nexcorner prelaunch landing · standalone styles.
+ * Authored 2026-11-18.
+ *
+ * Mirrors the sealed .nex-native-stage > .nex-native-frame layout (288×624
+ * centered on desktop ≥500px, full-bleed on mobile) locally so this route
+ * can render without loading nex-native.css. Palette is the owner-sealed
+ * NEX cream+orange+gray+white+black only.
+ *
+ *   --nex-cream        #FBF5E9   base cream surface
+ *   --nex-cream-elev   #FEFBF3   elevated cream for cards
+ *   --nex-accent-500   #F97316   primary orange
+ *   --nex-accent-600   #EA580C   orange hover / active
+ *   --nex-accent-100   #FED7AA   orange tint
+ *   --nex-neutral-900  #1A1A17   near-black ink
+ *   --nex-neutral-700  #3D3D38   secondary ink
+ *   --nex-neutral-500  #6E6E67   mid gray
+ *   --nex-neutral-200  #E8E8E4   border gray
+ *   --nex-neutral-0    #FFFFFF   white
+ */
+
+.nx-stage {
+  width: 100%;
+  min-height: 100dvh;
+  background: #FBF5E9;
+  color: #1A1A17;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow-x: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.nx-frame {
+  width: 100%;
+  min-height: 100dvh;
+  background: #FBF5E9;
+  color: #1A1A17;
+  overflow-x: hidden;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px)
+           18px
+           calc(env(safe-area-inset-bottom, 0px) + 28px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+@media (min-width: 500px) {
+  .nx-stage {
+    justify-content: center;
+    align-items: center;
+    padding: 24px 0;
+    background:
+      #020914
+      url("/nex-native/desktop-bg-nex-chat-shop-banner.png")
+      center center / 100% 100%
+      no-repeat fixed;
+  }
+  .nx-frame {
+    width: min(288px, calc((100dvh - 32px) * 9 / 19.5));
+    height: min(624px, calc(100dvh - 32px));
+    aspect-ratio: 9 / 19.5;
+    min-height: 0;
+    max-width: 288px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    border-radius: 32px;
+    box-shadow:
+      0 0 0 4px #000000,
+      0 24px 60px -14px rgba(0, 0, 0, 0.9),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+    padding: 12px 14px 24px;
+    transform: translateZ(0);
+  }
+  .nx-frame::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+/* ---- Hero ---- */
+
+.nx-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #EA580C;
+  margin: 8px 0 10px;
+}
+.nx-title {
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  font-weight: 800;
+  margin: 0 0 12px;
+  color: #1A1A17;
+}
+.nx-subtitle {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #3D3D38;
+  margin: 0 0 20px;
+}
+
+/* ---- Notify form ---- */
+
+.nx-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 24px;
+}
+.nx-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A1A17;
+}
+.nx-email-field {
+  display: flex;
+  background: #FFFFFF;
+  border: 1px solid #E8E8E4;
+  border-radius: 12px;
+  padding: 2px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.nx-email-field:focus-within {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
+}
+.nx-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 15px;
+  background: transparent;
+  color: #1A1A17;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  border-radius: 10px;
+}
+.nx-input::placeholder {
+  color: #6E6E67;
+}
+.nx-submit {
+  flex-shrink: 0;
+  border: none;
+  background: #F97316;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 150ms ease, box-shadow 150ms ease;
+  font-family: inherit;
+}
+.nx-submit:hover,
+.nx-submit:focus-visible {
+  background: #EA580C;
+  outline: 2px solid #1A1A17;
+  outline-offset: 2px;
+}
+.nx-submit[disabled] {
+  background: #C7C7BF;
+  cursor: wait;
+}
+.nx-consent {
+  font-size: 12px;
+  color: #6E6E67;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Status text under the form. Three visual roles: info (loading),
+ * success (durable accept), fail (blocked / transient). Each role is a
+ * modifier the server renders based on submission state — no pop-ups. */
+.nx-status {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+  line-height: 1.45;
+  border: 1px solid transparent;
+}
+.nx-status-loading {
+  background: #FEFBF3;
+  border-color: #E8E8E4;
+  color: #3D3D38;
+}
+.nx-status-ok {
+  background: #FFFFFF;
+  border-color: #F97316;
+  color: #1A1A17;
+}
+.nx-status-fail {
+  background: #FFFFFF;
+  border-color: #E8E8E4;
+  color: #3D3D38;
+}
+
+/* ---- Buying-guides secondary section ---- */
+
+.nx-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 24px 0 10px;
+  color: #1A1A17;
+  letter-spacing: -0.005em;
+}
+.nx-guide-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nx-guide-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: #FFFFFF;
+  border: 1px solid #E8E8E4;
+  border-radius: 10px;
+  color: #1A1A17;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.nx-guide-link:hover,
+.nx-guide-link:focus-visible {
+  border-color: #F97316;
+  background: #FEFBF3;
+  color: #EA580C;
+  outline: none;
+}
+.nx-guide-link::after {
+  content: "→";
+  color: #6E6E67;
+  margin-left: 12px;
+}
+.nx-guide-link:hover::after,
+.nx-guide-link:focus-visible::after {
+  color: #F97316;
+}
+
+/* ---- Footer ---- */
+
+.nx-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid #E8E8E4;
+  font-size: 11px;
+  color: #6E6E67;
+  line-height: 1.5;
+  text-align: center;
+}
+.nx-footer a {
+  color: #3D3D38;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nx-footer a:hover,
+.nx-footer a:focus-visible {
+  color: #EA580C;
+}
+.nx-footer-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  margin: 6px 0 0;
+}
+
+/* Visible focus ring · every interactive element in this surface. */
+.nx-frame a:focus-visible,
+.nx-frame button:focus-visible,
+.nx-frame input:focus-visible {
+  outline: 2px solid #1A1A17;
+  outline-offset: 2px;
+}

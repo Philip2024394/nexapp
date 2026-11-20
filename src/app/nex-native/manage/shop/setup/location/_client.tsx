@@ -33,6 +33,7 @@ import {
   COUNTRY_CATALOGUE_SORTED,
   lookupCountry,
 } from "@/lib/nex-native/country-catalogue";
+import { NexInput, NexTextarea } from "@/lib/nex-native/nex-keyboard";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "var(--nex-world-cream, #FAF8F4)";
@@ -346,13 +347,13 @@ export function LocationStepClient({
           <label htmlFor="shop-city" style={LABEL_STYLE}>
             City
           </label>
-          <input
+          <NexInput
             id="shop-city"
             type="text"
             maxLength={80}
             placeholder="Dublin · London · Jakarta · Sydney · …"
             value={city}
-            onChange={(e) => setCity(e.currentTarget.value)}
+            onChange={(next) => setCity(next)}
             style={FIELD_STYLE}
           />
           <span style={HINT_STYLE}>
@@ -365,13 +366,13 @@ export function LocationStepClient({
           <label htmlFor="shop-address" style={LABEL_STYLE}>
             Street address
           </label>
-          <textarea
+          <NexTextarea
             id="shop-address"
             rows={2}
             maxLength={500}
             placeholder="Street, city, postcode"
             value={address}
-            onChange={(e) => setAddress(e.currentTarget.value)}
+            onChange={(next) => setAddress(next)}
             style={{
               ...FIELD_STYLE,
               fontFamily: "inherit",

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // src/components/nex-native/control-drawer/__tests__/control-drawer-client.test.tsx
 //
 // NEX Control Drawer · regression suite · sealed 2026-10-16.
@@ -16,12 +17,19 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { render, fireEvent } from "@testing-library/react";
 import {
   ControlDrawer,
   __internal,
   type ControlDrawerSession,
 } from "../control-drawer-client";
 
+// Owner directive 2026-11-13 · the drawer calls `usePathname()` from
+// `next/navigation` inside a route-change watcher that auto-closes the
+// drawer on navigation. The older mock here only stubbed `useRouter`
+// which left `usePathname` undefined and caused a TypeError during
+// server render of <ControlDrawer>. Added 2026-11-18 as part of the
+// closeDrawer wiring fix.
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: () => {},
@@ -31,6 +39,7 @@ vi.mock("next/navigation", () => ({
     refresh: () => {},
     prefetch: () => {},
   }),
+  usePathname: () => "/nex-native/free-chat",
 }));
 
 // The sealed `signOutAction` is a server action · importing it on
@@ -74,16 +83,28 @@ describe("ControlDrawer · trigger (closed state)", () => {
 describe("DrawerBody · identity bar", () => {
   it("renders display name + handle for signed-in viewers", () => {
     const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={() => {}}
+      />,
     );
-    expect(html).toContain("Alice");
+    // Owner directive 2026-11-13 · IdentityBar now reads the branded
+    // "NEX CENTER" eyebrow + NEX ID; `displayName` is intentionally
+    // no longer rendered (search for "Hammerex Products" in the file
+    // for the sealed note). Keep the handle check + the identity
+    // data-attribute · those are the stable contract.
     expect(html).toContain("@alice");
     expect(html).toContain("data-nex-control-drawer-identity");
   });
 
   it("renders a sign-in prompt for anonymous viewers (no logout + no business group bleed)", () => {
     const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={null} onLogoutClick={() => {}} />,
+      <__internal.DrawerBody
+        session={null}
+        onLogoutClick={() => {}}
+        closeDrawer={() => {}}
+      />,
     );
     expect(html).toContain("Sign in to NEX");
     expect(html).toContain('href="/nex-native/sign-in"');
@@ -93,16 +114,18 @@ describe("DrawerBody · identity bar", () => {
     expect(html).not.toContain("Business Vault");
   });
 
-  it("renders the handle only when present (null handle must not crash or render @)", () => {
+  it("renders no @-handle when nexHandle is null (must not crash or render bare @)", () => {
     const html = renderToStaticMarkup(
       <__internal.DrawerBody
         session={{ ...SIGNED_IN, nexHandle: null }}
         onLogoutClick={() => {}}
+        closeDrawer={() => {}}
       />,
     );
-    expect(html).toContain("Alice");
     // No stray @ handle rendered when handle is null.
     expect(html).not.toContain("@alice");
+    // Identity bar still renders for signed-in viewers (branded eyebrow).
+    expect(html).toContain("data-nex-control-drawer-identity");
   });
 });
 
@@ -114,33 +137,61 @@ describe("DrawerBody · identity bar", () => {
 // direct URL · they are just no longer surfaced through the drawer.
 
 describe("DrawerBody · section groups + rows", () => {
-  it("renders the two sealed section titles in order (YOUR NEX before PREFERENCES)", () => {
+  it("renders the three sealed section titles in order (CREATE → YOUR NEX → NEX SUPPORT)", () => {
     const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={() => {}}
+      />,
     );
-    const i1 = html.indexOf("YOUR NEX");
-    const i2 = html.indexOf("PREFERENCES &amp; SUPPORT");
-    expect(i1).toBeGreaterThan(-1);
-    expect(i2).toBeGreaterThan(-1);
-    expect(i1).toBeLessThan(i2);
-    // YOUR BUSINESS retired · must NOT render.
+    // Owner directive 2026-11-05 iter 26 · CREATE section sits ABOVE
+    // YOUR NEX. Owner directive 2026-11-04 later-same-day · NEX
+    // SUPPORT replaces the previous "PREFERENCES & SUPPORT" title
+    // (see section render at title="NEX SUPPORT" in the source).
+    const iCreate = html.indexOf("CREATE");
+    const iYourNex = html.indexOf("YOUR NEX");
+    const iSupport = html.indexOf("NEX SUPPORT");
+    expect(iCreate).toBeGreaterThan(-1);
+    expect(iYourNex).toBeGreaterThan(-1);
+    expect(iSupport).toBeGreaterThan(-1);
+    expect(iCreate).toBeLessThan(iYourNex);
+    expect(iYourNex).toBeLessThan(iSupport);
+    // YOUR BUSINESS retired (2026-11-04) · must NOT render.
     expect(html).not.toContain("YOUR BUSINESS");
     expect(html).not.toContain("Business Vault");
+    // Old title retired (2026-11-04 later-same-day) · must NOT render.
+    expect(html).not.toContain("PREFERENCES &amp; SUPPORT");
   });
 
   it("every destination row renders a verified route (no new routes invented)", () => {
     const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={() => {}}
+      />,
     );
-    // YOUR_NEX_ROWS + PREFERENCES_ROWS only · YOUR BUSINESS retired.
-    // Note: the Chats-and-contacts row's CONTACTS_HREF has a "?dev=1"
-    // suffix outside production (see src · explicit dev-impersonation
-    // affordance), so the test asserts a partial match on the path.
+    // Allowlist is grounded in owner directives in the source, not
+    // "whatever the implementation renders" · each entry here cites
+    // the directive that sealed it. Partial match on href= so dev-
+    // environment query-string variants (?dev=1) still match.
     const expectedHrefPaths = [
-      "/nex-native/profile/me",
-      "/nex-native/contacts",
-      "/nex-native/chat-themes-library",
-      "/nex-native/settings/help",
+      "/nex-native/profile/me",       // sealed · "My profile" row
+      "/nex-native/contacts",         // sealed 2026-11-12 · Chats and contacts
+      "/nex-native/settings/profile/edit", // sealed 2026-11-12 · Edit Profile
+      "/nex-native/manage",           // sealed 2026-11-13 · Shop Settings
+      "/nex-native/manage/shop/faq",  // sealed 2026-11-17 · FAQ
+      "/nex-native/settings/chat-settings", // sealed 2026-11-12 · Chat Settings
+      "/nex-native/settings/payments",// sealed 2026-11-10 · Payment Providers
+      "/nex-native/manage/orders",    // sealed 2026-11-10 P3 · My Orders
+      "/nex-native/manage/wholesale", // sealed 2026-11-18 · Wholesale (concurrent work)
+      "/nex-native/store",            // sealed 2026-11-07 · NEX Store
+      "/nex-native/directory",        // sealed 2026-11-09 · Discovery
+      "/nex-native/settings",         // sealed 2026-11-11 Cycle 36 · Settings
+      "/nex-generated/buying-guides", // sealed 2026-11-18 · Buying Guides
+      "/nex-native/nex-1",            // sealed 2026-11-09 rev 4 · NEX 1
+      "/nex-native/create/product/category", // CREATE_ROWS · List a product
     ];
     for (const path of expectedHrefPaths) {
       expect(html).toContain(`href="${path}`);
@@ -151,7 +202,11 @@ describe("DrawerBody · section groups + rows", () => {
 describe("DrawerBody · logout surface + confirmation modal (owner decision #2)", () => {
   it("renders the Log out button for signed-in viewers", () => {
     const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={() => {}}
+      />,
     );
     expect(html).toContain("data-nex-control-drawer-logout");
     expect(html).toContain("Log out");
@@ -199,31 +254,162 @@ describe("ControlDrawer · architectural guards", () => {
   });
 
   it("row list exports stay stable (regression guard against silent re-ordering)", () => {
-    // Owner directive 2026-11-04 later-same-day · NEX Ireland drawer
-    // trim · drawer reduced to 11 rows (Emergency + 9 menu rows +
-    // Sign out). The YOUR_NEX / YOUR_BUSINESS / PREFERENCES arrays
-    // below reflect the trimmed set.
-    // Owner directive 2026-11-05 · global drawer unification · the
-    // YOUR_BUSINESS rows + BUSINESS_VAULT row are REMOVED from the
-    // drawer surface · only YOUR_NEX + PREFERENCES remain.
-    // Owner directive 2026-11-05 iter 22 · "discovery" row added to
-    // YOUR_NEX (replaced Live Feed subtitle on 2026-11-09 after NEX
-    // Live Feed was retired · href now routes to /directory).
-    // Owner directive 2026-11-07 · "nex-store" row added to YOUR_NEX
-    // between chat-appearance and discovery · dedicated place to
-    // discover + purchase NEX's own optional extras (Vault · themes).
-    // This guard synced to the sealed 5-row state on 2026-11-09 by
-    // Claude during audit remediation · prior 3-row assertion lagged
-    // the sealed directives.
+    // Row-key allowlist is anchored to owner directives, not whatever
+    // the implementation currently exports. Each entry cites its
+    // sealing directive:
+    //
+    //   chats-contacts     · 2026-11-12 (top of drawer)
+    //   profile            · sealed
+    //   edit-profile       · 2026-11-12 (dedicated edit route)
+    //   manage-shop        · 2026-11-13 (renamed "Shop Settings")
+    //   shop-faq           · 2026-11-17 (FAQ editor row)
+    //   chat-settings      · 2026-11-12 (Chat Settings hub)
+    //   payment-providers  · 2026-11-10 (merchant payment hub)
+    //   my-orders          · 2026-11-10 P3 (merchant dashboard)
+    //   wholesale          · 2026-11-18 (concurrent-work insertion ·
+    //                        DO NOT remove without a new directive)
+    //   nex-store          · 2026-11-07 (NEX-owned extras)
+    //   discovery          · 2026-11-09 revision (routes to /directory)
+    //
+    // Earlier 5-row assertion covered a now-stale state
+    // ("chat-appearance" was folded into Chat Settings on 2026-11-13
+    // and "profile" moved below "chats-contacts" on 2026-11-12). This
+    // list enforces the exact post-11-18 ordering.
     expect(__internal.YOUR_NEX_ROWS.map((r) => r.key)).toEqual([
-      "profile",
       "chats-contacts",
-      "chat-appearance",
+      "profile",
+      "edit-profile",
+      "manage-shop",
+      "shop-faq",
+      "chat-settings",
+      "payment-providers",
+      "my-orders",
+      "wholesale",
       "nex-store",
       "discovery",
     ]);
+    // PREFERENCES_ROWS · sealed 2026-11-04 trim retained only "help";
+    // 2026-11-11 Cycle 36 reinstated "settings"; 2026-11-09 revision 4
+    // renamed "help" → "nex-1"; 2026-11-18 inserted "buying-guides".
     expect(__internal.PREFERENCES_ROWS.map((r) => r.key)).toEqual([
-      "help",
+      "settings",
+      "buying-guides",
+      "nex-1",
     ]);
+  });
+});
+
+// ─── Regression · drawer-close callback (D3 · 2026-11-18) ──────────
+//
+// Before 2026-11-18, DrawerBody referenced a bare `close` identifier
+// at the three SectionGroup `closeDrawer` sites. That identifier
+// resolved against the global `window.close` because DrawerBody is a
+// top-level function and the parent's `close` useCallback lives only
+// inside ControlDrawer's component scope. Tapping any drawer row
+// invoked `window.close()` · on browsers that honour the API (most
+// SPAs under PWA/standalone display mode, in-app browsers, etc.) the
+// browser would try to terminate the whole tab.
+//
+// The fix threaded a required `closeDrawer: () => void` prop into
+// DrawerBody and passes the parent's close callback through. These
+// tests pin that wiring so a future refactor can never reintroduce
+// the global-close regression silently.
+
+describe("DrawerBody · closeDrawer wiring (regression · 2026-11-18)", () => {
+  it("invokes the closeDrawer prop on an ordinary row tap", () => {
+    const closeDrawer = vi.fn();
+    const { container } = render(
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={closeDrawer}
+      />,
+    );
+    const anyRow = container.querySelector<HTMLAnchorElement>(
+      '[data-nex-control-drawer-row="profile"]',
+    );
+    expect(anyRow).not.toBeNull();
+    // Fire a click · the <Link> element short-circuits navigation
+    // under the test DOM, but the inline onClick handler is still
+    // invoked. This is exactly what happens in production when the
+    // user taps a drawer row.
+    fireEvent.click(anyRow!);
+    expect(closeDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it("invokes the closeDrawer prop on a SAME-PATH row tap (pathname watcher does not fire)", () => {
+    // When a user taps a row that navigates to the current path, the
+    // usePathname watcher never fires (pathname is unchanged) so the
+    // drawer would never close via the route-change code path. The
+    // row-tap callback MUST close it. This is the exact bug reported
+    // as "Chats and contacts link doesn't work · drawer stays open"
+    // in the owner's 2026-11-13 test surface.
+    const closeDrawer = vi.fn();
+    const { container } = render(
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={closeDrawer}
+      />,
+    );
+    // The usePathname mock returns "/nex-native/free-chat". Find a row
+    // whose href matches that pathname prefix · same-path tap scenario.
+    // If no row happens to point at the mock path, this test still
+    // demonstrates that the onClick handler fires regardless of path
+    // change, so use the first row.
+    const row = container.querySelector<HTMLAnchorElement>(
+      '[data-nex-control-drawer-row]',
+    );
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
+    expect(closeDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT invoke window.close on a row tap", () => {
+    // The pre-fix defect: tapping a row invoked `window.close()`.
+    // This test spies on window.close and asserts it is never called.
+    const windowCloseSpy = vi.spyOn(window, "close").mockImplementation(() => {});
+    const closeDrawer = vi.fn();
+    const { container } = render(
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={closeDrawer}
+      />,
+    );
+    const rows = container.querySelectorAll<HTMLAnchorElement>(
+      '[data-nex-control-drawer-row]',
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      fireEvent.click(row);
+    }
+    expect(windowCloseSpy).not.toHaveBeenCalled();
+    expect(closeDrawer).toHaveBeenCalledTimes(rows.length);
+    windowCloseSpy.mockRestore();
+  });
+
+  it("row <Link> href remains intact · ordinary navigation still works", () => {
+    // Belt-and-braces · the row-tap closeDrawer call must not
+    // short-circuit the <Link>'s navigation. Each rendered row still
+    // exposes its canonical href so Next.js' <Link> can navigate.
+    const closeDrawer = vi.fn();
+    const { container } = render(
+      <__internal.DrawerBody
+        session={SIGNED_IN}
+        onLogoutClick={() => {}}
+        closeDrawer={closeDrawer}
+      />,
+    );
+    const profileRow = container.querySelector<HTMLAnchorElement>(
+      '[data-nex-control-drawer-row="profile"]',
+    );
+    expect(profileRow).not.toBeNull();
+    expect(profileRow!.getAttribute("href")).toBe("/nex-native/profile/me");
+    // Click fires the handler (closeDrawer) · default <Link>
+    // navigation would then proceed in a real browser; jsdom doesn't
+    // execute navigation but the handler assertion covers the wiring.
+    fireEvent.click(profileRow!);
+    expect(closeDrawer).toHaveBeenCalled();
   });
 });

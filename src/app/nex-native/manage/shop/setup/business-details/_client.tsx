@@ -955,7 +955,25 @@ function errorCopy(code: string): string {
       return "That category pair isn't recognised. Pick again from the list.";
     case "not-authenticated":
       return "You've been signed out · please sign in again.";
+    case "owner-mismatch":
+    // Lane C · prompt-7 round 18 · 2026-11-19 · service-layer
+    // `updateBusinessDisplayName` throws when the owner_account_id
+    // scope matches zero rows (concurrent ownership transfer OR the
+    // session's account no longer owns this business). The action
+    // converts that to the stable `owner-scope-denied` wire code so
+    // the seller sees the same user-safe banner as the pre-existing
+    // owner-mismatch branch from round 11.
+    case "owner-scope-denied":
+      return "You can only edit a shop you own · please sign in again.";
+    // Lane C · prompt-7 round 11 · 2026-11-19 · safe-error fall-through.
+    // Previously `return code;` leaked raw server/driver strings (e.g.
+    // Postgres error messages, library stack-trace preambles) to the
+    // seller's phone. Replace with a stable copy; the specific `code`
+    // is logged to aid debugging but never shown to the end user.
     default:
-      return code;
+      if (code && typeof code === "string") {
+        console.warn("[nex] shop-setup · unmapped server error code", code);
+      }
+      return "We couldn't save that just now · please try again in a moment.";
   }
 }

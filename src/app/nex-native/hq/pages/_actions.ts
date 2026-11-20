@@ -42,6 +42,12 @@ import {
   type RenameQueueEntry,
 } from "./_queue-readers";
 
+// Re-export so `_client.tsx` can continue importing these types from
+// `_actions.ts` alongside the action functions.  The types originate in
+// `_queue-readers.ts`; re-exporting here keeps the client's import list
+// focused on the action module without changing public type identity.
+export type { DeletionQueueEntry, LockOverrides, RenameQueueEntry };
+
 const execp = promisify(exec);
 
 async function assertHqAdmin(): Promise<string> {

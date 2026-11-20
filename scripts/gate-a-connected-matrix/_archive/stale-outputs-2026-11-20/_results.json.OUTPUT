@@ -1,0 +1,40 @@
+{
+  "runner_started_at": "2026-11-19T18:08:13.146Z",
+  "canonical_project_ref": "kdstoyyeygcopkogqsyv",
+  "run_id": "d2cbd3bd-88ca-404d-8fe4-2be6525859b2",
+  "identity_mode": "three",
+  "identity_labels": [
+    "A",
+    "B",
+    "C"
+  ],
+  "entries": [],
+  "dry_run": true,
+  "dry_run_manifest": [
+    "20_signup_disposable_identities.mjs",
+    "30_v_auth_null.mjs",
+    "31_v_auth_unknown.mjs",
+    "32_v_auth_unauthorized_diff.mjs",
+    "40_v_w1_new.mjs",
+    "41_v_w1_exist.mjs",
+    "42_v_w1_cap.mjs",
+    "43_v_w1_cap_race.mjs",
+    "44_v_w1_whitespace.mjs",
+    "45_v_w1_dup.mjs",
+    "50_v_w2_ok.mjs",
+    "51_v_w2_over.mjs",
+    "52_v_w2_dup.mjs",
+    "53_v_w2_auth.mjs",
+    "60_v_w3_update.mjs",
+    "61_v_w3_insert.mjs",
+    "62_v_w3_role.mjs",
+    "63_v_w3_cap.mjs",
+    "64_v_w3_race.mjs",
+    "65_v_w3_promote.mjs",
+    "66_v_w3_nopromote.mjs",
+    "70_v_atomic.mjs",
+    "90_cleanup.mjs"
+  ],
+  "runner_exit": 0,
+  "runner_completed_at": "2026-11-19T18:08:13.151Z"
+}

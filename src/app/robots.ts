@@ -22,6 +22,8 @@ import {
   assertProdSafeUrl,
   nexSiteUrl,
 } from "@/lib/nex-native/seo/site-url-resolver";
+import { isPrelaunchModeOn } from "@/lib/nex-native/prelaunch/feature-flag";
+import { listPublicAllowlistSnapshot } from "@/lib/nex-native/prelaunch/allowlist";
 
 const ALLOWED_SEARCH_BOTS: readonly string[] = [
   "Googlebot",
@@ -38,8 +40,45 @@ const DISALLOWED_TRAINING_BOTS: readonly string[] = [
   "Google-Extended",
 ];
 
-/** Dynamic robots route · Next.js reads this at /robots.txt. */
+/** Dynamic robots route · Next.js reads this at /robots.txt.
+ *
+ *  2026-11-18 · when NEX_PRELAUNCH_MODE is "true", this route returns a
+ *  narrow-allowlist policy: ONLY the Nexcorner landing + the published
+ *  buying guides are allow-crawled. Everything else is disallowed for
+ *  every user-agent. When the flag is off, the pre-existing public /
+ *  private partition is returned unchanged. */
 export default function robots(): MetadataRoute.Robots {
+  const base = nexSiteUrl();
+  const sitemapUrl = assertProdSafeUrl(`${base}/sitemap.xml`, "robots.sitemap");
+
+  if (isPrelaunchModeOn()) {
+    const snap = listPublicAllowlistSnapshot();
+    // Allow the exact Nexcorner paths + the guides prefix + framework
+    // internals. Disallow everything else at the root.
+    const allow: readonly string[] = [
+      ...snap.exactPaths,
+      ...snap.prefixPaths,
+    ];
+    return {
+      rules: [
+        {
+          userAgent: "*",
+          allow: [...allow],
+          disallow: ["/"],
+        },
+        // Model-training crawlers · still blanket Disallow even under
+        // prelaunch so the public landing isn't ingested into a model
+        // set we don't trust.
+        ...DISALLOWED_TRAINING_BOTS.map((bot) => ({
+          userAgent: bot,
+          disallow: ["/"],
+        })),
+      ],
+      sitemap: sitemapUrl,
+      host: base,
+    };
+  }
+
   // Private paths always disallow for every user-agent (including the
   // allowlist). Expressed with trailing `/` so Allow: /nex-native/directory
   // still works alongside Disallow: /nex-native/manage/ for Googlebot.
@@ -68,9 +107,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [...privateDisallow],
     },
   ];
-
-  const base = nexSiteUrl();
-  const sitemapUrl = assertProdSafeUrl(`${base}/sitemap.xml`, "robots.sitemap");
 
   return {
     rules,

@@ -57,6 +57,7 @@ import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { getShopCoverContent } from "@/lib/nex-native/shop-cover-service";
+import { projectPublicInfoPages } from "@/lib/nex-native/info-pages-service";
 import { CoverThemeSkin } from "../cover/theme-skin";
 import { CoverLayoutSwitch } from "../cover/layout-switch";
 import { BurgerMenu } from "../cover/_burger-menu";
@@ -517,7 +518,23 @@ export default async function PublicShopPage({
           hours={null}
           shopUrl={`/nex-native/${business.slug}`}
           accentHex={accentHex}
-          content={coverContent}
+          content={
+            coverContent
+              ? {
+                  ...coverContent,
+                  // Owner directive 2026-11-17 · server-side draft
+                  // projection. BurgerMenu is a "use client" component,
+                  // so the entire `content` prop is serialised into the
+                  // RSC/HTML payload shipped to anonymous visitors.
+                  // projectPublicInfoPages strips unpublished FAQ items
+                  // (disabled rows, empty questions, empty answers) and
+                  // disabled / unlabelled custom buttons BEFORE the
+                  // object crosses the boundary · drafts never appear
+                  // in the serialised payload for the public shop route.
+                  infoPages: projectPublicInfoPages(coverContent.infoPages),
+                }
+              : coverContent
+          }
         />
         {/* Owner-sealed 2026-11-13 · shop-to-customer contact flow ·
             tap routes signed-in visitors directly to peer chat with

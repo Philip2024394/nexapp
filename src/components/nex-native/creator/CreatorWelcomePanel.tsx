@@ -13,14 +13,12 @@
 // lets get your flow rocking."
 
 import * as React from "react";
-import Link from "next/link";
 import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
 import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
 import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges-common";
 
 const INK = "#102033";
 const INK_DIM = "#4A6080";
-const ACCENT = "#00AFFF";
 
 export interface CreatorWelcomePanelProps {
   readonly earnedBadges: readonly SectionProgress[];
@@ -90,28 +88,18 @@ export function CreatorWelcomePanel(
         ))}
       </div>
 
+      {/* 2026-11-17 · founder-directed · the "Set up Creator Support"
+          CTA pointed at /nex-native/settings/creator, which was never
+          built. The copy below now references the side drawer only, so
+          the owner has a working path to Creator Support without a
+          dead button. The congratulations shell, badge chips and the
+          "NEX never handles money" disclosure remain untouched. */}
       <p style={{ fontSize: 13, color: "#5A4300", lineHeight: 1.5, margin: 0 }}>
         To let your fans and followers support your work, add your QR
         code or payment link in <strong>Creator Support</strong>. You
-        can find it in the side drawer or tap the button below.{" "}
+        can find it in the side drawer.{" "}
         <strong>Let&rsquo;s get your flow rocking.</strong>
       </p>
-
-      <Link
-        href="/nex-native/settings/creator"
-        style={{
-          alignSelf: "flex-start",
-          padding: "9px 16px",
-          borderRadius: 999,
-          background: ACCENT,
-          color: "#fff",
-          textDecoration: "none",
-          fontWeight: 800,
-          fontSize: 13,
-        }}
-      >
-        Set up Creator Support →
-      </Link>
 
       <p
         style={{

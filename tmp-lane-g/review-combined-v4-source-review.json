@@ -1,0 +1,49 @@
+{
+  "reviewer": "Package B",
+  "date": "2026-11-19",
+  "target": {
+    "forward": "nex-supabase/candidate-migrations/CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW.sql",
+    "rollback": "nex-supabase/candidate-migrations/CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW_rollback.sql"
+  },
+  "verdict": "PASS",
+  "evidenceTier": "SOURCE_REVIEW",
+  "defectCount": 0,
+  "capCoverage": "PARTIAL",
+  "rollbackAssessment": "SOUND",
+  "defects": [],
+  "uncoveredCapWritePaths": [
+    {
+      "file": "src/lib/nex-native/calls/invite-service.ts",
+      "line": 285,
+      "function": "createCallInviteOrchestrated",
+      "operation": "nexSupabaseAdmin.from('nex_group_call_participant').insert(...)",
+      "note": "CURRENT live production invite path · does NOT call nex_invite_to_call_tx RPC · bypasses v4 FOR UPDATE lock · races mig-133 cap trigger",
+      "severity": "high"
+    },
+    {
+      "file": "src/lib/nex-native/calls/group-call-service.ts",
+      "line": 104,
+      "function": "createGroupCallSession",
+      "operation": "loop insert of participantsToInsert (host + up to 3 guests)",
+      "note": "Host-bootstrap + multi-invitee creation · direct admin INSERT · bypasses v4 FOR UPDATE · trigger alone defends",
+      "severity": "high"
+    },
+    {
+      "file": "src/lib/nex-native/calls/group-call-service.ts",
+      "line": 178,
+      "function": "joinGroupCallSession",
+      "operation": "insert fresh participant row when UPDATE finds no pre-invite row",
+      "note": "Callee-accept path · direct admin INSERT · bypasses v4 FOR UPDATE",
+      "severity": "medium"
+    }
+  ],
+  "unverifiedNotes": [
+    "SOURCE_REVIEW only. No DB connection used. Byte-presence of regex literal + absence of &amp; confirmed by targeted grep -c; lock placement + diff-against-baseline verified by file read; no safe harness executed from this agent.",
+    "Case B (NULL auth.uid fail-closed path): UNVERIFIED — matches v4 file's own acknowledgement.",
+    "Case G (bounded intermediate-write fault): STATE_BLOCKER — unchanged from mig-356.",
+    "mig-133 trigger invariant remains 'at most 4 rows ever (counts without filtering left_at)' — v4 preserves this, does not redefine to '4 active rows'.",
+    "No source file currently invokes the nex_invite_to_call_tx RPC in live code. The only RPC-calling file is src/lib/nex-native/calls/invite-service.transactional-candidate.ts, which is UNAPPLIED candidate code. Therefore applying v4 WITHOUT caller rewiring leaves GB-4CAP effectively unremediated in production flows (the trigger still defends with its pre-v4 race window).",
+    "DROP FUNCTION IF EXISTS at v4 lines 92-100 targets the 7-param signature (UUID,TEXT,TEXT,JSONB,TEXT,TEXT,UUID) matching mig-356 forward. No stale overload will survive.",
+    "Permission envelope (REVOKE ALL FROM PUBLIC + REVOKE EXECUTE FROM anon + REVOKE EXECUTE FROM service_role + GRANT EXECUTE TO authenticated) byte-equivalent to mig-356 · no widening."
+  ]
+}

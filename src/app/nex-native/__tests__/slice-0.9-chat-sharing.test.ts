@@ -233,9 +233,28 @@ function installHappyPath() {
   });
 }
 
-function peerMessageFd(overrides: { body?: string; reply_to_id?: string } = {}): FormData {
+function peerMessageFd(
+  overrides: {
+    body?: string;
+    reply_to_id?: string;
+    attachment_url?: string;
+    attachment_type?: string;
+  } = {},
+): FormData {
   const fd = new FormData();
-  fd.set("body", overrides.body ?? "Hello");
+  // Owner-authorised 2026-11-17 R3 · Slice 0.9 recipient-eligibility
+  // tests now exercise sendPeerMessageAction through an attachment-only
+  // form. Plaintext body sends to non-NEX1 peers are refused at the
+  // server boundary by the device-only E2E gate (see _actions.ts
+  // sendPeerMessageAction body/NEX1 check and the R3 regressions
+  // added after this suite). Attachment-only sends still exercise the
+  // same contacts_only/send_failed branches without tripping the gate.
+  fd.set("body", overrides.body ?? "");
+  fd.set(
+    "attachment_url",
+    overrides.attachment_url ?? "https://example.test/image.jpg",
+  );
+  fd.set("attachment_type", overrides.attachment_type ?? "image");
   if (overrides.reply_to_id) fd.set("reply_to_id", overrides.reply_to_id);
   return fd;
 }

@@ -1,0 +1,39 @@
+[seller · sign-in → /free-chat] 
+[TRIGGERS_PRESENT_FREE_CHAT] { rightNav: 1, leftNotifs: 1, leftShop: 1 }
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\01-seller-free-chat-pre-order.png
+[PRE_ORDERS_SECTION_ROWS] 0
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\02-seller-notifs-drawer-pre.png
+[SHOP_DRAWER_OPEN_STATE] { shopDrawerVisible: true, shopCardCount: 8 }
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\03-seller-shop-drawer-open.png
+[buyer · sign-in] 
+[buyer · seed cart as setup only] 
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\04-buyer-cart-hydrated.png
+[buyer · click Checkout] 
+[buyer · fill checkout sheet + submit] 
+[buyer · redirected] http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\05-buyer-after-submit.png
+[CREATED_ORDER_ID] c9432439-1608-4196-a25b-bacea46269d1
+[seller · navigate to /free-chat (triggers server re-render for drawer feed)] 
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\06-seller-free-chat-after-order.png
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\07-seller-notifs-drawer-after-order.png
+[POST_ORDERS_SECTION_ROWS] 1
+[ORDER_ROW_MATCH] {
+  matchCount: 1,
+  expectedHref: '/nex-native/manage/orders/c9432439-1608-4196-a25b-bacea46269d1'
+}
+[ORDER_ROW_TEXT] O
+Order #c9432439
+just now
+E2E PLQ Widget X mwit8ina · €17.99
+[ORDER_ROW_HAS_PRODUCT_NAME] true
+[NAV_RESULT] navigated
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\08-seller-order-detail-from-drawer.png
+[LANDED_URL] http://localhost:3008/nex-native/manage/orders/c9432439-1608-4196-a25b-bacea46269d1
+[DETAIL_CONTAINS] { productName: false, uniqueNote: false }
+[MANAGE_BADGE_MOUNTED] 1
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\09-seller-manage-badge-preserved.png
+[BUYER_ORDERS_SECTION_ROWS (expect 0)] 0
+  📸 evidence\master-flow\seller-alerts\checkpoint-3\10-buyer-notifs-drawer-no-orders.png
+[cleanup · exact order id(s) only] 
+[deleted nex_order c9432439-1608-4196-a25b-bacea46269d1] 1
+[deleted cart_order messages] 0

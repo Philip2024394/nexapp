@@ -38,12 +38,15 @@ import {
 } from "@/lib/nex-native/catalogue/delivery-spec";
 import {
   IdentitySpec,
-  WholesaleSpec,
   mergeIdentityIntoSpec,
-  mergeWholesaleIntoSpec,
+  WHOLESALE_SPEC_KEY,
   type IdentityT,
-  type WholesaleT,
 } from "@/lib/nex-native/catalogue/identity-wholesale-spec";
+// W14 (2026-11-18) · wholesale validation widens to the multi-tier shape so
+// tiers[], spec-level dispatch range, and branding/custom-spec capability
+// flags round-trip through the server action. The legacy single-tier shape
+// is still accepted (all extended fields are optional).
+import { WholesaleSpecWithTiers } from "@/lib/nex-native/catalogue/wholesale-tiers";
 import {
   ReturnsSpec,
   mergeReturnsIntoSpec,
@@ -220,13 +223,16 @@ export async function updateProductAction(
   }
 
   // 8d · Wholesale (optional)
+  // W14 (2026-11-18) · validated against WholesaleSpecWithTiers so multi-tier
+  // payloads (tiers[] + spec dispatch range + branding/custom-spec flags)
+  // persist to spec.__wholesale unchanged. Legacy single-tier payloads still
+  // pass because all extended fields are optional.
   if (input.wholesale !== undefined) {
-    const wResult = WholesaleSpec.safeParse(input.wholesale);
+    const wResult = WholesaleSpecWithTiers.safeParse(input.wholesale);
     if (!wResult.success) {
       return err("wholesale-invalid", `Wholesale validation failed: ${wResult.error.message}`);
     }
-    const wholesale: WholesaleT = wResult.data;
-    specFinal = mergeWholesaleIntoSpec(specFinal, wholesale);
+    specFinal = { ...specFinal, [WHOLESALE_SPEC_KEY]: wResult.data };
   }
 
   // 8e · Returns (optional)

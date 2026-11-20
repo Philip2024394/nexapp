@@ -1,0 +1,126 @@
+
+Running 11 tests using 1 worker
+
+  ✓   1 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:512:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 1 · customer signs in through the real form · lands on /contacts (7.3s)
+  ✓   2 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:524:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 2 · customer visits Rosa's shop by slug (3.1s)
+  ✓   3 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:537:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 3 · customer adds seeded product via sealed localStorage contract · cart badge sees the item (140ms)
+[ck4 step4] nav log after submit · 1 events · [
+  'http://localhost:3008/nex-native/chat/peer/11111111-1111-4111-8111-111111111113?cart_sent=1'
+]
+  ✓   4 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:598:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 4 · customer checks out via real UI · sendCartOrderAction submits · redirects to chat/peer/<rosa>?cart_sent=1 (14.9s)
+  ✓   5 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:723:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 5 · DB verifies the cart handoff · nex_peer_message cart_order row from Hammerex · nex_order delta reported honestly (3.2s)
+  ✘   6 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:784:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 6 · seller signs in in second isolated context · /manage/orders page loads (17.9s)
+  -   7 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:817:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 7 · seller sees the cart_order message in their chat with Hammerex
+  -   8 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:840:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 8 · reload persistence · cart_order survives reload on both sides
+  -   9 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:857:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 9 · payment-wording honesty · neither side shows 'paid' / 'payment confirmed' for a chat-only handoff
+  -  10 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:894:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 10 · cross-account access denial · Rosa cannot view Hammerex's order detail
+  -  11 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:942:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 11 · residual cart_order count after test window (pre-cleanup snapshot)
+[ck4 cleanup] leftover E2E products=1 · leftover E2E orders=0
+[ck4 evidence]
+  nex_order rows (customer=Hammerex, business=Rosa): before=-1 after=1 delta_during_run=-1
+  nex_product rows (business=Rosa):                  before=-1 after=4
+  nex_peer_message cart_order rows observed:          -1 during window · -1 residual post-cleanup
+  nex_vault_setup Hammerex:                          before=-1 after=1 (MUST BE EQUAL)
+  nex_vault_setup Rosa:                              before=-1 after=0 (MUST BE EQUAL)
+  ✘  12 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:512:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 1 · customer signs in through the real form · lands on /contacts (retry #1) (0ms)
+  -  13 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:784:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 6 · seller signs in in second isolated context · /manage/orders page loads (retry #1)
+  -  14 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:524:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 2 · customer visits Rosa's shop by slug (retry #1)
+  -  15 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:537:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 3 · customer adds seeded product via sealed localStorage contract · cart badge sees the item (retry #1)
+  -  16 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:598:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 4 · customer checks out via real UI · sendCartOrderAction submits · redirects to chat/peer/<rosa>?cart_sent=1 (retry #1)
+  -  17 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:723:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 5 · DB verifies the cart handoff · nex_peer_message cart_order row from Hammerex · nex_order delta reported honestly (retry #1)
+  -  18 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:817:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 7 · seller sees the cart_order message in their chat with Hammerex (retry #1)
+  -  19 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:840:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 8 · reload persistence · cart_order survives reload on both sides (retry #1)
+  -  20 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:857:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 9 · payment-wording honesty · neither side shows 'paid' / 'payment confirmed' for a chat-only handoff (retry #1)
+  -  21 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:894:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 10 · cross-account access denial · Rosa cannot view Hammerex's order detail (retry #1)
+  -  22 [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:942:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 11 · residual cart_order count after test window (pre-cleanup snapshot) (retry #1)
+
+
+  1) [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:784:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 6 · seller signs in in second isolated context · /manage/orders page loads 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('text=E2E Order Widget 1794806381932').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('text=E2E Order Widget 1794806381932').first() with timeout 10000ms
+      - waiting for locator('text=E2E Order Widget 1794806381932').first()
+
+
+      811 |       await expect(
+      812 |         sellerPage.locator(`text=${PRODUCT_NAME_FULL}`).first(),
+    > 813 |       ).toBeVisible({ timeout: 10_000 });
+          |         ^
+      814 |     }
+      815 |   });
+      816 |
+        at C:\Users\Victus\nexapp\tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:813:9
+
+    error: update or delete on table "nex_order" violates foreign key constraint "nex_order_event_order_id_fkey" on table "nex_order_event"
+
+      395 |       // valid UUIDs only, never empty strings.
+      396 |       if (rosaBusinessId && seededProductId && beforeAllTimestampIso) {
+    > 397 |         const delOrdersRes = await c.query(
+          |                              ^
+      398 |           `DELETE FROM nex_order
+      399 |            WHERE customer_account_id = $1
+      400 |              AND business_id = $2
+        at C:\Users\Victus\nexapp\node_modules\pg\lib\client.js:694:17
+        at C:\Users\Victus\nexapp\tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:397:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\customer-to-seller-order-C-6b07b--·-manage-orders-page-loads-customer-to-seller-order-390\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\customer-to-seller-order-C-6b07b--·-manage-orders-page-loads-customer-to-seller-order-390\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\customer-to-seller-order-C-6b07b--·-manage-orders-page-loads-customer-to-seller-order-390\error-context.md
+
+    Error Context: test-results\customer-to-seller-order-C-6b07b--·-manage-orders-page-loads-customer-to-seller-order-390\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\customer-to-seller-order-C-6b07b--·-manage-orders-page-loads-customer-to-seller-order-390\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\customer-to-seller-order-C-6b07b--·-manage-orders-page-loads-customer-to-seller-order-390\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:512:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 1 · customer signs in through the real form · lands on /contacts 
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    error: update or delete on table "nex_product" violates foreign key constraint "nex_order_product_id_fkey" on table "nex_order"
+
+      301 |           }
+      302 |         }
+    > 303 |         await c.query(
+          |         ^
+      304 |           `DELETE FROM nex_product
+      305 |            WHERE business_id = $1 AND name LIKE $2`,
+      306 |           [rosaBusinessId, `${PRODUCT_NAME_PREFIX} %`],
+        at C:\Users\Victus\nexapp\node_modules\pg\lib\client.js:694:17
+        at C:\Users\Victus\nexapp\tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:303:9
+
+    Error Context: test-results\customer-to-seller-order-C-d1cf9-al-form-·-lands-on-contacts-customer-to-seller-order-390-retry1\error-context.md
+
+    Error Context: test-results\customer-to-seller-order-C-d1cf9-al-form-·-lands-on-contacts-customer-to-seller-order-390-retry1\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\customer-to-seller-order-C-d1cf9-al-form-·-lands-on-contacts-customer-to-seller-order-390-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\customer-to-seller-order-C-d1cf9-al-form-·-lands-on-contacts-customer-to-seller-order-390-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:784:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 6 · seller signs in in second isolated context · /manage/orders page loads 
+  1 flaky
+    [customer-to-seller-order-390] › tests\e2e-p6-isolation\customer-to-seller-order.spec.ts:512:7 › Checkpoint 4 · Customer → Seller → Order handoff (sandbox · fixture-assisted) › 1 · customer signs in through the real form · lands on /contacts 
+  5 did not run
+  4 passed (1.1m)

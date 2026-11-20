@@ -1,0 +1,24 @@
+STEP A · buyer sign-in + clear cart
+ERR: page.evaluate: Execution context was destroyed, most likely because of a navigation
+    at readCart (C:\Users\Victus\nexapp\scripts\_tmp\cp-cart-multi-and-chat-r5.mjs:102:26)
+    at C:\Users\Victus\nexapp\scripts\_tmp\cp-cart-multi-and-chat-r5.mjs:201:59 {
+  log: [],
+  name: 'Error'
+}
+
+DONE
+{
+  "when": "2026-11-17T15:58:31.805Z",
+  "unique_note": "CP-R5-1794931111805",
+  "chat_probe_text": "CP-R5 chat probe 1794931111805",
+  "product_x": {
+    "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "name": "E2E PLQ Widget X mwit8ina"
+  },
+  "product_y": {
+    "id": "681024eb-0c2e-41f6-b123-aee41c354cd1",
+    "name": "E2E PLQ Widget Y mwit8ina"
+  },
+  "disposable_records": [],
+  "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation"
+}

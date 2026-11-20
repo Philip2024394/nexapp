@@ -1,0 +1,68 @@
+{
+  "stamp": "2026-11-19T11:56:00.383Z",
+  "accountIds": [
+    "bfcd2a0b-7c94-43d2-83c8-cc548bcf9f66",
+    "c6ad3b74-75a6-4d01-9f78-77ce5122b32d"
+  ],
+  "authIds": [
+    "58013b91-caa6-4047-ac47-f53fa447256f",
+    "c0d68671-3307-43f6-9848-114353465867"
+  ],
+  "deleted": {
+    "messages": [
+      "c139ce5b-3eb1-48ab-a983-992971cedb81",
+      "002bac4d-5455-43b9-bfa2-417455c5f061"
+    ],
+    "conversations": [
+      "4a250371-ec53-45b4-9879-dfb93c88380a"
+    ],
+    "participants": [
+      "6d3911dd-eaed-4396-937f-9a18bc6a34db",
+      "abfbdde2-a03b-439b-b4b5-9c29dea8293b"
+    ],
+    "sessions": [
+      "c0aab923-3080-46ef-bbc0-79ee22017540",
+      "fc4c9b83-97c7-4926-baaa-c55e6cdfeeec"
+    ],
+    "accounts": [
+      "bfcd2a0b-7c94-43d2-83c8-cc548bcf9f66",
+      "c6ad3b74-75a6-4d01-9f78-77ce5122b32d"
+    ]
+  },
+  "authDeletions": [
+    {
+      "authId": "58013b91-caa6-4047-ac47-f53fa447256f",
+      "deleted": true,
+      "error": null
+    },
+    {
+      "authId": "c0d68671-3307-43f6-9848-114353465867",
+      "deleted": true,
+      "error": null
+    }
+  ],
+  "neighbourInvariants": {
+    "non_fixture_sessions": {
+      "before": "0",
+      "after": "0"
+    },
+    "non_fixture_participants": {
+      "before": "0",
+      "after": "0"
+    },
+    "non_fixture_conversations": {
+      "before": "9",
+      "after": "9"
+    },
+    "non_fixture_messages": {
+      "before": "141",
+      "after": "141"
+    },
+    "accounts_delta": {
+      "before": "960",
+      "after": "958",
+      "expected_delta": -2
+    }
+  },
+  "neighbourOK": true
+}

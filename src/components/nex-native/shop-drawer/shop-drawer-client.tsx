@@ -91,6 +91,21 @@ export interface ShopDrawerProps {
    *  and the trigger glyph. Hides the "Activate your shop" container
    *  because the viewer is not expected to own a shop in this mode. */
   readonly peerCatalog?: boolean;
+  /** Owner directive 2026-11-18 prompt-4 · explicit viewer identity the
+   *  mounting page resolved server-side. When provided this discriminator
+   *  is authoritative over the legacy `viewerHasShop` boolean, and the
+   *  MOCK_SHOP_PRODUCTS fallback is SUPPRESSED so no mocked rows can leak
+   *  to a signed-out or shop-less viewer.
+   *    · "guest"   → viewer is a session-less visitor (no nex_account).
+   *                  Render the guest create-account container.
+   *    · "no-shop" → viewer is signed in but owns no `nex_business`.
+   *                  Render the existing Activate-your-shop container.
+   *    · "shop"    → viewer is signed in AND owns a `nex_business`.
+   *                  Render real products; or "no products yet" empty
+   *                  state when `products=[]`.
+   *  When undefined the drawer falls back to legacy behaviour (used by
+   *  the peer-catalog mount which never passes this prop). */
+  readonly viewerKind?: "guest" | "no-shop" | "shop";
 }
 
 export function ShopDrawer({
@@ -99,6 +114,7 @@ export function ShopDrawer({
   shareAction,
   products,
   peerCatalog = false,
+  viewerKind,
 }: ShopDrawerProps): React.JSX.Element | null {
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
@@ -112,9 +128,18 @@ export function ShopDrawer({
   // Owner directive 2026-11-16 · in peer-catalog mode we always honour
   // the server-provided list (even when empty) and never fall back to
   // mocks · a buyer must see the peer owner's real catalogue or the
-  // empty state, not fabricated inventory. Legacy prototype mode keeps
-  // the mock fallback until the owner retires it.
-  const list = peerCatalog ? products ?? [] : products ?? MOCK_SHOP_PRODUCTS;
+  // empty state, not fabricated inventory.
+  //
+  // Owner directive 2026-11-18 prompt-4 · when `viewerKind` is provided
+  // (new identity-aware mount contract), the mock fallback is likewise
+  // SUPPRESSED so a guest / no-shop / zero-product viewer never sees
+  // Treaty Bar Hoodie / Dublin print / Roasted Blend demo cards.
+  // Legacy mounts that still omit `viewerKind` keep the Phase-1 fallback
+  // until they are migrated.
+  const list =
+    peerCatalog || viewerKind !== undefined
+      ? products ?? []
+      : products ?? MOCK_SHOP_PRODUCTS;
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -169,7 +194,30 @@ export function ShopDrawer({
   // the peer owner's catalogue, so the "activate your shop" CTA is
   // irrelevant and the no-shop container is suppressed even when the
   // viewer themselves has no shop.
-  const noShopMode = !peerCatalog && !viewerHasShop;
+  //
+  // Owner directive 2026-11-18 prompt-4 · explicit viewer identity, when
+  // provided, drives the empty-state branch. Three distinct containers:
+  //   · guestMode      → viewer has NO nex_account yet; render create-
+  //                      account CTA, NOT the shop-setup CTA (those are
+  //                      different flows and conflating them was the
+  //                      source of the Treaty Bar Hoodie leak for Nex
+  //                      Guest on localhost:3008).
+  //   · noShopMode     → viewer has an account but no nex_business; the
+  //                      Activate-your-shop CTA is the correct target.
+  //   · shopEmptyMode  → viewer owns a business but has not yet added
+  //                      products; distinct copy + Add-product CTA so
+  //                      the user understands this is their own empty
+  //                      shop, not a "please set up a shop" prompt.
+  const guestMode = !peerCatalog && viewerKind === "guest";
+  const noShopMode = !peerCatalog && (
+    viewerKind === "no-shop" ||
+    (viewerKind === undefined && !viewerHasShop)
+  );
+  const shopEmptyMode =
+    !peerCatalog &&
+    viewerKind === "shop" &&
+    list.length === 0 &&
+    query.trim().length === 0;
 
   const overlay = (
     <>
@@ -451,8 +499,12 @@ export function ShopDrawer({
             gap: 16,
           }}
         >
-          {noShopMode ? (
+          {guestMode ? (
+            <GuestCreateAccountContainer onClose={closeDrawer} />
+          ) : noShopMode ? (
             <ActivateShopContainer onClose={closeDrawer} />
+          ) : shopEmptyMode ? (
+            <ShopHasNoProductsContainer onClose={closeDrawer} />
           ) : filtered.length === 0 ? (
             <EmptyState
               hasQuery={query.trim().length > 0}
@@ -870,6 +922,183 @@ function ActivateShopContainer({
         }}
       >
         Activate your shop
+      </a>
+    </div>
+  );
+}
+
+// Owner directive 2026-11-18 prompt-4 · Guest create-account container
+// rendered when the mounting page resolved the viewer as `kind: "guest"`
+// or `kind: "visitor"` (no linked nex_account). Explicitly separates
+// "you have no account yet" from "you have an account but no shop",
+// since the earlier conflation caused the free-chat mount to hard-code
+// viewerHasShop=true and leak MOCK_SHOP_PRODUCTS to guests.
+//
+// CTA targets `/nex-native/sign-in?mode=signup` which is the one-URL
+// signup surface sealed 2026-11-02 (see sign-in page comments at
+// lines 41-43 for the mode=signup contract).
+function GuestCreateAccountContainer({
+  onClose,
+}: {
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-shop-drawer-guest
+      style={{
+        padding: "4px 2px 0",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          background: "rgba(255, 114, 0, 0.14)",
+          border: `1px solid ${PANEL_BORDER}`,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#FF7200",
+          alignSelf: "center",
+        }}
+      >
+        <ShopGlyph accent="#FF7200" size={26} />
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          fontWeight: 700,
+          lineHeight: 1.3,
+          color: TEXT,
+          textAlign: "center",
+        }}
+      >
+        Create an account to set up your shop and add products.
+      </p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          lineHeight: 1.45,
+          color: MUTED,
+          textAlign: "center",
+        }}
+      >
+        Your shop lives with your NEX account · sign up in under a minute
+        and come straight back here to add your first product.
+      </p>
+      <a
+        href="/nex-native/sign-in?mode=signup"
+        onClick={() => onClose()}
+        data-nex-shop-drawer-guest-cta
+        style={{
+          marginTop: 2,
+          padding: "12px 18px",
+          borderRadius: 999,
+          background: "#FF7200",
+          color: "#FFFFFF",
+          fontWeight: 900,
+          fontSize: 13,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+          textAlign: "center",
+          boxShadow: "0 4px 14px rgba(255, 114, 0, 0.4)",
+        }}
+      >
+        Create NEX account
+      </a>
+    </div>
+  );
+}
+
+// Owner directive 2026-11-18 prompt-4 · Shop-has-no-products container
+// rendered when the viewer owns a nex_business but has not yet listed
+// any nex_product rows. Distinct from ActivateShopContainer so that an
+// existing seller isn't told to "activate your shop" (confusing · their
+// shop is already active, they just have no inventory yet).
+function ShopHasNoProductsContainer({
+  onClose,
+}: {
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-shop-drawer-shop-empty
+      style={{
+        padding: "4px 2px 0",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          background: "rgba(255, 114, 0, 0.14)",
+          border: `1px solid ${PANEL_BORDER}`,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#FF7200",
+          alignSelf: "center",
+        }}
+      >
+        <ShopGlyph accent="#FF7200" size={26} />
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          fontWeight: 700,
+          lineHeight: 1.3,
+          color: TEXT,
+          textAlign: "center",
+        }}
+      >
+        You have no products in your shop yet.
+      </p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          lineHeight: 1.45,
+          color: MUTED,
+          textAlign: "center",
+        }}
+      >
+        Add your first product and it will show up here · tap any card
+        in this drawer to share it directly into any chat.
+      </p>
+      <a
+        href="/nex-native/manage/products"
+        onClick={() => onClose()}
+        data-nex-shop-drawer-shop-empty-cta
+        style={{
+          marginTop: 2,
+          padding: "12px 18px",
+          borderRadius: 999,
+          background: "#FF7200",
+          color: "#FFFFFF",
+          fontWeight: 900,
+          fontSize: 13,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+          textAlign: "center",
+          boxShadow: "0 4px 14px rgba(255, 114, 0, 0.4)",
+        }}
+      >
+        Add a product
       </a>
     </div>
   );

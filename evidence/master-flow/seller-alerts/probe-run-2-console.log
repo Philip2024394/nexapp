@@ -1,0 +1,58 @@
+{"ts":"2026-11-16T06:28:30.786Z","phase":"pre_signin_seller"}
+{"ts":"2026-11-16T06:28:40.200Z","phase":"seller_on_manage","url":"http://localhost:3008/nex-native/manage"}
+{"ts":"2026-11-16T06:28:40.209Z","phase":"pre_orders_card_text","text":"Orders Buyer orders · newest first"}
+{"ts":"2026-11-16T06:28:40.215Z","phase":"pre_badge_mounted","count":0}
+  📸 evidence\master-flow\seller-alerts\01-seller-manage-pre-order.png
+{"ts":"2026-11-16T06:28:46.421Z","phase":"pre_orders_list_rows","rowCount":0}
+  📸 evidence\master-flow\seller-alerts\02-seller-orders-list-pre.png
+{"ts":"2026-11-16T06:28:48.029Z","phase":"pre_unread_count_endpoint","result":{"status":200,"body":{"count":0,"chat":0,"orders":0}}}
+{"ts":"2026-11-16T06:28:48.107Z","phase":"pre_signin_buyer"}
+{"ts":"2026-11-16T06:28:54.696Z","phase":"buyer_signed_in"}
+{"ts":"2026-11-16T06:28:58.431Z","phase":"cart_seeded_as_setup","key":"nex_cart_v1","productId":"47bdf78e-84a9-4ca5-b33f-0676981df65b"}
+  📸 evidence\master-flow\seller-alerts\03a-buyer-cart-page.png
+{"ts":"2026-11-16T06:29:03.224Z","phase":"cart_page_rendered","productVisible":true}
+  📸 evidence\master-flow\seller-alerts\03b-buyer-checkout-sheet.png
+{"ts":"2026-11-16T06:29:03.664Z","phase":"buyer_submit_clicked","submitTs":1794810543517}
+{"ts":"2026-11-16T06:29:10.866Z","phase":"buyer_redirected_to_chat","url":"http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1"}
+  📸 evidence\master-flow\seller-alerts\04-buyer-after-submit.png
+{"ts":"2026-11-16T06:29:10.920Z","phase":"observation_begin","durationMs":120000}
+{"ts":"2026-11-16T06:29:12.515Z","phase":"observe","elapsedS":0,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:29:12.516Z","phase":"FIRST_API_ORDERS_POSITIVE","elapsedS":0,"apiOrders":1}
+{"ts":"2026-11-16T06:29:19.121Z","phase":"observe","elapsedS":6,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:29:25.887Z","phase":"observe","elapsedS":13,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:29:32.499Z","phase":"observe","elapsedS":19,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:29:40.951Z","phase":"observe","elapsedS":26,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:29:47.963Z","phase":"observe","elapsedS":35,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:29:55.773Z","phase":"observe","elapsedS":42,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:02.438Z","phase":"observe","elapsedS":49,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:10.897Z","phase":"observe","elapsedS":56,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:17.613Z","phase":"observe","elapsedS":64,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:26.627Z","phase":"observe","elapsedS":71,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:33.227Z","phase":"observe","elapsedS":80,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:41.746Z","phase":"observe","elapsedS":87,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:48.273Z","phase":"observe","elapsedS":95,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:30:56.074Z","phase":"observe","elapsedS":102,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:31:02.681Z","phase":"observe","elapsedS":110,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:31:11.663Z","phase":"observe","elapsedS":116,"inPageBadgeMountedCount":0,"ordersCardIndicator":"off","listRowCount":0,"apiStatus":200,"apiBody":{"count":2,"chat":1,"orders":1}}
+{"ts":"2026-11-16T06:31:16.670Z","phase":"observation_end","firstBadgeMountedAt":null,"firstApiOrdersPositiveAt":0,"firstListRowAt":null}
+  📸 evidence\master-flow\seller-alerts\07-seller-manage-post-observation.png
+  📸 evidence\master-flow\seller-alerts\08-seller-orders-post-observation.png
+{"ts":"2026-11-16T06:31:23.198Z","phase":"POST_RELOAD_manage","badgeMountedCount":0,"cardText":"Orders Buyer orders · newest first"}
+  📸 evidence\master-flow\seller-alerts\09-seller-manage-after-reload.png
+{"ts":"2026-11-16T06:31:26.671Z","phase":"POST_RELOAD_list","rowCount":1}
+  📸 evidence\master-flow\seller-alerts\10-seller-orders-after-reload.png
+{"ts":"2026-11-16T06:31:29.776Z","phase":"EXACT_ORDER_LINKED","orderId":"aa6dcd1e-1cbf-4aba-87d1-fa2e228f56de","containsUniqueNote":true,"containsProductName":true}
+  📸 evidence\master-flow\seller-alerts\11-seller-order-detail-exact-match.png
+{"ts":"2026-11-16T06:31:36.682Z","phase":"non_seller_denial_list","url":"http://localhost:3008/nex-native/manage/orders","rowCount":0}
+  📸 evidence\master-flow\seller-alerts\12-non-seller-manage-orders.png
+{"ts":"2026-11-16T06:31:41.516Z","phase":"non_seller_direct_detail_get","attemptedOrderId":"aa6dcd1e-1cbf-4aba-87d1-fa2e228f56de","landedUrl":"http://localhost:3008/nex-native/manage/orders/aa6dcd1e-1cbf-4aba-87d1-fa2e228f56de","containsUniqueNote":false,"containsProductName":false,"bodyFirst200":""}
+  📸 evidence\master-flow\seller-alerts\13-non-seller-direct-detail-get.png
+{"ts":"2026-11-16T06:31:43.201Z","phase":"non_seller_unread_count_isolation","result":{"status":200,"body":{"count":0,"chat":0,"orders":0}}}
+
+[cleanup] scoped by exact order ids created by this run
+  deleted nex_order aa6dcd1e-1cbf-4aba-87d1-fa2e228f56de (1)
+  deleted cart_order messages: 0
+  deleted plain cart chat messages: 0
+  deleted orphan time-scoped orders: 0
+
+Evidence saved to evidence/master-flow/seller-alerts

@@ -1,0 +1,74 @@
+{
+  "startedAt": "2026-11-16T09:39:28.400Z",
+  "productId": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+  "productName": "E2E PLQ Widget X mwit8ina",
+  "businessSlug": "e2e-ck5-seller-shop-mwhyjc0c",
+  "fixture": {
+    "hasMultiImage": false,
+    "hasSpec": false,
+    "hasDispatch": false,
+    "descLen": 39
+  },
+  "results": [
+    {
+      "id": "P1",
+      "status": "PASS",
+      "note": "title=\"E2E PLQ Widget X mwit8ina\" · price=\"€17.99\" · askSeller=true · backFab=true · mainImg=1",
+      "evidence": "P1-product-page-rendered.png"
+    },
+    {
+      "id": "P2",
+      "status": "PASS",
+      "note": "thumbs element count=0 (fixture has 1 image)",
+      "evidence": "P1-product-page-rendered.png"
+    },
+    {
+      "id": "P3",
+      "status": "BLOCKED",
+      "note": "CK5 fixture X has single image only (gallery_urls=null/empty) · multi-image gallery not sampleable with current seeded fixtures",
+      "evidence": null
+    },
+    {
+      "id": "P4",
+      "status": "UNVERIFIED",
+      "note": "no Read-more toggle mounted · product description too short to clamp AND no specs (fixture limitation)",
+      "evidence": null
+    },
+    {
+      "id": "P5",
+      "status": "PASS",
+      "note": "title after reload = \"E2E PLQ Widget X mwit8ina\"",
+      "evidence": null
+    },
+    {
+      "id": "P7",
+      "status": "PASS",
+      "note": "shop ?product=<id> redirected to /nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "evidence": "P7-shop-query-redirect.png"
+    },
+    {
+      "id": "P8",
+      "status": "PASS",
+      "note": "shop card tap routed to /nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "evidence": "P8-card-tap-opened-product-page.png"
+    },
+    {
+      "id": "P6",
+      "status": "PASS",
+      "note": "after back FAB · URL=http://localhost:3008/nex-native/e2e-ck5-seller-shop-mwhyjc0c",
+      "evidence": "P6-back-fab-returned.png"
+    },
+    {
+      "id": "P9",
+      "status": "PASS",
+      "note": "landed at http://localhost:3008/nex-native/conversations/6ad024dd-473e-4415-9ef2-8b714b0c3990?product=47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "evidence": "P9-ask-seller-landed.png"
+    },
+    {
+      "id": "P10",
+      "status": "PASS",
+      "note": "cart line count after add=1 · header count pill reflects storage via nex-cart-changed event",
+      "evidence": "P10-added-to-cart.png"
+    }
+  ]
+}

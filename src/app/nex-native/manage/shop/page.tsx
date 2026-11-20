@@ -512,7 +512,7 @@ export default async function ShopSettingsPage({
               Loyalty ladder + share rewards
             </div>
             <div style={{ fontSize: 12, color: NEX.textDim, marginTop: 2 }}>
-              More orders → bigger discount for buyers · you still net more than on GoFood
+              More orders → bigger discount for buyers · NEX charges no sales commission on direct orders
             </div>
           </div>
           <div

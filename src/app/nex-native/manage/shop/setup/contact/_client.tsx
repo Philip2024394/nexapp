@@ -21,6 +21,7 @@ import {
   HINT_STYLE,
 } from "../_wizard-shell";
 import { saveShopContactAction } from "../_actions";
+import { NexInput } from "@/lib/nex-native/nex-keyboard";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const INK = "#F2F5F8";
@@ -255,12 +256,12 @@ export function ContactStepClient({
                 >
                   {field.prefix}
                 </span>
-                <input
+                <NexInput
                   id={`shop-${field.name}`}
                   type={field.type ?? "text"}
                   placeholder={field.placeholder}
                   value={values[field.name]}
-                  onChange={(e) => set(field.name, e.currentTarget.value)}
+                  onChange={(next) => set(field.name, next)}
                   style={{
                     ...FIELD_STYLE,
                     flex: 1,

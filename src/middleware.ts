@@ -13,6 +13,12 @@
 //      cookies — refresh MUST happen here).
 //   3. Canonical /nex-native/home redirect for the legacy /nex and
 //      /nex/chat deep-links.
+//   4. NEX prelaunch gate · 2026-11-18 · default-OFF via
+//      NEX_PRELAUNCH_MODE. When ON, every non-allowlisted path is
+//      redirected to /nexcorner (page) or 404'd (API / server action)
+//      unless the caller's authenticated Supabase user id is in
+//      NEX_PRELAUNCH_FOUNDER_UIDS. The allowlist + flag live in pure
+//      modules at src/lib/nex-native/prelaunch/.
 
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -26,6 +32,17 @@ import {
   DIRECTORY_SEED_MAX_AGE_SECONDS,
   pickOrMintDirectorySeed,
 } from "@/lib/nex-native/directory/directory-seed";
+// NEX prelaunch gate · default-OFF · 2026-11-18.
+// Pure imports only · the three modules below have no I/O and no
+// imports from `nexSupabaseAdmin` (which is Node-only).
+import {
+  isPrelaunchPublicApi,
+  isPrelaunchPublicPath,
+} from "@/lib/nex-native/prelaunch/allowlist";
+import {
+  isFounderUid,
+  isPrelaunchModeOn,
+} from "@/lib/nex-native/prelaunch/feature-flag";
 
 // ── CID injection ──────────────────────────────────────────────────
 // Edge runtime cannot resolve node:async_hooks even transitively, so
@@ -49,9 +66,59 @@ function attachCid<T extends NextResponse>(res: T, cid: string): T {
 
 const BYPASS_PATH_PREFIXES = ["/_next/", "/api/", "/favicon"];
 
+// Matcher expanded 2026-11-18 for the NEX prelaunch gate. When the flag
+// is OFF (default) the middleware function body early-exits for paths
+// that weren't previously matched, so existing behaviour is unchanged.
+// The expansion is required because the gate must inspect pages/APIs
+// that live outside /nex-native/* (e.g. /, /directory, /chat-themes-
+// library, /api/*). The exclusion keeps Next internals and static
+// assets out of middleware execution entirely.
 export const config = {
-  matcher: ["/nex-native/:path*", "/nex", "/nex/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
+
+// Paths the pre-prelaunch middleware already handled. When the gate
+// is OFF, any OTHER matched path is early-exited to keep behaviour
+// identical to the pre-2026-11-18 build.
+function isLegacyMatchedPath(pathname: string): boolean {
+  return (
+    pathname === "/nex" ||
+    pathname === "/nex/chat" ||
+    pathname.startsWith("/nex-native/") ||
+    pathname.startsWith("/nex/")
+  );
+}
+
+// Read the authenticated NEX user id via the SSR Supabase client,
+// returning null on any error so the gate falls through to the default
+// deny path (never fail-open). Reuses the same `createServerClient`
+// pattern as `refreshNexAuthSession` below.
+async function readAuthedNexUidOrNull(
+  req: NextRequest,
+): Promise<string | null> {
+  const nexUrl =
+    process.env.NEX_SUPABASE_URL ?? process.env.NEXT_PUBLIC_NEX_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY;
+  if (!nexUrl || !anon) return null;
+  try {
+    const supabase = createServerClient(nexUrl, anon, {
+      cookies: {
+        getAll() {
+          return req.cookies
+            .getAll()
+            .map((c) => ({ name: c.name, value: c.value }));
+        },
+        setAll() {
+          /* no-op · gate is read-only, no cookie writes */
+        },
+      },
+    });
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function refreshNexAuthSession(
   req: NextRequest,
@@ -108,8 +175,47 @@ function ensureDirectorySeedCookie(
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
-  const cid = resolveCorrelationId(req);
   const pathname = req.nextUrl.pathname;
+  const flagOn = isPrelaunchModeOn();
+
+  // Flag OFF · path was not matched by the pre-prelaunch matcher ·
+  // return a clean pass-through so we add no behaviour whatsoever.
+  if (!flagOn && !isLegacyMatchedPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  const cid = resolveCorrelationId(req);
+
+  // ── NEX prelaunch gate ────────────────────────────────────────────
+  // Runs BEFORE every other decision when the flag is ON. The two
+  // allowlist calls are O(1) set / tiny-array lookups. Founder bypass
+  // is a Supabase getUser() + env-list membership check.
+  if (flagOn) {
+    const pathAllowed = isPrelaunchPublicPath(pathname);
+    const apiAllowed = isPrelaunchPublicApi(pathname);
+    if (!pathAllowed && !apiAllowed) {
+      const uid = await readAuthedNexUidOrNull(req);
+      if (!isFounderUid(uid)) {
+        const isApi = pathname.startsWith("/api/");
+        // RSC server actions arrive as POST to the containing page
+        // path with a `next-action` request header. Those paths are
+        // not on the public allowlist, so the request would otherwise
+        // be 302-redirected and the action body would be dropped.
+        // 404 them instead · same shape as an unknown API.
+        const isServerAction = req.headers.get("next-action") !== null;
+        if (isApi || isServerAction) {
+          return attachCid(
+            new NextResponse("Not Found", { status: 404 }),
+            cid,
+          );
+        }
+        const target = req.nextUrl.clone();
+        target.pathname = "/nexcorner";
+        target.search = "";
+        return attachCid(NextResponse.redirect(target, 302), cid);
+      }
+    }
+  }
 
   for (const prefix of BYPASS_PATH_PREFIXES) {
     if (pathname.startsWith(prefix)) {

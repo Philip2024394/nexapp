@@ -11,9 +11,11 @@
 // - Uses the sealed sidebar via hq/layout.tsx.
 
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { requireHqAdmin } from "@/lib/nex-native/hq-authorization";
+import { readTranslationMonitoringSnapshot } from "@/lib/nex-native/hq/translation-monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,8 @@ export default async function HqHomePage(): Promise<React.JSX.Element> {
     .then(() => true)
     .catch(() => false);
   if (!authorised) notFound();
+
+  const translation = readTranslationMonitoringSnapshot();
 
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto", color: INK }}>
@@ -111,6 +115,57 @@ export default async function HqHomePage(): Promise<React.JSX.Element> {
         {CARDS.map((card) => (
           <CountryCardTile key={card.id} card={card} />
         ))}
+      </section>
+
+      <section
+        aria-label="Translation monitoring summary"
+        style={{
+          marginTop: 28,
+          padding: "16px 18px",
+          borderRadius: 14,
+          border: `1px solid ${BORDER}`,
+          background: "#071A12",
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          gap: 16,
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: INK_MUTED, textTransform: "uppercase", letterSpacing: "0.18em" }}>
+            Chat translation pilot · founder-only
+          </div>
+          <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: translation.availability === "configured" ? "#16D66B" : translation.availability === "configuration_incomplete" || translation.availability === "configured_not_live_tested" ? "#F6B01E" : "#7D9BC0", boxShadow: "0 0 10px currentColor" }} />
+            <span style={{ fontSize: 14, fontWeight: 800, color: INK }}>
+              {translation.availability.replace(/_/g, " ")}
+            </span>
+            <span style={{ fontSize: 12, color: INK_MUTED }}>·</span>
+            <span style={{ fontSize: 12.5, color: INK_DIM }}>
+              provider health: {translation.providerHealth.replace(/_/g, " ")}
+            </span>
+          </div>
+          <div style={{ marginTop: 6, fontSize: 12, color: INK_MUTED, lineHeight: 1.6 }}>
+            Process-local metrics only · no durable customer totals · opens translation details page.
+          </div>
+        </div>
+        <Link
+          href="/nex-native/hq/translation"
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 800,
+            background: "#16D66B",
+            color: "#031309",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Open details
+        </Link>
       </section>
 
       <section

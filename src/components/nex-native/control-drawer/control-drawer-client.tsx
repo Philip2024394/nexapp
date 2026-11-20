@@ -47,6 +47,13 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/app/nex-native/_actions";
+// Owner-authorised 2026-11-17 continuation 3 · translation pilot Gap D.
+// Primary cleanup path · fires before the sealed signOutAction form
+// submit so the in-memory translation cache + DOM nodes + broadcast
+// to other tabs happen in the SAME tab that is logging out. The
+// layout-level `TranslationLogoutSweeper` covers out-of-band paths.
+// Runs synchronously · never cancels the submit.
+import { runTranslationLogoutCleanup } from "@/lib/nex-native/translation/client/translation-logout-cleanup";
 // Owner directive 2026-10-18 · guest viewers see a sealed 3D lock
 // icon next to any row that requires an account. Reusing the
 // existing primitive rather than inventing a second lock shape
@@ -319,6 +326,21 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/manage",
     locked: false,
   },
+  // Owner directive 2026-11-17 · dedicated "FAQ" row sits next to
+  // Shop Settings · routes to the seller FAQ editor which seeds
+  // from the sealed starter bank and publishes answered entries
+  // into nex_business.info_pages.faq_items. Ownership gating is
+  // enforced at page-load (listBusinessesByOwner · redirect to
+  // /manage/shop/setup for non-owners) · same pattern as other
+  // shop rows that are visible to all signed-in users but gate
+  // server-side.
+  {
+    key: "shop-faq",
+    label: "FAQ",
+    subtitle: "Answer once · reuse in every chat",
+    href: "/nex-native/manage/shop/faq",
+    locked: false,
+  },
   // Owner directive 2026-11-13 · standalone "Chat themes" drawer row
   // retired · Chat Settings now hosts the Chat Theme link on-page so
   // the drawer stays lean. Direct URL /nex-native/chat-themes-library
@@ -351,6 +373,21 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     label: "My Orders",
     subtitle: "Confirm and track orders",
     href: "/nex-native/manage/orders",
+    locked: false,
+  },
+  // Owner directive 2026-11-18 · Wholesale catalogue. Sellers with an
+  // active Shop subscription can expose their existing products as a
+  // trade-only view with quantity-based pricing and seller-approved
+  // buyers. Visible to every signed-in viewer; the destination page
+  // itself gates ownership server-side (same pattern as Shop Settings /
+  // FAQ / Payment Providers · redirects non-owners to the setup
+  // dispatcher). The buyer catalogue sits at /<businessSlug>/wholesale
+  // behind seller-scoped approval — not reached from this drawer row.
+  {
+    key: "wholesale",
+    label: "Wholesale",
+    subtitle: "Trade pricing · approved buyers",
+    href: "/nex-native/manage/wholesale",
     locked: false,
   },
   // Owner directive 2026-11-07 · NEX Store · dedicated place to
@@ -416,6 +453,19 @@ const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
     label: "Settings",
     subtitle: "Profile · privacy · payments · more",
     href: "/nex-native/settings",
+  },
+  // Owner directive 2026-11-18 · Buying Guides educational hub. Public
+  // buyer-facing content (independent Next guides, no Rolex / brand
+  // affiliation). Deliberately placed in PREFERENCES — not in Shop
+  // Settings — because this is reader content, not seller management.
+  // Landing index lives at /nex-generated/buying-guides and links to
+  // the per-brand guides (Rolex is the first). Rows are visible to
+  // every viewer (signed-in or anonymous) · no auth gate.
+  {
+    key: "buying-guides",
+    label: "Buying Guides",
+    subtitle: "Independent product research",
+    href: "/nex-generated/buying-guides",
   },
   {
     key: "nex-1",
@@ -743,6 +793,7 @@ export function ControlDrawer({
           peerSharedMediaHref={peerSharedMediaHref}
           currentSurface={currentSurface}
           drawerVisitor={drawerVisitor}
+          closeDrawer={close}
         />
       </aside>
       {confirmLogout ? (
@@ -780,7 +831,11 @@ export function ControlDrawer({
         }
         /* Owner directive 2026-11-17 · hide the drawer's native
            vertical scrollbar on the right edge while keeping scroll
-           functionality intact for touch + wheel. */
+           functionality. Firefox + Edge/IE use the standard
+           scrollbar-width / -ms-overflow-style; WebKit uses the
+           pseudo-element below. overflow-y: auto on drawerStyle is
+           unchanged so the panel still scrolls when content exceeds
+           the frame height. */
         [data-nex-control-drawer] {
           scrollbar-width: none;
           -ms-overflow-style: none;
@@ -790,15 +845,18 @@ export function ControlDrawer({
           height: 0;
           display: none;
         }
-        /* Owner directive 2026-11-17 · on real mobile screens the
-           side drawer must render as a full-height viewport panel.
+        /* Owner directive 2026-11-17 · side drawer must render as a
+           full-height viewport panel on real mobile screens.
            On desktop (min-width 500px) the drawer stays position
            absolute inside the 288x624 phone-frame · unchanged.
            On mobile (max-width 499.98px), the surrounding
-           .nex-native-frame is min-height 100dvh rather than a
-           fixed scroll container · fix the drawer to the viewport
-           so it always covers the full screen even when the page
-           has been scrolled. */
+           .nex-native-frame is min-height 100dvh rather than a fixed
+           scroll container, so an absolute-positioned drawer at
+           top:0/bottom:0 grows to the full document height and
+           scrolls out of view with the page. Switching to
+           position:fixed on mobile anchors the drawer to the viewport
+           itself so it covers the entire mobile screen regardless of
+           page scroll. */
         @media (max-width: 499.98px) {
           [data-nex-control-drawer] {
             position: fixed !important;
@@ -893,6 +951,16 @@ function DrawerBody({
   peerSharedMediaHref,
   currentSurface,
   drawerVisitor,
+  // Owner directive 2026-11-18 · fix for window.close bug ·
+  // DrawerBody previously called a bare `close` identifier at the
+  // SectionGroup `closeDrawer={close}` sites, which resolved to the
+  // global `window.close` (DrawerBody is a top-level function; the
+  // `close` useCallback lives inside ControlDrawer's component scope).
+  // The parent now threads its drawer-close callback through this
+  // typed prop so row taps close the drawer instead of the browser
+  // tab. Prop is required so a future caller can never regress to the
+  // global by omitting it.
+  closeDrawer,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly onLogoutClick: () => void;
@@ -908,6 +976,7 @@ function DrawerBody({
     readonly nexHandle: string;
     readonly displayName: string;
   } | null;
+  readonly closeDrawer: () => void;
 }) {
   // Owner directive 2026-10-23 · "unlock them for admin dev entry".
   // Non-production builds · if the URL carries `?dev=1` the drawer
@@ -985,7 +1054,7 @@ function DrawerBody({
         rows={CREATE_ROWS}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
-        closeDrawer={close}
+        closeDrawer={closeDrawer}
       />
 
       <SectionGroup
@@ -1019,7 +1088,7 @@ function DrawerBody({
         })()}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
-        closeDrawer={close}
+        closeDrawer={closeDrawer}
       />
 
       {/* Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer
@@ -1037,7 +1106,7 @@ function DrawerBody({
         rows={PREFERENCES_ROWS}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
-        closeDrawer={close}
+        closeDrawer={closeDrawer}
       />
 
       {session !== null ? (
@@ -1522,7 +1591,28 @@ function LogoutConfirmModal({
           >
             Cancel
           </button>
-          <form action={signOutAction} style={{ flex: 1 }}>
+          <form
+            action={signOutAction}
+            style={{ flex: 1 }}
+            onSubmit={() => {
+              // Owner-authorised 2026-11-17 continuation 3 · Gap D.
+              // Fires SYNCHRONOUSLY before the sealed signOutAction
+              // server action submits so the in-memory translation
+              // cache, translation DOM nodes, and account-scoped
+              // consent broadcast all happen in THIS tab before
+              // navigation. Never throws (helper is guarded) · never
+              // cancels the submit (no preventDefault). AccountId is
+              // not threaded through to this modal, so the helper
+              // falls back to iterating known translation-prefs keys
+              // for scoped broadcasts. Encryption keys, Vault data
+              // and IDB message cache are NOT touched.
+              try {
+                runTranslationLogoutCleanup(null);
+              } catch {
+                /* ignore · never block the sealed logout path */
+              }
+            }}
+          >
             <button
               type="submit"
               style={confirmLogoutStyle}

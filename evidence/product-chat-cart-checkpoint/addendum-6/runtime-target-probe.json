@@ -1,0 +1,41 @@
+{
+  "when": "2026-11-17T15:36:49.794Z",
+  "visited": [
+    {
+      "path": "/nex-native/sign-in",
+      "url": "http://localhost:3008/nex-native/sign-in",
+      "status": "ok"
+    },
+    {
+      "path": "/nex-native",
+      "url": "http://localhost:3008/nex-native",
+      "status": "ok"
+    },
+    {
+      "path": "/nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "url": "http://localhost:3008/nex-native/product/47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "status": "ok"
+    },
+    {
+      "path": "/nex-native/shop/e2e-ck5-seller-shop-mwhyjc0c",
+      "url": "http://localhost:3008/nex-native/shop/e2e-ck5-seller-shop-mwhyjc0c",
+      "status": "ok"
+    },
+    {
+      "path": "/directory",
+      "url": "http://localhost:3008/directory",
+      "status": "ok"
+    }
+  ],
+  "supabase_hosts": [],
+  "by_resource_type": {
+    "fetch": [],
+    "xhr": [],
+    "ws": [],
+    "other": []
+  },
+  "sandbox_ref": "kdstoyyeygcopkogqsyv",
+  "prod_ref": "ijvqdvsvwtwxzcqmoqit",
+  "positive_sandbox_match": false,
+  "any_prod_contact": false
+}

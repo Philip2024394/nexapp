@@ -1,0 +1,54 @@
+{
+  "journeys": [
+    {
+      "id": "C1-text-send",
+      "status": "BLOCKED",
+      "note": "probe cannot type into forceKeypadActive composer without NEXT_PUBLIC_NEX_E2E_HOOKS=1 · existing bubble count on screen=5 · the sealed send path is covered by the slice-1b-share-product-live-session.test.ts regression and the prior peer-catalog A-share-product PASS",
+      "evidence": null
+    },
+    {
+      "id": "C3-bubble-actions",
+      "status": "PASS",
+      "note": "menu rendered · reply=1 copy=1 forward=1 edit=0",
+      "evidence": "evidence\\free-chat-audit\\C3-long-press-menu.png"
+    },
+    {
+      "id": "C2-reactions",
+      "status": "PASS",
+      "note": "smile button clickable · picker opened (presence)",
+      "evidence": "evidence\\free-chat-audit\\C2-reaction-picker.png"
+    },
+    {
+      "id": "C4-read-tick",
+      "status": "UNVERIFIED",
+      "note": "no tick selector matched · tick may use different attribute",
+      "evidence": null
+    },
+    {
+      "id": "C5-joker-keypad",
+      "status": "PASS",
+      "note": "phone-width Joker signature: inputmode=none readonly=true keypadNodes=2",
+      "evidence": "evidence\\free-chat-audit\\C5-joker-keypad.png"
+    },
+    {
+      "id": "C6-call-centre",
+      "status": "UNVERIFIED",
+      "note": "probe-tooling: Error: locator.click: Element is not visible\nCall log:\n\u001b[2m  - waiting for locator('[data-nex-free-chat-call-center-trigger]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button ty",
+      "evidence": null
+    },
+    {
+      "id": "C8-drawer-regression",
+      "status": "PASS",
+      "note": "Shop FAB present in peer-catalog mode · count=1",
+      "evidence": null
+    },
+    {
+      "id": "C7-theme-library",
+      "status": "UNVERIFIED",
+      "note": "library rendered but no apply/preview CTA located · title=\"NEX · Chat that's yours\"",
+      "evidence": "evidence\\free-chat-audit\\C7-theme-library.png"
+    }
+  ],
+  "startedAt": "2026-11-16T09:18:18.224Z",
+  "finishedAt": "2026-11-16T09:19:38.390Z"
+}

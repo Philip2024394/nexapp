@@ -547,6 +547,18 @@ export default async function BusinessConversationPage({
         ) : null}
       </header>
 
+      {/* Bridge 74 · ensure this browser has a Curve25519 device key
+          AND its public key is registered on the server. Without this
+          mount, a fresh browser context (Playwright, incognito, new
+          device) generates a local keypair that the server never
+          learns about · outgoing fan-out addresses old devices only ·
+          incoming rows can't be decrypted. DeviceKeyHub is session-
+          aware (upsertDeviceKeyAction gates on resolveNexAppSession
+          FromContext) and idempotent (refreshes last_seen_at on
+          repeat calls). Same mount used at /chat/peer/[accountId]
+          — see that page.tsx:1919. */}
+      <DeviceKeyHub />
+
       {/* Message list + composer are wired through a client component
           that owns the realtime subscription, encrypted send, and the
           3-dot products drawer. Mount below. */}
@@ -603,3 +615,4 @@ export default async function BusinessConversationPage({
 // ─── Client shell · dynamically imported to keep server tree lean ──
 
 import { BusinessConversationClient } from "./_client";
+import { DeviceKeyHub } from "../../chat/peer/[accountId]/_device-key-hub";

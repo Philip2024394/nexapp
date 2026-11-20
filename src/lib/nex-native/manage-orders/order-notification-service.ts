@@ -50,7 +50,23 @@ import type { NexOrderRow, NexUuid } from "../types";
 export type OrderNotificationKind =
   | "new_order"
   | "payment_confirmed"
-  | "order_cancelled";
+  | "order_cancelled"
+  // Dispatch-tracking preparation (2026-11-17). Fires only when the
+  // dispatch feature flag is enabled AND a seller dispatch action
+  // succeeded; the privacy copy below is intentionally identical for
+  // every sub-event so a lock-screen observer learns nothing about
+  // which specific shipment state advanced.
+  | "shipment_update";
+
+/** Sub-event detail routed through the single "shipment_update" push
+ *  kind. Used to populate the data payload + in-app timeline only;
+ *  the visible push body stays uniform. */
+export type ShipmentUpdateSubKind =
+  | "preparing"
+  | "dispatched"
+  | "tracking_added"
+  | "tracking_updated"
+  | "delivered_by_seller";
 
 export interface OrderNotificationResult {
   readonly kind: OrderNotificationKind;
@@ -91,6 +107,10 @@ const VISIBLE_COPY: Record<OrderNotificationKind, { title: string; body: string 
     title: "NEX",
     body: "Your order has been cancelled.",
   },
+  shipment_update: {
+    title: "NEX",
+    body: "Your order has an update.",
+  },
 };
 
 /** Resolve the seller account_id from a business_id. */
@@ -115,8 +135,14 @@ async function fanOutToAccount(
   recipientAccountId: NexUuid,
   orderId: NexUuid,
   kind: OrderNotificationKind,
+  subKind?: ShipmentUpdateSubKind,
 ): Promise<Omit<OrderNotificationResult, "kind" | "recipientAccountId">> {
   const { title, body } = VISIBLE_COPY[kind];
+  // Buyer-side deep-link: route them to their chat with the seller
+  // (where the cart handoff + tracking sheet live). Seller-side
+  // deep-link: route to the order detail page. The caller never
+  // sends shipment_update to the seller — so safe to default to
+  // order detail here and buyer-overriding at the call site.
   const deepLink = `/nex-native/manage/orders/${orderId}`;
   const result = await dispatchPushNotification(
     recipientAccountId,
@@ -125,7 +151,12 @@ async function fanOutToAccount(
       kind: "system",
       title,
       body,
-      data: { orderId, url: deepLink, eventKind: kind },
+      data: {
+        orderId,
+        url: deepLink,
+        eventKind: kind,
+        ...(subKind ? { shipmentSubKind: subKind } : {}),
+      },
     },
   );
   return {
@@ -203,6 +234,69 @@ export async function notifyBuyerPaymentConfirmed(
  * from sellerCancelOrderAction. Reason is NOT included in the push
  * body for privacy · the buyer sees it in-app on the order detail.
  */
+/**
+ * Notify the buyer that the seller has advanced the shipment state.
+ * Uses the single "shipment_update" push kind — the lock-screen copy
+ * is identical for every sub-event so an observer learns nothing
+ * about which shipment stage this is. The sub-kind rides in the
+ * hidden `shipmentSubKind` data payload for in-app routing only.
+ *
+ * Gated by:
+ *   · NEX_ORDER_NOTIFICATIONS_DISABLED (cold stop · identical to siblings)
+ *   · NEX_DISPATCH_TRACKING_ENABLED (feature flag · dispatch work entirely)
+ *
+ * This function is safe to call when NEX_DISPATCH_TRACKING_ENABLED is
+ * absent — it short-circuits before touching any dispatch-related
+ * column or state. Schema-safe under disabled flag.
+ *
+ * Idempotency / deduplication: the caller (dispatch-service) ensures
+ * one sub-event maps to one shipment_update push per transition by
+ * only calling after the DB UPDATE succeeded and only on an actual
+ * state change. Duplicate suppression at the push-subscription layer
+ * (nex_account_push_subscription) remains the authority.
+ */
+export async function notifyBuyerShipmentUpdate(
+  order: NexOrderRow,
+  subKind: ShipmentUpdateSubKind,
+): Promise<OrderNotificationResult> {
+  if (isDisabled()) {
+    return {
+      kind: "shipment_update",
+      recipientAccountId: null,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      skipped_reason: "disabled_by_env",
+    };
+  }
+  // Second-layer gate so this helper is safe to leave in-tree even
+  // when migration 349 has not been applied anywhere. If the flag is
+  // off the function performs zero column reads · the NexOrderRow
+  // passed in is only used for its id and customer_account_id, which
+  // are pre-349 columns.
+  if (process.env.NEX_DISPATCH_TRACKING_ENABLED !== "true") {
+    return {
+      kind: "shipment_update",
+      recipientAccountId: null,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      skipped_reason: "disabled",
+    };
+  }
+  const result = await fanOutToAccount(
+    order.customer_account_id,
+    order.id,
+    "shipment_update",
+    subKind,
+  );
+  return {
+    kind: "shipment_update",
+    recipientAccountId: order.customer_account_id,
+    ...result,
+  };
+}
+
 export async function notifyBuyerOrderCancelled(
   order: NexOrderRow,
 ): Promise<OrderNotificationResult> {

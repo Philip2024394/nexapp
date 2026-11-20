@@ -1,0 +1,21 @@
+
+Running 10 tests using 1 worker
+
+  ✓   1 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:226:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 1 · CK5 seller signs in through real form (8.4s)
+  ✓   2 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:233:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 2 · navigate to /create/product/category?business=<id> (3.6s)
+  ✓   3 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:243:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 3 · drill fashion_clothing → womens via real tile clicks (6.9s)
+  ✓   4 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:279:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 4 · form renders expected sections (name, price, spec, market, images) (43ms)
+  ✓   5 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:288:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 5 · upload image via real file-input · preview renders (3.4s)
+[d3 step6] variantType=size selected · variant_section_inputs=2 · add_button_visible=true · GAP=false
+  ✓   6 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:321:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 6 · variant-seeding gap observation (honest finding) (221ms)
+  ✓   7 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:357:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 7 · submit with EMPTY name shows error · stays on form (295ms)
+  ✓   8 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:377:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 8 · fill required fields + spec + submit as draft · redirect to /manage/products/<id> (11.1s)
+  ✓   9 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:449:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 9 · DB persists · product row has selected dept+cat + spec (1.2s)
+[d3 step10] product visible on public shop page = false (expected false for draft)
+[d3 cleanup] deleted 1 E2E Product rows for business=099b2fca-dbaf-4a09-aa28-a2433a7b70fd
+[d3 evidence]
+  variant_seeding_gap_observed=false
+  created_product_id=11eb9b40-d005-486f-aa57-3a38ce489575
+  ✓  10 [product-create-form-390] › tests\e2e-p6-isolation\product-create-form.spec.ts:474:7 › D3 · Create Product form (sandbox · CK5 disposable · fixture-assisted) › 10 · navigate to public storefront /<slug> · product status filter note (2.9s)
+
+  10 passed (47.5s)

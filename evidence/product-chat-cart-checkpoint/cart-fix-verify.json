@@ -1,0 +1,29 @@
+{
+  "when": "2026-11-17T09:37:27.874Z",
+  "url_before": "http://localhost:3008/nex-native/product/preview",
+  "link_count_before": 0,
+  "button_count_before": 1,
+  "has_cart_button": true,
+  "click": {
+    "url_before": "http://localhost:3008/nex-native/product/preview",
+    "url_after": "http://localhost:3008/nex-native/product/preview",
+    "navigated": false,
+    "dialog_count": 2,
+    "popup_count": 1,
+    "centered": {
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "center_x": 195,
+      "viewport_mid": 195,
+      "offset_from_center": 0
+    }
+  },
+  "close_reopen": {
+    "dialog_after_escape": 1,
+    "dialog_after_reopen": 2
+  }
+}

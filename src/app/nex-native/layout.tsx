@@ -32,6 +32,7 @@ import { I18nProvider } from "@/lib/nex/i18n/I18nProvider";
 import { resolveServerLocale } from "@/lib/nex/i18n/server";
 import { IncomingCallHub } from "./_incoming-call-hub";
 import { VaultCrossTabListener } from "./_vault-cross-tab-listener";
+import { VaultIdleGuard } from "./_vault-idle-guard";
 import { IncomingGroupCallHub } from "./_incoming-group-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
@@ -92,6 +93,15 @@ import "./nex-native.css";
 // share the same adapter instance + versioned re-reads work across
 // surfaces (post in drawer → product page sees it immediately).
 import { ReviewStoreProvider } from "@/lib/nex-native/reviews/review-store-provider";
+// Owner-authorised 2026-11-17 continuation 3 · translation pilot Gap D
+// · defence-in-depth client component that sweeps the in-memory
+// translation cache + translation DOM nodes when the viewer
+// navigates to a signed-out route (sign-in / welcome). The explicit
+// logout form in the control drawer runs its own cleanup first; this
+// sweeper covers session-expiry redirects + any other out-of-band
+// auth loss. Renders no DOM · zero cost until a route change hits
+// the signed-out set.
+import { TranslationLogoutSweeper } from "@/lib/nex-native/translation/client/translation-logout-sweeper";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -120,8 +130,18 @@ export const metadata: Metadata = {
     default: "NEX · Chat that's yours",
     template: "%s · NEX",
   },
+  // Owner-sealed 2026-11-18 (A24 copy correction) · the shared root
+  // description previously conflated two surfaces with opposite trial
+  // rules. Themes+ was sealed 2026-11-13 as NO FREE TRIAL · NEX Shop
+  // was sealed 2026-11-08 WITH a 7-day trial. Root-level copy MUST
+  // be neutral so neither claim leaks across. Package-specific trial
+  // wording lives on each package's own surface (Shop pre-disclosure
+  // at _shop-trial-pre-disclosure.tsx · Themes+ on its own page).
+  // "Indonesia-first pricing" also removed · the sealed four launch
+  // markets (IE · GB · US · ID) are coequal under Scope Reduction
+  // 2026-11-06.
   description:
-    "NEX is a chat app with beautiful themes · every friend sees your look · premium themes free for 7 days · Indonesia-first pricing.",
+    "NEX is a chat app with beautiful themes · every conversation looks the way you want · shops and chat together.",
   applicationName: "NEX",
   manifest: "/nex.webmanifest",
   appleWebApp: {
@@ -149,19 +169,22 @@ export const metadata: Metadata = {
     ],
     shortcut: "/favicon-32.png",
   },
+  // A24 · OG/Twitter descriptions share the neutral root copy · no
+  // trial claim · no country-first pricing claim. Package-specific
+  // wording lives on each package's own OG surface only.
   openGraph: {
     type: "website",
     siteName: "NEX",
     title: "NEX · Chat that's yours",
     description:
-      "Beautiful chat themes · your look, every conversation · Bisnis Rp 39k/mo · free 7-day trial.",
+      "Beautiful chat themes · every conversation looks the way you want · shops and chat together.",
     locale: "id_ID",
   },
   twitter: {
     card: "summary_large_image",
     title: "NEX · Chat that's yours",
     description:
-      "Beautiful chat themes · your look, every conversation · Bisnis Rp 39k/mo · free 7-day trial.",
+      "Beautiful chat themes · every conversation looks the way you want · shops and chat together.",
   },
 };
 
@@ -248,6 +271,11 @@ export default async function NexNativeLayout({
           allowlisted public destinations. Zero DOM · see
           _public-route-prefetcher.tsx. */}
       <PublicRoutePrefetcher />
+      {/* Owner-authorised 2026-11-17 continuation 3 · translation
+          pilot logout cleanup sweeper. Mount sibling of the other
+          global hubs so it stays alive across every nex-native
+          route transition. */}
+      <TranslationLogoutSweeper />
       <div
         className="nex-native-stage"
         data-nex-world={activeWorld.meta.id}
@@ -302,6 +330,12 @@ export default async function NexNativeLayout({
                   Now in one tab locks every other tab of this origin
                   that is still running JS. */}
               <VaultCrossTabListener />
+              {/* Prompt-5 · 2026-11-18 · auto-locks Vault after 5 min
+                  idle (sealed §G) and after visibilitychange→hidden
+                  grace. Previously the library had the function but
+                  no mount site; the sealed lock-lifecycle "Vault
+                  locks itself when nobody is using it" was unenforced. */}
+              <VaultIdleGuard />
               {/* Owner-authorised 2026-11-08 (round 27) · group-call
                   incoming hub · polls /api/nex-native/calls/incoming-
                   group every 15s. Sits alongside the sealed 1:1 hub

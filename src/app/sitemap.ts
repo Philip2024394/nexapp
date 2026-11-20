@@ -16,6 +16,7 @@ import {
   type NexCountry,
 } from "@/lib/nex-native/seo/site-url-resolver";
 import { loadPublicShopsForSitemap } from "@/lib/nex-native/seo/sitemap-service";
+import { isPrelaunchModeOn } from "@/lib/nex-native/prelaunch/feature-flag";
 
 type ChangeFrequency = NonNullable<
   MetadataRoute.Sitemap[number]["changeFrequency"]
@@ -76,10 +77,47 @@ function emit(
   return { url, lastModified, changeFrequency, priority };
 }
 
+/** Narrow sitemap emitted when NEX_PRELAUNCH_MODE is on · ONLY the
+ *  Nexcorner landing + the published buying guides + their index. No
+ *  shop URLs · no marketing surfaces · no app routes. Emitted on the
+ *  WORLDWIDE base only (Ireland-specific marketing pages are not
+ *  exposed under prelaunch). */
+const PRELAUNCH_STATIC_ENTRIES: readonly StaticEntry[] = [
+  { path: "/nexcorner", changeFrequency: "daily", priority: 1.0 },
+  { path: "/nex-generated/buying-guides", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/nex-generated/buying-guides/rolex", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/mobile-phones", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/handbags", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/laptops", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/running-shoes", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/leather-wallets", changeFrequency: "monthly", priority: 0.7 },
+];
+
 /** Dynamic sitemap route · Next.js reads this at /sitemap.xml. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const entries: MetadataRoute.Sitemap = [];
+
+  // NEX prelaunch · narrow sitemap matching the public allowlist.
+  if (isPrelaunchModeOn()) {
+    let base: string;
+    try {
+      base = resolveNexSiteUrlForCountry("worldwide").url;
+    } catch {
+      return entries;
+    }
+    for (const spec of PRELAUNCH_STATIC_ENTRIES) {
+      const entry = emit(
+        base,
+        spec.path,
+        now,
+        spec.changeFrequency,
+        spec.priority,
+      );
+      if (entry) entries.push(entry);
+    }
+    return entries;
+  }
 
   // Resolve both country bases · degrade gracefully if ONE env is missing
   // in dev. Owner directive 2026-11-11 (B1 closeout) · production strictness:

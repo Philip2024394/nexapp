@@ -1,0 +1,30 @@
+          // that inline override wins over the `:root` CSS vars emitted
+          // by _world-stylesheet.tsx so Ireland's `WORLD_KEYPAD_ACCENT`
+          // (Orange) was being masked by a hard-coded blue. Passing
+          // undefined lets the keypad's paletteVars=={} branch fire so
+          // the Ireland :root cascade applies.
+          accentColor={accentColor}
+          maxLength={maxLength}
+        />
+      ) : null}
+    </>
+  );
+}
+"
+
+ ❯ src/lib/nex-native/nex-keyboard/__tests__/nex-wrappers.test.ts:83:23
+     81|
+     82|   it("defaults accentColor to NEX cyan", () => {
+     83|     expect(INPUT_SRC).toMatch(/accentColor \?\?\s*"#00AFFF"/);
+       |                       ^
+     84|   });
+     85|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[89/89]⎯
+
+
+ Test Files  32 failed | 303 passed | 1 skipped (336)
+      Tests  61 failed | 6446 passed | 190 skipped | 9 todo (6706)
+   Start at  12:33:04
+   Duration  23.96s (transform 20.35s, setup 8.72s, import 38.69s, tests 62.51s, environment 67ms)
+

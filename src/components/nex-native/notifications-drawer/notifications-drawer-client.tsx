@@ -73,6 +73,14 @@ export interface NotificationsDrawerProps {
    *  inside a flex-row header nav alongside grid + "+". Default
    *  false preserves the standalone floating-bell behaviour. */
   readonly inline?: boolean;
+  /** Owner-authored 2026-11-17 · when true, the bell trigger button is
+   *  not rendered. The drawer then opens solely via the
+   *  `nex:open-notifications-drawer` window CustomEvent. Settings uses
+   *  this to make the "Notifications" row open the canonical drawer
+   *  without stacking a second bell on top of the existing header
+   *  bell. The event listener is installed unconditionally, so any
+   *  mount of this component (triggerless or not) answers the event. */
+  readonly hideTrigger?: boolean;
 }
 
 type FilterKey = "all" | "unread" | NotificationSectionKey;
@@ -80,6 +88,7 @@ type FilterKey = "all" | "unread" | NotificationSectionKey;
 export function NotificationsDrawer({
   initialNotifications,
   inline = false,
+  hideTrigger = false,
 }: NotificationsDrawerProps = {}): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
@@ -144,6 +153,20 @@ export function NotificationsDrawer({
   React.useEffect(() => {
     if (visible) closeRef.current?.focus();
   }, [visible]);
+
+  // 2026-11-17 · Listen for a window-level CustomEvent so external
+  // surfaces (e.g. the Settings "Notifications" row) can open the
+  // canonical drawer without duplicating its state or content. Installed
+  // unconditionally so the component answers the event whether or not
+  // it renders its own trigger.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (): void => openDrawer();
+    window.addEventListener("nex:open-notifications-drawer", handler);
+    return () => {
+      window.removeEventListener("nex:open-notifications-drawer", handler);
+    };
+  }, [openDrawer]);
 
   const filteredItems = React.useMemo(() => {
     if (filter === "all") return effectiveItems;
@@ -579,7 +602,11 @@ export function NotificationsDrawer({
     <>
       {/* Trigger · floating bell button at top-left of the phone frame.
           Absolute-positioned so it never fights FreeChatHeader's layout.
-          Shows an unread-count badge when > 0. */}
+          Shows an unread-count badge when > 0.
+          2026-11-17 · suppressed when hideTrigger is set so an external
+          mount (e.g. Settings) can open the canonical drawer via the
+          window CustomEvent without stacking a second bell. */}
+      {hideTrigger ? null : (
       <button
         ref={triggerRef}
         type="button"
@@ -648,6 +675,7 @@ export function NotificationsDrawer({
           </span>
         ) : null}
       </button>
+      )}
 
       {rendered && frameNode ? createPortal(overlay, frameNode) : null}
     </>

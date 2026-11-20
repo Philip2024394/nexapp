@@ -31,6 +31,7 @@ import { effectiveTier } from "@/lib/nex-native/account-service";
 import { listOrdersByBusiness } from "@/lib/nex-native/order-service";
 import { isVenueCategory } from "@/lib/nex-native/types";
 import { NexPageHeader } from "../_page-header";
+import { ManageInboxUnreadBadgeClient } from "./_inbox-unread-badge-client";
 import {
   IconCard,
   IconClipboard,
@@ -225,7 +226,16 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
         {/* Owner directive 2026-11-13 · Rooms row removed until the
             /manage/accommodation list page exists (see showRooms above). */}
 
-        <SectionLabel>Orders & Fulfilment</SectionLabel>
+        <SectionLabel>
+          Orders & Fulfilment
+          {/* Owner-authorised 2026-11-16 · live in-page unread pill.
+              `ManageInboxUnreadBadgeClient` polls the sealed
+              `/api/nex-native/unread-count` endpoint on mount, every
+              60s while visible, and on tab foreground. It renders
+              NOTHING for zero/unknown (honest-null) · only a positive
+              `chat + orders` total produces the neutral-900 pill. */}
+          <ManageInboxUnreadBadgeClient />
+        </SectionLabel>
         <LinkCard
           href="/nex-native/manage/orders"
           icon={<IconClipboard />}

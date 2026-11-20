@@ -39,11 +39,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import {
+  resolveViewerRegion,
+  type CheckoutRegion,
+} from "@/lib/nex-native/commercial/region-resolver";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Region = "IE" | "GB" | "US" | "ID";
+// A10 · 2026-11-18 · Region type is now the CheckoutRegion export
+// from the resolver so the two modules can't drift out of sync.
+type Region = CheckoutRegion;
 type Currency = "eur" | "gbp" | "usd" | "idr";
 
 // Per-market price ID lookup · reads NEX_STRIPE_PRICE_SHOP_<CCY>_MONTHLY
@@ -78,12 +84,21 @@ function currencyForRegion(region: Region): Currency {
   }
 }
 
-// Viewer-region resolver · DEFERRED per regional-pricing.ts header.
-// For now defaults to IE (Ireland) · owner directive to wire the real
-// resolver (Accept-Language + CF/Vercel geo header + account pref)
-// lands as a separate task.
-function defaultRegion(): Region {
-  return "IE";
+// A10 · 2026-11-18 · viewer-region resolver wired. Supersedes the
+// hard-coded IE default. Priority order per regional-pricing.ts
+// lines 298-307:
+//   1. account preference (nex_account.region_pref · column not
+//      migrated yet · we pass null until it lands)
+//   2. Accept-Language header country sub-tag
+//   3. Vercel/Cloudflare IP country header
+//   4. NEX_APP_COUNTRY env fallback
+//   5. Hard default · IE
+function resolveRegion(req: NextRequest): Region {
+  const { region } = resolveViewerRegion({
+    accountRegionPref: null,
+    getHeader: (name) => req.headers.get(name),
+  });
+  return region;
 }
 
 function makeStripeClient(): Stripe {
@@ -116,7 +131,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // 2 · resolve region + price ID (empty → 422)
-  const region = defaultRegion();
+  const region = resolveRegion(req);
   const priceId = priceIdForRegion(region);
   if (!priceId) {
     return NextResponse.json(

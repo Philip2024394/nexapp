@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [two-context-isolation-390] › tests\e2e-p6-isolation\two-context-isolation.spec.ts:83:7 › P6 · two-context isolation (real sandbox sign-in) › Step 1 · both contexts sign in with distinct real credentials (15.4s)
+  ✓  2 [two-context-isolation-390] › tests\e2e-p6-isolation\two-context-isolation.spec.ts:120:7 › P6 · two-context isolation (real sandbox sign-in) › Step 2 · customer sees handbags-direct as a VISITOR · no owner chrome (4.8s)
+  ✓  3 [two-context-isolation-390] › tests\e2e-p6-isolation\two-context-isolation.spec.ts:134:7 › P6 · two-context isolation (real sandbox sign-in) › Step 3 · seller reaches /manage · hub surface for shop owner (17ms)
+  ✓  4 [two-context-isolation-390] › tests\e2e-p6-isolation\two-context-isolation.spec.ts:145:7 › P6 · two-context isolation (real sandbox sign-in) › Step 4 · cross-shop isolation · customer cannot reach seller's /manage as Rosa (2.1s)
+  ✓  5 [two-context-isolation-390] › tests\e2e-p6-isolation\two-context-isolation.spec.ts:167:7 › P6 · two-context isolation (real sandbox sign-in) › Step 5 · session persists across navigation in each context (2.5s)
+
+  5 passed (29.8s)

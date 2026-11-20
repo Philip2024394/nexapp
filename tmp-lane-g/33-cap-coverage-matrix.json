@@ -1,0 +1,171 @@
+{
+  "generatedAt": "2026-11-19",
+  "packageId": "D",
+  "authorship": "coordinator-authored after Explore tool-limit (no Write capability in Explore)",
+  "evidenceTier": "SOURCE_INSPECTED",
+  "banner": "OFFLINE SOURCE INSPECTION ONLY · NO POSTGRES RUNTIME PROOF",
+  "preservedSections": ["§16.44", "§16.44.12"],
+  "triggerSource": "nex-supabase/migrations/133_nex_group_call.sql:83-102",
+  "triggerBody": "SELECT COUNT(*) FROM nex_group_call_participant WHERE session_id = NEW.session_id · raises if cnt >= 4 · counts all rows irrespective of left_at",
+  "capInvariant": "at most 4 rows ever per session (NOT 4 active rows)",
+  "candidateRpc": {
+    "name": "nex_invite_to_call_tx",
+    "v4Snapshot": "nex-supabase/candidate-migrations/CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW.sql",
+    "v4Sha256": "de77e9a19eb49df85433bf66969b87a44b05885b302a23559e76134b799bfea7",
+    "lockShape": "PERFORM 1 FROM nex_group_call_session WHERE id = v_session_id FOR UPDATE · between session ownership block and participant INSERT",
+    "liveTsCallers": [],
+    "candidateTsCaller": "src/lib/nex-native/calls/invite-service.transactional-candidate.ts:102",
+    "capCoverageIfAppliedStandalone": "NONE · no live TS caller invokes the RPC · function body change does not alter the live writer call chain"
+  },
+  "writers": [
+    {
+      "id": "W1",
+      "function": "inviteToCall / createCallInviteOrchestrated",
+      "file": "src/lib/nex-native/calls/invite-service.ts",
+      "line": 287,
+      "operation": "INSERT",
+      "capTriggerFires": true,
+      "entryPoints": [
+        "src/app/nex-native/call/preview/_invite-actions.ts:41"
+      ],
+      "columnsWritten": ["session_id", "account_id", "invited_at"],
+      "lockOrder": "NONE (no session FOR UPDATE held by TS code path)",
+      "serialisationGuarantees": [
+        "UNIQUE(session_id, account_id) rejects duplicate account on same session",
+        "trigger SELECT COUNT(*) · no row lock"
+      ],
+      "authorisation": "TS-side UUID+rate-limit · admin INSERT via service_role · RLS bypassed",
+      "dedupBehaviour": "regex match on duplicate-key error message · return skipped:'already_invited'",
+      "racePossibleWithConcurrentWriter": true,
+      "severityIfLive": "HIGH (B)",
+      "severityAfterCoordinatorVerification": "HIGH (confirmed · active route + existingSessionId reuse)",
+      "evidenceFile": "invite-service.ts:220-301 (read 2026-11-19)",
+      "uncertainty": [
+        "deployed trigger definition not DB-inspected",
+        "Postgres isolation level at Supabase pooler not verified",
+        "no behavioural (browser/persistence/provider/device) evidence of race"
+      ]
+    },
+    {
+      "id": "W2",
+      "function": "createGroupCallSession",
+      "file": "src/lib/nex-native/calls/group-call-service.ts",
+      "line": 105,
+      "operation": "INSERT (loop 1-4 rows · host + up to 3 guests)",
+      "capTriggerFires": true,
+      "entryPoints": [
+        "src/app/nex-native/free-chat/call/_live-add-to-call-action.ts:70",
+        "src/app/nex-native/chat/peer/[accountId]/_add-to-call-action.ts:55"
+      ],
+      "columnsWritten": ["session_id", "account_id", "role", "joined_at (host only)"],
+      "lockOrder": "NONE · session row just inserted in same function at line 63-72 · 4 participant inserts are each separate HTTP calls (not a single transaction)",
+      "serialisationGuarantees": [
+        "sole writer on newly-created session_id for duration of loop (no grep evidence of concurrent publication)",
+        "client-side .slice(0,3) enforces 4-cap pre-emptively",
+        "trigger is backstop only"
+      ],
+      "authorisation": "TS-side (action layer) · admin INSERT via service_role · RLS bypassed",
+      "dedupBehaviour": "error.code === '23505' → continue loop; P0001 falls through to throw (comment/code drift noted)",
+      "racePossibleWithConcurrentWriter": false,
+      "severityIfLive": "HIGH (B)",
+      "severityAfterCoordinatorVerification": "THEORETICAL (session is new and self-owned · 4-cap enforced client-side via slice · trigger race window would require concurrent publication of new session_id)",
+      "evidenceFile": "group-call-service.ts:42-120 (read 2026-11-19)",
+      "uncertainty": [
+        "deployed trigger definition not DB-inspected",
+        "client-side slice silently truncates invitees over 3 · rejectedCount surfaced but caller responsibility to show it",
+        "comment at line 110 names P0001 but branch only matches 23505 · OUT OF SCOPE here"
+      ]
+    },
+    {
+      "id": "W3",
+      "function": "joinGroupCallSession",
+      "file": "src/lib/nex-native/calls/group-call-service.ts",
+      "line": 179,
+      "operation": "INSERT (fresh fallback · fires when UPDATE at line 161-167 found no pre-invite row)",
+      "capTriggerFires": true,
+      "entryPoints": [
+        "NO LIVE CALLER grep-confirmed in src/app/ with the pattern used · callers may exist via API route or indirect import not matched"
+      ],
+      "columnsWritten": ["session_id", "account_id", "role (default guest)", "joined_at"],
+      "lockOrder": "NONE",
+      "serialisationGuarantees": [
+        "UPDATE-first pattern at line 161 narrows race to not-pre-invited joiners",
+        "UNIQUE(session_id, account_id) rejects duplicate account on same session"
+      ],
+      "authorisation": "caller provides accountId · admin INSERT via service_role · no DB-side auth.uid mapping",
+      "dedupBehaviour": "insErr.code === '23505' → return null (treated as join race)",
+      "racePossibleWithConcurrentWriter": true,
+      "severityIfLive": "MEDIUM (B)",
+      "severityAfterCoordinatorVerification": "THEORETICAL (no live caller grep-found · severity unverified until caller located)",
+      "evidenceFile": "group-call-service.ts:150-196 (read 2026-11-19)",
+      "uncertainty": [
+        "deployed trigger definition not DB-inspected",
+        "no live caller grep-confirmed · severity may be purely theoretical",
+        "call-link admission flow not traced in this batch"
+      ]
+    }
+  ],
+  "proposals": [
+    {
+      "id": "Option-A",
+      "name": "Route all writers through v4 RPC",
+      "covers": ["W1", "W2", "W3"],
+      "preserves": ["SECURITY DEFINER identity checks", "FOR UPDATE serialisation per RPC invocation"],
+      "risks": [
+        "createGroupCallSession needs session-create with from_call_link_id and multi-invitee semantics the current RPC does not support as-is",
+        "joinGroupCallSession writes joined_at + role which the RPC does not accept as parameters · RPC signature extension required · drifts v4 outside byte-additive envelope"
+      ],
+      "gates": [
+        "caller rewire PROHIBITED",
+        "RPC signature extension PROHIBITED",
+        "flag flip PROHIBITED",
+        "sandbox application PROHIBITED until separately authorised"
+      ]
+    },
+    {
+      "id": "Option-B",
+      "name": "Add session-row FOR UPDATE wrapper at each writer",
+      "covers": ["W1", "W2 (theoretical tightening)", "W3"],
+      "preserves": ["existing RPC and candidate SQL", "no DB-side change"],
+      "risks": [
+        "Supabase JS client .from(...).insert(...) cannot express a transaction spanning prior SELECT FOR UPDATE · requires raw rpc() or bespoke pg client",
+        "major behavioural change to invite surface · new code path · new error modes",
+        "lock-order review owed to prevent deadlock across writers"
+      ],
+      "gates": [
+        "caller rewire PROHIBITED",
+        "new transaction-handling infrastructure PROHIBITED this batch"
+      ]
+    },
+    {
+      "id": "Option-C",
+      "name": "Narrow trigger predicate · in-trigger FOR UPDATE or advisory lock",
+      "covers": ["W1", "W2", "W3 transparently"],
+      "preserves": ["existing writer contract", "existing RPC", "existing candidate SQL"],
+      "risks": [
+        "new migration · new rollback · new review cycle · drifts outside v4 envelope",
+        "in-trigger FOR UPDATE serialises W2 loop against itself · latency cost",
+        "cannot redefine invariant from 4-rows-ever to 4-active-rows without separately gated semantic change"
+      ],
+      "gates": [
+        "new migration authoring PROHIBITED this batch",
+        "sandbox apply + rollback draft each require their own gate"
+      ]
+    }
+  ],
+  "recommendation": "NO RECOMMENDATION AUTHORED IN THIS MATRIX · coordinator names the single minimal proposal in the HQ diagram + §16.45 ledger. All three options require their own separately-authorised implementation gate.",
+  "residualOpen": {
+    "deployedTriggerDefinition": "UNVERIFIED (DB gate closed)",
+    "poolerIsolationLevel": "UNVERIFIED",
+    "behaviouralEvidence": "NONE (no browser/persistence/provider/device tier)",
+    "caseB_nullAuthUid": "UNVERIFIED",
+    "caseG_intermediateWriteFault": "STATE_BLOCKER",
+    "suppliedIdentityMismatch": "INAPPLICABLE (no caller passes selfSupabaseUserId in current contract)"
+  },
+  "verdictMatrix": {
+    "localEngineering": "SOURCE_INSPECTED verdict for coverage matrix only · no closure executed",
+    "connectedRpc": "UNVERIFIED (DB gate closed)",
+    "founderWalkthrough": "UNVERIFIED",
+    "publicLaunch": "NOT READY"
+  }
+}

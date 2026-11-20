@@ -27,6 +27,14 @@ export interface SettingsRowDef {
   readonly subtitle: string;
   readonly comingSoon?: boolean;
   readonly highlighted?: boolean;
+  /**
+   * When present, the row is rendered as a button that triggers a
+   * client-side action rather than navigating. Currently supports:
+   *   · "open-notifications-drawer" · opens the canonical LEFT
+   *     notifications drawer already mounted by the app shell.
+   * Rows with an actionKind must set href:null.
+   */
+  readonly actionKind?: "open-notifications-drawer";
 }
 
 export interface SettingsGroupDef {
@@ -103,22 +111,13 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         title: "See My Theme",
         subtitle: "Choose which contacts see your personal chat theme",
       },
-      {
-        key: "world-intro",
-        href: "/nex-native/settings/world-intro",
-        emoji: "🎬",
-        title: "World Intro",
-        subtitle:
-          "Choose whether your World Intro plays when people enter your chat",
-      },
-      {
-        key: "custom-intro",
-        href: "/nex-native/settings/custom-intro",
-        emoji: "✨",
-        title: "Custom Intro",
-        subtitle: "Create your own paid intro video",
-        highlighted: true,
-      },
+      // 2026-11-17 · founder-directed removal. "World Intro" and
+      // "Custom Intro" rows were dead-link entries pointing at
+      // /nex-native/settings/world-intro + /custom-intro, neither of
+      // which exists on disk. Removed from the Settings landing per the
+      // Settings Correction prompt. The underlying intro-video feature
+      // (sealed elsewhere in the shop + chat shell) is NOT affected by
+      // this removal · only the broken Settings entry points are gone.
       {
         // Owner directive 2026-11-11 (Cycle 41) · surface the real
         // chat-background-sync preference page. Ties the shop cover
@@ -147,8 +146,15 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         // category when prefs cannot be read). Scope note: the
         // preferences UI is functional today · no event source wires
         // to the dispatch helper yet (deferred to Stage 3b).
+        // 2026-11-17 · founder-directed · the Notifications row now
+        // opens the canonical LEFT notifications drawer (the same
+        // drawer the header bell opens) rather than navigating to a
+        // non-existent /settings/notifications page. Rendered as a
+        // button that dispatches `nex:open-notifications-drawer` via
+        // window CustomEvent · the drawer subscribes on mount.
         key: "notifications",
-        href: "/nex-native/settings/notifications",
+        href: null,
+        actionKind: "open-notifications-drawer",
         emoji: "🔔",
         title: "Notifications",
         subtitle: "Control message, call and other NEX notifications",
@@ -305,11 +311,18 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         // via navigator.connection. Data export remains honestly
         // unavailable pending email + background-job infrastructure
         // decisions (see docs/architecture/data-export-phase-2.md).
+        // 2026-11-17 · founder-directed Storage & Data unification.
+        // Settings "Data usage" and Shop Settings "Storage" now lead
+        // to the same canonical Storage experience at
+        // /nex-native/settings/storage. The old `/data-usage` route is
+        // preserved as a compatibility redirect (see
+        // /settings/data-usage/page.tsx) so any inbound deep-links or
+        // bookmarks still land the user in the right place.
         key: "data-usage",
-        href: "/nex-native/settings/data-usage",
+        href: "/nex-native/settings/storage",
         emoji: "📶",
-        title: "Data usage",
-        subtitle: "Control how NEX uses your data",
+        title: "Storage & Data",
+        subtitle: "Shop storage, bandwidth and how NEX uses your data",
         comingSoon: false,
       },
     ],
@@ -338,22 +351,11 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         subtitle: "Earn · spend · tip · affiliate commissions · chat boosts",
         comingSoon: true,
       },
-      {
-        // 2026-10-15 · Phase 0 · Affiliate was previously only in the
-        // inline landing-page rows. Promoting into the IA so there is a
-        // single source of truth. The destination `/nex-native/settings/
-        // affiliate` is an explainer that redirects joined users to the
-        // live dashboard at `/nex-native/affiliate` (see
-        // settings/affiliate/page.tsx). The landing may apply a title/
-        // subtitle transform for already-joined users; the registry
-        // carries the not-joined default.
-        key: "affiliate",
-        href: "/nex-native/settings/affiliate",
-        emoji: "🤝",
-        title: "Earn with NEX · Affiliate",
-        subtitle:
-          "No products to sell? Promote others' listings and earn commission",
-      },
+      // 2026-11-17 · founder-directed removal. The "Earn with NEX ·
+      // Affiliate" row has been removed from the Settings landing.
+      // The affiliate feature itself (if/when re-authored) is out of
+      // the current launch scope; the Settings doorway was removed
+      // per the Settings Correction prompt.
     ],
   },
   {
@@ -372,19 +374,10 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         subtitle: "Get help with NEX",
         comingSoon: false,
       },
-      {
-        // 2026-10-15 · Stage 1 graduation. Replaced the ComingSoon
-        // shell with a real About page: real app version read from
-        // package.json, honest licence/acknowledgement wording (no
-        // fabricated attribution list), and links to the sealed
-        // Terms + Privacy routes. No invented build timestamp.
-        key: "about",
-        href: "/nex-native/settings/about",
-        emoji: "ℹ️",
-        title: "About NEX",
-        subtitle: "App information and version",
-        comingSoon: false,
-      },
+      // 2026-11-17 · founder-directed removal. The "About NEX" row
+      // has been removed from the Settings landing per the Settings
+      // Correction prompt. The underlying /settings/about page
+      // remains on disk but is no longer surfaced in Settings.
     ],
   },
 ] as const;

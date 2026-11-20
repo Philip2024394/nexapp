@@ -9,11 +9,17 @@
 //   · writeClientLang persists + resolveClientLang reads it back
 //   · Unsupported values in URL/localStorage fall through to default
 
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18N_KEYS } from "./keys";
 import { EN_PACK } from "./packs/en";
 import { ID_PACK } from "./packs/id";
-import { DEFAULT_LANG, SUPPORTED_LANGS, resolveClientLang, writeClientLang } from "./lang";
+import {
+  DEFAULT_LANG,
+  SUPPORTED_LANGS,
+  narrowBrowserPreference,
+  resolveClientLang,
+  writeClientLang,
+} from "./lang";
 
 describe("i18n · key registry integrity", () => {
   it("every I18N_KEY has an entry in the EN pack", () => {
@@ -65,6 +71,14 @@ describe("resolveClientLang · precedence + safety", () => {
         removeItem: (k: string) => { delete store[k]; },
       },
     };
+    // Suppress jsdom's default `navigator.language === "en-US"` for this
+    // suite — these tests predate the browser-preference fallback and
+    // assert the URL/localStorage precedence in isolation.
+    vi.stubGlobal("navigator", { languages: [], language: "" });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("returns DEFAULT_LANG when no URL query + no localStorage entry", () => {
@@ -134,6 +148,65 @@ describe("writeClientLang · persistence + safety", () => {
   it("silent on localStorage failure (private mode)", () => {
     globalThis.window.localStorage.setItem = () => { throw new Error("private mode"); };
     expect(() => writeClientLang("id")).not.toThrow();
+  });
+});
+
+describe("resolveClientLang · browser-preference fallback (2026-11-18)", () => {
+  beforeEach(() => {
+    const store: Record<string, string> = {};
+    globalThis.window = {
+      location: { href: "https://nex.local/nex-app" },
+      localStorage: {
+        getItem: (k: string) => store[k] ?? null,
+        setItem: (k: string, v: string) => { store[k] = v; },
+        removeItem: (k: string) => { delete store[k]; },
+      },
+    };
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses navigator.languages primary subtag when URL + localStorage are empty", () => {
+    vi.stubGlobal("navigator", { languages: ["en-GB", "en"], language: "en-GB" });
+    expect(resolveClientLang()).toBe("en");
+  });
+
+  it("falls through unsupported navigator tag to DEFAULT_LANG", () => {
+    vi.stubGlobal("navigator", { languages: ["fr-FR"], language: "fr-FR" });
+    expect(resolveClientLang()).toBe(DEFAULT_LANG);
+  });
+
+  it("honours language preference order from navigator.languages", () => {
+    vi.stubGlobal("navigator", { languages: ["fr", "id", "en"], language: "fr" });
+    // fr is unsupported · id is first supported match
+    expect(resolveClientLang()).toBe("id");
+  });
+
+  it("URL ?lang= wins over navigator preference", () => {
+    globalThis.window.location.href = "https://nex.local/nex-app?lang=id";
+    vi.stubGlobal("navigator", { languages: ["en"], language: "en" });
+    expect(resolveClientLang()).toBe("id");
+  });
+
+  it("localStorage wins over navigator preference", () => {
+    globalThis.window.localStorage.setItem("nex_user_lang", "en");
+    vi.stubGlobal("navigator", { languages: ["id"], language: "id" });
+    expect(resolveClientLang()).toBe("en");
+  });
+
+  it("narrowBrowserPreference returns null when navigator is undefined", () => {
+    vi.stubGlobal("navigator", undefined);
+    expect(narrowBrowserPreference()).toBeNull();
+  });
+
+  it("narrowBrowserPreference returns null when no listed tag is supported", () => {
+    vi.stubGlobal("navigator", {
+      languages: ["ja", "fr-FR", "de"],
+      language: "ja",
+    });
+    expect(narrowBrowserPreference()).toBeNull();
   });
 });
 

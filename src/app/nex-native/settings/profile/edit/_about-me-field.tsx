@@ -8,6 +8,7 @@
 // (lines aren't a reliable server concept — width wrapping varies).
 
 import { useState } from "react";
+import { NexTextarea } from "@/lib/nex-native/nex-keyboard";
 
 const MAX_CHARS = 500;
 const SOFT_LINES = 7;
@@ -29,10 +30,10 @@ export function AboutMeField({ defaultValue }: Props): React.ReactElement {
 
   return (
     <>
-      <textarea
+      <NexTextarea
         name="about_me"
         value={value}
-        onChange={(e) => setValue(e.target.value.slice(0, MAX_CHARS))}
+        onChange={(next) => setValue(next.slice(0, MAX_CHARS))}
         maxLength={MAX_CHARS}
         rows={5}
         placeholder="A few sentences · what you're into, what you're looking for, anything you want people to know."

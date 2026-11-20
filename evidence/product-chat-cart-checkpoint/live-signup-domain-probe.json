@@ -1,0 +1,34 @@
+{
+  "when": "2026-11-17T09:03:44.596Z",
+  "results": [
+    {
+      "label": "com-fake",
+      "email": "cpbuyer-76aa4b2a@cpcheckpoint-nex-sandbox.com",
+      "url": "http://localhost:3008/nex-native/sign-in?e=sign_up_failed&m=email+rate+limit+exceeded&preserve_email=cpbuyer-76aa4b2a%40cpcheckpoint-nex-sandbox.com&mode=signup",
+      "bannerCode": "sign_up_failed",
+      "bannerText": "email rate limit exceeded",
+      "cookies": [
+        "sb-kdstoyyeygcopkogqsyv-auth-token-code-verifier"
+      ],
+      "hasAuth": false
+    },
+    {
+      "label": "test-tld",
+      "email": "cpbuyer-7db9f5bc@cpcheckpoint.test",
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup&error=rate_limited&retry_after=3384",
+      "bannerCode": "rate_limited",
+      "bannerText": "Too many signup attempts from this network. Try again in 3384 seconds.",
+      "cookies": [],
+      "hasAuth": false
+    },
+    {
+      "label": "example-com",
+      "email": "cpbuyer-87506e4a@nex.example.com",
+      "url": "http://localhost:3008/nex-native/sign-in?mode=signup&error=rate_limited&retry_after=3377",
+      "bannerCode": "rate_limited",
+      "bannerText": "Too many signup attempts from this network. Try again in 3377 seconds.",
+      "cookies": [],
+      "hasAuth": false
+    }
+  ]
+}

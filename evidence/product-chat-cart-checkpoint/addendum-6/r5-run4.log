@@ -1,0 +1,239 @@
+STEP A · buyer sign-in + clear cart
+STEP B · add Product X
+STEP C · add Product Y
+STEP D · open header cart modal · assert 2 lines + centered
+STEP E · increase X qty to 2
+STEP F · decrease X qty back to 1
+STEP G · remove Product Y · X remains
+STEP H · remove Product X · empty state
+STEP I · reload empty cart · persists empty
+STEP J · re-add X and Y
+STEP K · reload with 2 items · persists both
+STEP L · /nex-native/cart · submit checkout w/ buyer note
+STEP M · DB verify nex_order row
+STEP O1 · buyer sends chat matrix-6 probe
+ERR: locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for locator('[data-nex-peer-composer]').first().locator('textarea').first() to be visible[22m
+
+    at C:\Users\Victus\nexapp\scripts\_tmp\cp-cart-multi-and-chat-r5.mjs:387:14 {
+  log: [
+    "  - waiting for locator('[data-nex-peer-composer]').first().locator('textarea').first() to be visible"
+  ],
+  name: 'TimeoutError'
+}
+
+DONE
+{
+  "when": "2026-11-17T16:12:30.129Z",
+  "unique_note": "CP-R5-1794931950129",
+  "chat_probe_text": "CP-R5 chat probe 1794931950129",
+  "product_x": {
+    "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "name": "E2E PLQ Widget X mwit8ina"
+  },
+  "product_y": {
+    "id": "681024eb-0c2e-41f6-b123-aee41c354cd1",
+    "name": "E2E PLQ Widget Y mwit8ina"
+  },
+  "disposable_records": [
+    {
+      "table": "nex_order",
+      "id": "1ad9e054-114a-469b-8472-4446a4194596",
+      "keyed_by": "CP-R5-1794931950129"
+    }
+  ],
+  "step_A": {
+    "signed_in": true,
+    "initial_cart": 0
+  },
+  "step_B": {
+    "cart_after_x": 1
+  },
+  "step_C": {
+    "cart_after_y": 2
+  },
+  "step_D": {
+    "dialog_center_x": 195,
+    "viewport_mid": 195,
+    "off_center_px": 0,
+    "lines": [
+      {
+        "key": "8711633d-570b-4f6e-856a-43f12ddafbed",
+        "text": "E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional)"
+      },
+      {
+        "key": "14073a94-74c1-467e-82ae-be93528c4b37",
+        "text": "E2E PLQ Widget Y mwit8ina €42.50€42.50 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "badge_count": 2,
+    "subtotal_text": "€60.49"
+  },
+  "step_E": {
+    "lines": [
+      {
+        "key": "8711633d-570b-4f6e-856a-43f12ddafbed",
+        "text": "E2E PLQ Widget X mwit8ina €35.98€17.99 × 2 − 2 + × Notes for this item (optional)"
+      },
+      {
+        "key": "14073a94-74c1-467e-82ae-be93528c4b37",
+        "text": "E2E PLQ Widget Y mwit8ina €42.50€42.50 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "subtotal_text": "€78.48",
+    "badge_count": 3
+  },
+  "step_F": {
+    "lines": [
+      {
+        "key": "8711633d-570b-4f6e-856a-43f12ddafbed",
+        "text": "E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional)"
+      },
+      {
+        "key": "14073a94-74c1-467e-82ae-be93528c4b37",
+        "text": "E2E PLQ Widget Y mwit8ina €42.50€42.50 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "subtotal_text": "€60.49",
+    "badge_count": 2
+  },
+  "step_G": {
+    "lines": [
+      {
+        "key": "8711633d-570b-4f6e-856a-43f12ddafbed",
+        "text": "E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "subtotal_text": "€17.99",
+    "badge_count": 1,
+    "cart_storage": [
+      {
+        "key": "8711633d-570b-4f6e-856a-43f12ddafbed",
+        "kind": "product",
+        "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget X mwit8ina",
+        "price_pence": 1799,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794931964976
+      }
+    ]
+  },
+  "step_H": {
+    "empty_node_visible": true,
+    "lines_after": [],
+    "badge_count": 0,
+    "cart_storage": []
+  },
+  "step_I": {
+    "cart_storage_after_reload": [],
+    "badge_count": 0
+  },
+  "step_J": {
+    "cart_storage_after_readd": [
+      {
+        "key": "56f004de-e95e-4ac4-a127-e8acdf67e7ac",
+        "kind": "product",
+        "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget X mwit8ina",
+        "price_pence": 1799,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794931978243
+      },
+      {
+        "key": "ec92536f-42c8-46ae-ac38-08a07d55943d",
+        "kind": "product",
+        "id": "681024eb-0c2e-41f6-b123-aee41c354cd1",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget Y mwit8ina",
+        "price_pence": 4250,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794931981628
+      }
+    ]
+  },
+  "step_K": {
+    "cart_items_after_reload": 2,
+    "cart_product_ids": [
+      "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "681024eb-0c2e-41f6-b123-aee41c354cd1"
+    ],
+    "badge_count": 2
+  },
+  "step_L": {
+    "redirected_to": "http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1"
+  },
+  "step_M": {
+    "order_id": "1ad9e054-114a-469b-8472-4446a4194596",
+    "state": "created",
+    "is_truthful_unpaid": true,
+    "price_pence": "1799",
+    "currency": "EUR",
+    "customer_note": "CP-R5-1794931950129",
+    "customer_note_matches": true,
+    "order_rows_in_window": 1
+  },
+  "step_O1_debug": {
+    "composer_form_count": 1,
+    "all_textarea_count": 0,
+    "send_btn_count": 1,
+    "url": "http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1",
+    "has_reply_indicator": 0
+  },
+  "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-nex-peer-composer]').first().locator('textarea').first() to be visible\u001b[22m\n"
+}
+node:events:505
+    throw er; // Unhandled 'error' event
+    ^
+
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:221:20)
+Emitted 'error' event on Client instance at:
+    at Client._handleErrorEvent (C:\Users\Victus\nexapp\node_modules\pg\lib\client.js:422:10)
+    at Connection.emit (node:events:514:20)
+    at Socket.reportStreamError (C:\Users\Victus\nexapp\node_modules\pg\lib\connection.js:59:12)
+    at Socket.emit (node:events:514:20)
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  errno: -4077,
+  code: 'ECONNRESET',
+  syscall: 'read'
+}
+
+Node.js v26.13.1

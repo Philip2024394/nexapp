@@ -224,12 +224,12 @@ export function HqPagesClient({
   function toggleLock(url: string) {
     const next = !isLocked(url);
     // Optimistic update.
-    setLockOverrides((prev) => ({ ...prev, [url]: next }));
+    setLockOverrides((prev: LockOverrides) => ({ ...prev, [url]: next }));
     startTransition(async () => {
       const res = await toggleLockAction(url, next);
       if (!res.ok) {
         // Roll back on failure.
-        setLockOverrides((prev) => {
+        setLockOverrides((prev: LockOverrides) => {
           const copy = { ...prev };
           if (url in initialLockOverrides) {
             copy[url] = initialLockOverrides[url];
@@ -1131,7 +1131,7 @@ function PreviewPopover({
                 title={`Files Claude will delete${
                   inspect === "loading"
                     ? " · loading…"
-                    : inspect && inspect !== "loading"
+                    : inspect
                       ? ` (${inspect.ownFiles.length})`
                       : ""
                 }`}
@@ -1149,7 +1149,7 @@ function PreviewPopover({
                 title={`Files Claude will clean${
                   inspect === "loading"
                     ? " · loading…"
-                    : inspect && inspect !== "loading"
+                    : inspect
                       ? ` (${inspect.callers.count}${inspect.callers.truncated ? "+" : ""})`
                       : ""
                 }`}
@@ -1219,7 +1219,6 @@ function FilesSection({
         <ul
           style={{
             margin: "4px 0 0",
-            padding: 0,
             listStyle: "none",
             fontFamily: mono
               ? "ui-monospace, SFMono-Regular, Menlo, monospace"

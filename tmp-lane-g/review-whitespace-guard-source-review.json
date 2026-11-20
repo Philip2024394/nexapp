@@ -1,0 +1,50 @@
+{
+  "reviewer": "Agent B · OFFLINE Lane G parallel batch",
+  "reviewed_at": "2026-11-19",
+  "target": "GB-WHITESPACE-GUARD · CANDIDATE_nex_group_call_invite_v3_whitespace_strict_PREVIEW",
+  "repo": "C:/Users/Victus/nexapp",
+  "verdict": "PASS",
+  "evidenceTier": "OFFLINE_TESTED",
+  "defectCount": 0,
+  "defects": [],
+  "safeChecks": {
+    "script": "C:/Users/Victus/nexapp/tmp-lane-g/review-whitespace-guard-safe-checks.mjs",
+    "pass": 30,
+    "fail": 0,
+    "exitCode": 0
+  },
+  "observations": [
+    {
+      "id": "O-1",
+      "note": "Rollback is destructive-replace (drops v3 function; operator must re-apply mig-356 to restore baseline). Documented explicitly in rollback header. Not a defect."
+    },
+    {
+      "id": "O-2",
+      "note": "Guard error message now mentions `_LANE_G_ACCEPT_HREF_PATTERN`. Improved debuggability; no behaviour change."
+    },
+    {
+      "id": "O-3",
+      "note": "Four UNVERIFIED notes in Agent A's results JSON correctly bound the JS-vs-Postgres regex semantic gap. Each has a concrete sandbox SELECT. Must be resolved before apply authorisation."
+    }
+  ],
+  "unverifiedNotes": [
+    "postgres_posix_ere_question_mark_escape · sandbox SELECT required to prove `\\?` parses identically to JS escape",
+    "postgres_hex_hyphen_class_semantics · sandbox SELECT matrix required for [0-9a-f-]{36} semantics under Postgres engine",
+    "postgres_u0000_handling_in_text · driver-level NUL behaviour (reject/strip vs reach regex) is surface-dependent",
+    "postgres_tilde_star_case_insensitivity_over_a_f · confirm `~*` matches A-F uppercase equivalently to JS /i"
+  ],
+  "verdictMatrix": {
+    "localEngineering": "PASS",
+    "connectedRpc": "NOT ATTEMPTED · gate closed · Agent B offline-only · sandbox SELECTs for UNVERIFIED notes required",
+    "founderWalkthrough": "NOT ATTEMPTED · gate closed · depends on Connected-RPC verification + separate owner authorisation",
+    "publicLaunch": "NOT ATTEMPTED · gate closed · requires migration number assignment, sandbox apply, battery re-run, prod authorisation per sealed rules"
+  },
+  "sectionsCovered": {
+    "diffAgainstBaseline": "PASS · only guard block changed · signature + envelope preserved",
+    "regexFidelity": "PASS · byte-equivalent · no HTML entity contamination · `!~*` case-insensitive",
+    "rollbackSoundness": "PASS · drop is destructive-replace · operator sequence explicit · no prod ref",
+    "hardRefusalProd": "PASS · no apply script exists (candidate has no number); static SQL cannot connect",
+    "testHarnessFidelity": "PASS · JS mirror correctly flagged · 4 UNVERIFIED notes concrete + actionable · coverage meets minimum",
+    "securityReview": "PASS · no bypass surface · full-anchor narrow grammar · no ReDoS · NULL short-circuit intact · permissions unwidened"
+  }
+}

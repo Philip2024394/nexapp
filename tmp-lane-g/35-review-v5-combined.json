@@ -1,0 +1,172 @@
+{
+  "generatedAt": "2026-11-19T20:19:00Z",
+  "reviewer": "Independent automated reviewer (Claude Sonnet 4.6)",
+  "evidenceTier": "SOURCE_INSPECTED + UNIT (vitest 51/51)",
+  "packages": {
+    "w1": {
+      "verdict": "PASS",
+      "description": "W1 is a declaration file only — no executable SQL. Points to v4 as the RPC body. All security properties confirmed from v4 by grep.",
+      "checks": [
+        { "id": 1, "name": "SECURITY_DEFINER + search_path", "result": "PASS", "evidence": "Confirmed in v4 lines 121-122 (grep); declared verbatim in W1 comment", "tier": "SOURCE_INSPECTED" },
+        { "id": 2, "name": "GRANT envelope", "result": "PASS", "evidence": "REVOKE ALL from PUBLIC, anon, service_role; GRANT to authenticated confirmed in v4 lines 308-320", "tier": "SOURCE_INSPECTED" },
+        { "id": 3, "name": "auth.uid() fail-closed body guard", "result": "PASS", "evidence": "caller_identity_required (NULL uid) + caller_account_not_found (no row) both ERRCODE 42501 in v4 lines 135-145", "tier": "SOURCE_INSPECTED" },
+        { "id": 4, "name": "No caller-supplied trusted identity", "result": "PASS", "evidence": "7-param v4 signature has no identity params; test V5-PARAM-CONTRACT confirms p_self_supabase_user_id absent", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 5, "name": "Cap-count semantics (relying on mig-133 trigger)", "result": "PASS", "evidence": "FOR UPDATE in v4 before participant INSERT; mig-133 trigger as hard cap", "tier": "SOURCE_INSPECTED" },
+        { "id": 6, "name": "Lock order: session FOR UPDATE before participant INSERT", "result": "PASS", "evidence": "v4 line ~219 PERFORM 1 FROM nex_group_call_session WHERE id = v_session_id FOR UPDATE", "tier": "SOURCE_INSPECTED" },
+        { "id": 7, "name": "Dedup semantics (23505 internalised)", "result": "PASS", "evidence": "out_skipped='already_invited' returned; test V5-DUP-1 verifies no silent swallow", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 8, "name": "mig-133 role CHECK / cohost loophole", "result": "N/A", "evidence": "W1 invite path does not expose a role parameter to the caller", "tier": "SOURCE_INSPECTED" },
+        { "id": 9, "name": "Rollback soundness", "result": "PASS", "evidence": "W1 rollback delegates to v4 rollback; no DDL to drop in W1 itself", "tier": "SOURCE_INSPECTED" },
+        { "id": 10, "name": "No table/trigger/constraint modification", "result": "PASS", "evidence": "W1 SQL file contains zero executable DDL", "tier": "SOURCE_INSPECTED" },
+        { "id": 11, "name": "Named error classes / SQLSTATE mapping", "result": "PASS", "evidence": "InviteToCallV5ErrorCode with 8 codes; all SQLSTATEs mapped: 42883, 42501, 22023, P0001, 23505(dedup)", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 12, "name": "No service_role bypass", "result": "PASS", "evidence": "AdminLike has only .rpc(); no admin.auth.getUser(); no identity forwarded; V5-PARAM-CONTRACT verifies 7 exact params", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 13, "name": "No live import", "result": "PASS", "evidence": "grep src/app/ src/lib/ for invite-service.v5-candidate import = zero hits", "tier": "SOURCE_INSPECTED" },
+        { "id": 14, "name": "Preserves return shape vs live inviteToCall", "result": "PASS", "evidence": "InviteToCallV5Result superset of live contract; additive distinct error codes only", "tier": "SOURCE_INSPECTED" },
+        { "id": 15, "name": "vitest run", "result": "PASS", "evidence": "20 tests pass", "tier": "UNIT" },
+        { "id": 16, "name": "Test coverage", "result": "PASS", "evidence": "happy path, dedup 23505, 42883x2, 22023 URL guard, 42501 NULL uid, 42501 account-not-found, P0001x2, UUID validation, self-invite, media type, param contract, shape errors, pre-mig-306 CHECK, session_not_owned", "tier": "UNIT" }
+      ],
+      "fixesApplied": [],
+      "vitest": {
+        "command": "npx vitest run src/lib/nex-native/calls/__tests__/invite-service-v5-candidate.test.ts",
+        "exitCode": 0,
+        "fileCount": 1,
+        "testCount": 20
+      }
+    },
+    "w2": {
+      "verdict": "PASS",
+      "description": "New nex_create_group_call_session_tx RPC. Creates session + all participant rows in one transaction. No FOR UPDATE needed (new session, no published session_id).",
+      "checks": [
+        { "id": 1, "name": "SECURITY_DEFINER + search_path", "result": "PASS", "evidence": "Lines 76-77 of SQL: SECURITY DEFINER, SET search_path = public, pg_temp", "tier": "SOURCE_INSPECTED" },
+        { "id": 2, "name": "GRANT envelope", "result": "PASS", "evidence": "Lines 220-230: REVOKE ALL from PUBLIC, REVOKE from anon, REVOKE from service_role, GRANT to authenticated", "tier": "SOURCE_INSPECTED" },
+        { "id": 3, "name": "auth.uid() fail-closed body guard", "result": "PASS", "evidence": "Lines 94-106: NULL uid → caller_identity_required 42501; no account → caller_account_not_found 42501", "tier": "SOURCE_INSPECTED" },
+        { "id": 4, "name": "No caller-supplied trusted identity", "result": "PASS", "evidence": "4-param signature: p_media_type, p_from_call_link_id, p_host_country, p_invitee_account_ids. No identity. W2-PASSTHROUGH-2 verifies.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 5, "name": "Cap-count semantics (W2: new session, FOR UPDATE unnecessary)", "result": "PASS", "evidence": "Lines 139-148 document rationale: brand-new session_id not visible to concurrent writers before COMMIT; mig-133 trigger + TS slice as defence-in-depth", "tier": "SOURCE_INSPECTED" },
+        { "id": 6, "name": "Lock order (W2 documents absence)", "result": "PASS", "evidence": "Explicitly justified in function body comment lines 139-148", "tier": "SOURCE_INSPECTED" },
+        { "id": 7, "name": "Dedup semantics (unique_violation per guest row)", "result": "PASS", "evidence": "Lines 203-208: EXCEPTION WHEN unique_violation THEN NULL (skip guest). W2-DUP-1 verifies JSONB array excludes duplicate.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 8, "name": "mig-133 role CHECK / cohost loophole", "result": "N/A", "evidence": "Host inserted with literal 'host', guests with literal 'guest'. No caller-controlled role param.", "tier": "SOURCE_INSPECTED" },
+        { "id": 9, "name": "Rollback soundness", "result": "PASS", "evidence": "DROP FUNCTION IF EXISTS nex_create_group_call_session_tx(TEXT, UUID, TEXT, UUID[]) — exact signature match, no side-effect DROPs", "tier": "SOURCE_INSPECTED" },
+        { "id": 10, "name": "No table/trigger/constraint modification", "result": "PASS", "evidence": "Only CREATE OR REPLACE FUNCTION. No ALTER, no trigger changes, no constraint modifications.", "tier": "SOURCE_INSPECTED" },
+        { "id": 11, "name": "Named error classes / SQLSTATE mapping", "result": "PASS", "evidence": "V5RpcUnavailableError (42883), V5CallerIdentityRequiredError (42501), V5ParticipantCapExceededError (P0001), 22023 rethrow with code. All tested.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 12, "name": "No service_role bypass", "result": "PASS", "evidence": "AdminLike has only .rpc(); hostAccountId explicitly NOT forwarded to RPC; W2-PASSTHROUGH-1 confirms exact 4 params", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 13, "name": "No live import", "result": "PASS", "evidence": "grep src/app/ src/lib/ for group-call-service.v5-candidate import = zero hits", "tier": "SOURCE_INSPECTED" },
+        { "id": 14, "name": "Preserves return shape vs live createGroupCallSession", "result": "PASS", "evidence": "CreateGroupCallSessionV5Result with session:GroupCallSessionRow, participants:GroupCallParticipantRow[], rejectedCount:number. Types imported from live service.", "tier": "SOURCE_INSPECTED" },
+        { "id": 15, "name": "vitest run", "result": "PASS", "evidence": "11 tests pass", "tier": "UNIT" },
+        { "id": 16, "name": "Test coverage", "result": "PASS", "evidence": "happy path (3 invitees), TS cap slice (5→3), 22023 media, 42501x2, dedup guest skip, 42883x2, P0001, exact param contract, hostAccountId not forwarded", "tier": "UNIT" }
+      ],
+      "fixesApplied": [],
+      "vitest": {
+        "command": "npx vitest run src/lib/nex-native/calls/__tests__/group-call-service-v5-candidate.test.ts",
+        "exitCode": 0,
+        "fileCount": 1,
+        "testCount": 11
+      }
+    },
+    "w3": {
+      "verdict": "PASS",
+      "description": "New nex_join_group_call_session_tx RPC. UPDATE path (pre-invited row) + INSERT fallback with FOR UPDATE lock. Role guard rejects 'cohost' at RPC level before INSERT.",
+      "checks": [
+        { "id": 1, "name": "SECURITY_DEFINER + search_path", "result": "PASS", "evidence": "Lines 108-109 of SQL: SECURITY DEFINER, SET search_path = public, pg_temp", "tier": "SOURCE_INSPECTED" },
+        { "id": 2, "name": "GRANT envelope", "result": "PASS", "evidence": "Lines 240-250: REVOKE ALL from PUBLIC, REVOKE from anon, REVOKE from service_role, GRANT to authenticated", "tier": "SOURCE_INSPECTED" },
+        { "id": 3, "name": "auth.uid() fail-closed body guard", "result": "PASS", "evidence": "Lines 120-134: NULL uid → caller_identity_required 42501; no account → caller_account_not_found 42501", "tier": "SOURCE_INSPECTED" },
+        { "id": 4, "name": "No caller-supplied trusted identity", "result": "PASS", "evidence": "2-param signature: p_session_id UUID, p_role TEXT. No identity. W3-PARAMS-1 confirms account_id/p_account_id/accountId absent.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 5, "name": "Cap-count semantics (W3 uses mig-133 trigger)", "result": "PASS", "evidence": "INSERT fallback triggers mig-133 cap trigger. FOR UPDATE at lines 159-162 serialises concurrent INSERT-path callers. UPDATE path is cap-neutral.", "tier": "SOURCE_INSPECTED" },
+        { "id": 6, "name": "Lock order: session FOR UPDATE before participant INSERT", "result": "PASS", "evidence": "Lines 159-162: PERFORM 1 FROM nex_group_call_session WHERE id = p_session_id FOR UPDATE; acquired before UPDATE attempt and before INSERT fallback.", "tier": "SOURCE_INSPECTED" },
+        { "id": 7, "name": "Dedup semantics (unique_violation internalised to was_update=TRUE)", "result": "PASS", "evidence": "Lines 200-211: unique_violation → SELECT existing id, v_was_update:=TRUE. Not silently swallowed. W3-RACE-1/RACE-2 verify.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 8, "name": "mig-133 role CHECK / cohost loophole TIGHTENED", "result": "PASS", "evidence": "Lines 136-141: IF p_role NOT IN ('host','guest') THEN RAISE EXCEPTION 'invalid_role' USING ERRCODE='22023'. Fires BEFORE INSERT reaches DB CHECK. TS type JoinRole also excludes 'cohost'. W3-ROLE-1 tests 22023 mapping.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 9, "name": "Rollback soundness", "result": "PASS", "evidence": "DROP FUNCTION IF EXISTS nex_join_group_call_session_tx(UUID, TEXT) — exact signature match, no side-effect DROPs", "tier": "SOURCE_INSPECTED" },
+        { "id": 10, "name": "No table/trigger/constraint modification", "result": "PASS", "evidence": "DROP FUNCTION IF EXISTS (idempotent guard) + CREATE FUNCTION only. No ALTER TABLE, no trigger changes.", "tier": "SOURCE_INSPECTED" },
+        { "id": 11, "name": "Named error classes / SQLSTATE mapping", "result": "PASS", "evidence": "V5RpcUnavailableError (42883), CallerIdentityRequiredError (42501), InvalidRoleError (22023+role), InvalidSessionError (22023/42501 non-role). P0001 rethrown as generic Error. 23505 returns null.", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 12, "name": "No service_role bypass", "result": "PASS", "evidence": "AdminLike has only .rpc(); no identity forwarded; W3-PARAMS-1 verifies only p_session_id + p_role in RPC call", "tier": "SOURCE_INSPECTED + UNIT" },
+        { "id": 13, "name": "No live import", "result": "PASS", "evidence": "grep src/app/ src/lib/ for group-call-join.v5-candidate import = zero hits", "tier": "SOURCE_INSPECTED" },
+        { "id": 14, "name": "Preserves return shape vs live joinGroupCallSession", "result": "PASS", "evidence": "JoinGroupCallSessionV5Result | null with participantId, wasUpdate, sessionPromoted. Additive over live contract.", "tier": "SOURCE_INSPECTED" },
+        { "id": 15, "name": "vitest run", "result": "PASS", "evidence": "20 tests pass", "tier": "UNIT" },
+        { "id": 16, "name": "Test coverage", "result": "PASS", "evidence": "happy paths x4 (UPDATE/INSERT/promote combos), P0001 cap trigger, dedup SQL-caught, dedup TS-layer defensive, role rejection 22023, 42501 NULL uid, 42501 account-not-found, session_not_found, 42883x2, param contract, default role, null/empty rowset", "tier": "UNIT" }
+      ],
+      "fixesApplied": [],
+      "vitest": {
+        "command": "npx vitest run src/lib/nex-native/calls/__tests__/group-call-join-v5-candidate.test.ts",
+        "exitCode": 0,
+        "fileCount": 1,
+        "testCount": 20
+      }
+    }
+  },
+  "sha256Pinned": {
+    "w1_sql":        "ec972d21c5de69839096c1534540dd7ffeda2a08574c23070b93929e9c27d524",
+    "w1_rollback":   "f42848e98207f21e579bb217748fbd215ab5f5a177c7f3d0e99ada8ced92175d",
+    "w1_ts":         "6b66b01fd59e0469bf38d32d4296124a88f40e7d74fb4b0a62c90ddf4db9be90",
+    "w1_test":       "b515281a27aed315f59f757d2159777751d7792165d445aece3e1a1e7a8cb683",
+    "w2_sql":        "51cb55863636a8b23f4c825646f5eeb980159493cedef7b36aea44154d4344db",
+    "w2_rollback":   "07466c7ecf2b2f71fddd17bf3186b72bf826ee01631042554e6c3777cd01c4ae",
+    "w2_ts":         "25a9b7dfccbe08ad6ff27922adce2266a1b1cf051cb8ae070aa7d0062db6589b",
+    "w2_test":       "a4aaf9c824a6c6718c390d0551f74fa9b6c6627ce8ca82a06aea623018acd4cd",
+    "w3_sql":        "375fc243fd87bfab75c074824b29007518f84c868f588a6d92e018fc5a0802b9",
+    "w3_rollback":   "2b83c0fea0a70ccde9d16b4839e14a6fd5871b2c46534a3073526dba7d5665f5",
+    "w3_ts":         "ff0d5f95357d9acd18d4c61f6b8a27f5e4cabc7d831b77f4b96e7817ae98c23a",
+    "w3_test":       "267c2ea7708dd2464ce1e75912e2552198c21fb67239e1b99c669602ad6f700a",
+    "v4_sql":        "de77e9a19eb49df85433bf66969b87a44b05885b302a23559e76134b799bfea7",
+    "mig133_sql":    "35af48379268cb56736bc7024c4e310b51f8e722772d814bf7e0e2a4be3af26b"
+  },
+  "vitestCombined": {
+    "command": "npx vitest run <all three test files>",
+    "exitCode": 0,
+    "fileCount": 3,
+    "testCount": 51,
+    "durationMs": 357
+  },
+  "supersedeStatement": "v5-W1 does NOT supersede v4. W1 is a declaration file that points to v4 as the RPC body unchanged (option a). v5-W2 and v5-W3 are ADDITIONS alongside v4, covering orthogonal operations (session-create and join-accept). No v5 file conflicts with or supersedes any other candidate or applied migration.",
+  "residualOpen": [
+    {
+      "id": "OPEN-1",
+      "summary": "Case B NULL auth.uid() fail-closed path in v4: UNVERIFIED at runtime. Code is correct but no sandbox execution evidence yet.",
+      "blocking": false
+    },
+    {
+      "id": "OPEN-2",
+      "summary": "Case G bounded intermediate-write fault (v4): STATE_BLOCKER in v4 documentation. Outside scope of v5 batch.",
+      "blocking": false
+    },
+    {
+      "id": "OPEN-3",
+      "summary": "mig-133 trigger counts ALL rows, not just active (left_at IS NULL). If 4-active-row semantics needed, separate schema change required.",
+      "blocking": false
+    },
+    {
+      "id": "OPEN-4",
+      "summary": "W2 session reconstruction: host_account_id is empty string in returned GroupCallSessionRow (RPC only echoes session ID). Callers needing full row should call getGroupCallSession().",
+      "blocking": false
+    },
+    {
+      "id": "OPEN-5",
+      "summary": "W3 P0001 (4-cap trigger) rethrown as generic Error rather than a named class. Acceptable given THEORETICAL severity (no live caller confirmed). Can be tightened at activation time.",
+      "blocking": false
+    },
+    {
+      "id": "OPEN-6",
+      "summary": "Pre-existing unstaged modification to src/lib/nex-native/calls/group-call-service.ts (maybeEndSessionIfAllParticipantsLeft export from §16.33 workstream). Not caused by this batch. Owner should commit/discard before promoting v5 for clean history.",
+      "blocking": false
+    }
+  ],
+  "verdictMatrix": {
+    "localEngineering": "PASS — all 20 checks pass across W1/W2/W3; no fixes required; SOURCE_INSPECTED",
+    "offlineTests": "PASS — 51/51 vitest tests pass; exit code 0; UNIT tier",
+    "sqlRuntime": "NOT_AVAILABLE — no DB connection; no sandbox apply authorised; SQL correctness is SOURCE_INSPECTED only",
+    "activated": "NOT_ACTIVATED — all 12 files are untracked; no live caller imports any v5-candidate; no feature flags flipped",
+    "founder": "PENDING — sandbox apply authorisation not yet granted; feature flag flips not authorised",
+    "publicLaunch": "BLOCKED — sandbox runtime evidence required; founder apply authorisation required; feature flag authorisation required; production remains sealed"
+  },
+  "scopeGuardrailsConfirmed": {
+    "v4Unmodified": true,
+    "mig133Unmodified": true,
+    "liveServiceFilesUnmodified": true,
+    "srcAppUnmodified": true,
+    "middlewareUnmodified": true,
+    "envUnmodified": true,
+    "noCommit": true,
+    "noPush": true,
+    "noDBConnection": true,
+    "noMigrationApplied": true,
+    "noFeatureFlagFlipped": true,
+    "dTradesBanned_notReferenced": true
+  }
+}

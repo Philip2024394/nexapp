@@ -1,0 +1,17 @@
+
+Running 11 tests using 1 worker
+
+  ✓   1 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:421:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 1 · buyer signs in (7.3s)
+  ✓   2 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:428:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 2 · buyer opens an inquiry about Product X · sealed write shape (1.4s)
+  ✓   3 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:449:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 3 · buyer opens peer chat · sees Product X pinned at top (9.1s)
+  ✓   4 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:462:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 4 · pin survives buyer reload · still anchored to Product X (5.9s)
+  ✓   5 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:472:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 5 · pin survives buyer navigate-away-and-back (8.4s)
+  ✓   6 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:489:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 6 · seller signs in second context · sees SAME Product X pinned (8.5s)
+  ✓   7 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:516:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 7 · buyer opens a SECOND inquiry about Product Y · same conversation (1.4s)
+  ✓   8 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:536:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 8 · after Y · pin UPDATES to Y (latest anchor) · X stays visible inline (5.4s)
+  ✓   9 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:565:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 9 · pin survives buyer reload after second inquiry · still Y (5.1s)
+  ✓  10 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:579:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 10 · seller reloads same conversation · also sees Y pinned (6.1s)
+[cp2 cleanup] deleted peer messages=2
+  ✓  11 [product-linked-inquiry-390] › tests\e2e-p6-isolation\product-linked-inquiry.spec.ts:599:7 › CP2 · Product-linked inquiry pin · CK5 disposable · fixture-assisted › 11 · third peer chat with a DIFFERENT seller (no inquiry) renders NO pin (4.9s)
+
+  11 passed (1.3m)

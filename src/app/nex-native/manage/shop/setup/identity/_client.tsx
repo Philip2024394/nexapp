@@ -30,6 +30,7 @@ import {
   saveShopIdentityAction,
   uploadShopIdentityLogoAction,
 } from "../_actions";
+import { NexInput } from "@/lib/nex-native/nex-keyboard";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "var(--nex-world-cream, #FAF8F4)";
@@ -108,7 +109,7 @@ export function IdentityStepClient({
     if (result.ok) {
       setLogoUrl(result.url);
     } else {
-      setStatus({ kind: "error", message: `Logo upload: ${result.error}` });
+      setStatus({ kind: "error", message: `Logo upload: ${errorCopy(result.error)}` });
     }
   }
 
@@ -123,7 +124,7 @@ export function IdentityStepClient({
     if (result.ok) {
       router.push(result.nextHref);
     } else {
-      setStatus({ kind: "error", message: result.error });
+      setStatus({ kind: "error", message: errorCopy(result.error) });
     }
   }
 
@@ -165,7 +166,7 @@ export function IdentityStepClient({
           <label htmlFor="shop-name" style={LABEL_STYLE}>
             Shop name
           </label>
-          <input
+          <NexInput
             id="shop-name"
             name="displayName"
             type="text"
@@ -173,7 +174,7 @@ export function IdentityStepClient({
             maxLength={40}
             placeholder="e.g. Irish Pride · The Little Bakery · Grafton Studio"
             value={shopName}
-            onChange={(e) => setShopName(e.currentTarget.value)}
+            onChange={(next) => setShopName(next)}
             style={{
               ...FIELD_STYLE,
               borderColor: nameError
@@ -399,4 +400,26 @@ export function IdentityStepClient({
       </form>
     </WizardShell>
   );
+}
+
+// Lane C · prompt-7 round 18 · 2026-11-19 · safe-error mapper.
+// Mirrors `errorCopy` in ../business-details/_client.tsx so the legacy
+// 8-step identity surface never leaks raw server/driver strings. Known
+// wire codes map to specific copy; unknown codes log the raw code
+// (diagnostic breadcrumb) and show a stable generic banner.
+function errorCopy(code: string): string {
+  switch (code) {
+    case "shop-name-length":
+      return "Shop name must be 2 to 40 characters.";
+    case "not-authenticated":
+      return "You've been signed out · please sign in again.";
+    case "owner-mismatch":
+    case "owner-scope-denied":
+      return "You can only edit a shop you own · please sign in again.";
+    default:
+      if (code && typeof code === "string") {
+        console.warn("[nex] shop-setup · unmapped server error code", code);
+      }
+      return "We couldn't save that just now · please try again in a moment.";
+  }
 }

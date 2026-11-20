@@ -1,0 +1,240 @@
+{
+  "generated_at": "2026-11-19T12:26:09.292Z",
+  "sql_path": "C:\\Users\\Victus\\nexapp\\nex-supabase\\candidate-migrations\\CANDIDATE_nex_group_call_invite_v3_whitespace_strict_PREVIEW.sql",
+  "source_assertions": [
+    {
+      "name": "sql_file_readable",
+      "pass": true,
+      "detail": "8445 bytes"
+    },
+    {
+      "name": "guard_contains_regex_literal",
+      "pass": true,
+      "detail": "'^/nex-native/call/preview\\?session=[0-9a-f-]{36}&accept=1$'"
+    },
+    {
+      "name": "guard_uses_case_insensitive_not_match_operator",
+      "pass": true,
+      "detail": "operator `!~*` (POSIX ERE case-insensitive not-match)"
+    },
+    {
+      "name": "guard_raises_22023",
+      "pass": true,
+      "detail": "ERRCODE 22023 + contract-matching message"
+    },
+    {
+      "name": "mig356_btrim_body_guard_absent",
+      "pass": true,
+      "detail": "mig-356 `length(btrim(...)) = 0` form must NOT appear"
+    },
+    {
+      "name": "preserves_security_definer",
+      "pass": true,
+      "detail": "function stays SECURITY DEFINER"
+    },
+    {
+      "name": "preserves_search_path",
+      "pass": true,
+      "detail": "search_path pin"
+    },
+    {
+      "name": "preserves_attachment_type_call_invite",
+      "pass": true,
+      "detail": "attachment_type='call_invite' literal preserved"
+    },
+    {
+      "name": "preserves_revoke_all_from_public",
+      "pass": true,
+      "detail": "REVOKE ALL FROM PUBLIC"
+    },
+    {
+      "name": "preserves_revoke_execute_from_anon",
+      "pass": true,
+      "detail": "REVOKE EXECUTE FROM anon"
+    },
+    {
+      "name": "preserves_revoke_execute_from_service_role",
+      "pass": true,
+      "detail": "REVOKE EXECUTE FROM service_role"
+    },
+    {
+      "name": "preserves_grant_execute_to_authenticated",
+      "pass": true,
+      "detail": "GRANT EXECUTE TO authenticated"
+    },
+    {
+      "name": "no_insert_into_nex_migration_history",
+      "pass": true,
+      "detail": "candidate preview must NOT claim a version row (executable SQL only · comments allowed to reference the pattern)"
+    }
+  ],
+  "offline_executable": [
+    {
+      "name": "null_is_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "undefined_is_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "empty_string_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "ascii_spaces_only_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "tab_only_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "newline_only_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "cr_only_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "ff_only_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "vt_only_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "mixed_whitespace_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "valid_href_accepted",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "uppercase_hex_accepted_due_to_case_insensitive_flag",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "session_35_chars_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "session_37_chars_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "session_nonhex_char_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "accept_equals_2_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "missing_query_string_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "trailing_slash_before_query_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "absolute_url_with_scheme_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "percent_encoded_space_in_path_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "null_byte_inside_href_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "valid_href_wrapped_in_whitespace_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "sql_injection_suffix_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "name": "rtl_override_u202e_mid_string_rejected",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    }
+  ],
+  "unverified": [
+    {
+      "topic": "postgres_posix_ere_question_mark_escape",
+      "follow_up": "In sandbox, run `SELECT '/nex-native/call/preview?session=11111111-1111-4111-8111-111111111111&accept=1' ~* '^/nex-native/call/preview\\?session=[0-9a-f-]{36}&accept=1$';` and confirm true. Postgres POSIX ERE requires `\\?` to escape `?` (a quantifier); the JS mirror cannot prove Postgres parses this literal identically."
+    },
+    {
+      "topic": "postgres_hex_hyphen_class_semantics",
+      "follow_up": "In sandbox, run matrix of 36-char strings containing only [0-9a-f-] (mixed hyphen positions) and confirm `~*` matches; add one non-hex char and confirm it does not. The JS mirror uses the same character class source but Postgres regex engine differs at the implementation level."
+    },
+    {
+      "topic": "postgres_u0000_handling_in_text",
+      "follow_up": "Postgres text values cannot contain NUL (\\u0000); drivers typically reject or strip. The JS mirror rejects at regex level; Postgres behaviour depends on the driver surface. Confirm in sandbox whether the driver raises `invalid byte sequence` before the regex is evaluated, or whether the regex sees the character."
+    },
+    {
+      "topic": "postgres_tilde_star_case_insensitivity_over_a_f",
+      "follow_up": "Confirm `~*` treats `[0-9a-f-]` as case-insensitive covering `A-F` identically. Run a session string using A-F uppercase hex against the guard and confirm it is accepted (matches the `/i` flag semantics of the JS mirror)."
+    }
+  ],
+  "totals": {
+    "pass": 37,
+    "fail": 0,
+    "unverified_notes": 4
+  }
+}

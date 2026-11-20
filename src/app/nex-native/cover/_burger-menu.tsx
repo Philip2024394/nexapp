@@ -34,6 +34,10 @@ import * as React from "react";
 // Owner directive 2026-11-12 · HeaderCartIcon import retired · the
 // mount was removed from the burger-menu header.
 import type { ShopCoverContent } from "@/lib/nex-native/shop-cover-service";
+import {
+  isFaqItemEnabled,
+  type NexInfoFaqItem,
+} from "@/lib/nex-native/info-pages";
 
 interface BurgerMenuProps {
   /** Owner's NEX handle so the "Chat with us" row can deep-link
@@ -103,8 +107,32 @@ export function BurgerMenu({
   //   · services → retail · wholesale · custom-made toggles
   //   · about    → business description (for templates with no inline
   //                About block in the design).
-  type SheetKey = "visit" | "shipping" | "services" | "about" | null;
+  type SheetKey =
+    | "visit"
+    | "shipping"
+    | "services"
+    | "about"
+    | "faq"
+    | null;
   const [sheet, setSheet] = React.useState<SheetKey>(null);
+
+  // Owner directive 2026-11-17 · Seller FAQ customer-facing surface.
+  // Only entries that are enabled AND have both a non-empty question
+  // AND a non-empty answer surface to buyers · unanswered rows stay
+  // hidden per directive ("Only answered, published entries are shown
+  // to customers"). If zero rows survive the filter the FAQ row never
+  // renders — the shop looks the same as before.
+  const publishedFaqItems: NexInfoFaqItem[] = React.useMemo(() => {
+    const rows = content?.infoPages?.faq_items ?? [];
+    return rows.filter(
+      (row) =>
+        isFaqItemEnabled(row) &&
+        row.question.trim().length > 0 &&
+        row.answer.trim().length > 0,
+    );
+  }, [content?.infoPages?.faq_items]);
+  const ownerAccountId = content?.ownerAccountId ?? null;
+  const shopDisplayName = content?.displayName ?? "the seller";
 
   // Close on Escape · covers both the dropdown and any open sheet.
   React.useEffect(() => {
@@ -259,6 +287,18 @@ export function BurgerMenu({
               sublabel="Your story · what you make"
               onClick={() => openSheet("about")}
             />
+            {/* FAQ · owner-authorised 2026-11-17. Only renders when
+                this shop has at least one published + answered FAQ
+                entry · keeps the dropdown shape identical for shops
+                that haven't filled it in yet. */}
+            {publishedFaqItems.length > 0 ? (
+              <SheetRow
+                icon="❓"
+                label="FAQ"
+                sublabel={`${publishedFaqItems.length} common question${publishedFaqItems.length === 1 ? "" : "s"}`}
+                onClick={() => openSheet("faq")}
+              />
+            ) : null}
             {shopUrl ? (
               <button
                 type="button"
@@ -310,6 +350,15 @@ export function BurgerMenu({
           accent={accent}
           content={content ?? null}
           shopUrl={resolvedShopUrl}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+      {sheet === "faq" ? (
+        <FaqSheet
+          items={publishedFaqItems}
+          ownerAccountId={ownerAccountId}
+          shopDisplayName={shopDisplayName}
+          accent={accent}
           onClose={() => setSheet(null)}
         />
       ) : null}
@@ -1273,6 +1322,132 @@ function AboutUsSheet({
         })}
       </footer>
     </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// FaqSheet · owner directive 2026-11-17. Renders the shop's published
+// FAQ as an accordion inside the sealed Sheet wrapper so the surface
+// feels identical to Visit Us / Services / About. One entry is open at
+// a time (buyers scan top-to-bottom). A "Still have a question?" CTA
+// at the bottom deep-links into the sealed peer chat with the owner.
+// -----------------------------------------------------------------------------
+function FaqSheet({
+  items,
+  ownerAccountId,
+  shopDisplayName,
+  accent,
+  onClose,
+}: {
+  items: NexInfoFaqItem[];
+  ownerAccountId: string | null;
+  shopDisplayName: string;
+  accent: string;
+  onClose: () => void;
+}) {
+  const [openId, setOpenId] = React.useState<string | null>(
+    items.length > 0 ? (items[0]?.id ?? null) : null,
+  );
+  const chatHref = ownerAccountId
+    ? `/nex-native/chat/peer/${encodeURIComponent(ownerAccountId)}`
+    : null;
+  const cap = { ...sectionCapStyle, color: accent };
+  return (
+    <Sheet title="FAQ" accent={accent} onClose={onClose}>
+      <div style={cap}>Common questions</div>
+      <div
+        style={{
+          marginTop: 6,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {items.map((row) => {
+          const isOpen = row.id === openId;
+          return (
+            <div
+              key={row.id}
+              style={{
+                border: `1px solid ${hexAlpha(accent, 0.3)}`,
+                borderRadius: 10,
+                background: "rgba(5, 15, 28, 0.55)",
+                overflow: "hidden",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenId(isOpen ? null : row.id)}
+                aria-expanded={isOpen}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "10px 12px",
+                  background: "transparent",
+                  color: INK,
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  lineHeight: 1.35,
+                }}
+              >
+                <span style={{ flex: 1 }}>{row.question}</span>
+                <span
+                  aria-hidden
+                  style={{
+                    color: accent,
+                    fontSize: 14,
+                    transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                    transition: "transform 160ms ease-out",
+                  }}
+                >
+                  ›
+                </span>
+              </button>
+              {isOpen ? (
+                <div
+                  style={{
+                    padding: "0 12px 12px",
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    color: INK_DIM,
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {row.answer}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <p style={sheetHintStyle}>
+        Still have a question? Message {shopDisplayName} directly.
+      </p>
+      {chatHref ? (
+        <a href={chatHref} style={{ ...ctaPrimaryStyle, marginTop: 8 }}>
+          Message the seller →
+        </a>
+      ) : (
+        <div
+          style={{
+            ...ctaSecondaryStyle,
+            marginTop: 8,
+            opacity: 0.6,
+            cursor: "not-allowed",
+          }}
+        >
+          Message the seller
+        </div>
+      )}
+    </Sheet>
   );
 }
 

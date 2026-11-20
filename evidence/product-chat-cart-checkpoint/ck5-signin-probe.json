@@ -1,0 +1,35 @@
+{
+  "when": "2026-11-17T09:38:58.212Z",
+  "results": [
+    {
+      "label": "seller",
+      "email": "e2e-vault-ck5-A-mwhyjav3@nex.invalid",
+      "handle": "nex-986294",
+      "businessSlug": "e2e-ck5-seller-shop-mwhyjc0c",
+      "postUrl": "http://localhost:3008/nex-native/contacts",
+      "bannerCode": null,
+      "bannerText": null,
+      "sbCookies": [
+        "sb-kdstoyyeygcopkogqsyv-auth-token"
+      ],
+      "sandboxRefCookieCount": 1,
+      "hasAuthToken": true,
+      "consoleErr": []
+    },
+    {
+      "label": "buyer",
+      "email": "e2e-vault-ck5-B-mwhyjbaa@nex.invalid",
+      "handle": "nex-973399",
+      "businessSlug": null,
+      "postUrl": "http://localhost:3008/nex-native/contacts",
+      "bannerCode": null,
+      "bannerText": null,
+      "sbCookies": [
+        "sb-kdstoyyeygcopkogqsyv-auth-token"
+      ],
+      "sandboxRefCookieCount": 1,
+      "hasAuthToken": true,
+      "consoleErr": []
+    }
+  ]
+}

@@ -2,28 +2,34 @@
 //
 // Static-source guardrails for the shared NEX page header.
 //
-// Owner-authorised shape (2026-10-17 final · after Home + Settings
-// icon removal):
-//   · Left   · NEX ping badge (size 56 · hero scale matching
-//              /directory/landing) wrapped in a Link to /nex-native
-//   · Right  · Search icon (routes to /nex-native/directory/landing ·
-//              the canonical NEX Directory entry per the 2026-10-17
-//              canonical-directory doctrine)
-//            · Three-dots drawer (shared PageHeaderDrawerButtonClient
-//              with Home · Contacts · Chat · Calls · Search · Settings
-//              · Sign out destinations)
+// Shape history
+//   · 2026-10-17 (retired) · brand ping-badge LEFT + search icon MIDDLE +
+//     three-dots drawer RIGHT.
+//   · 2026-11-12 (CURRENT · owner directive) · brand ping-badge and
+//     search icon globally retired from the shared header. The header
+//     renders a SINGLE element: the shared drawer button pinned to the
+//     right. Every surface gets the stripped header automatically · no
+//     per-page hide-flag needed. Legacy props (brandAvatarUrl / brandAccent
+//     / brandSlot / hideSearch / hideBrand / searchStyle) remain on the
+//     interface for backward compat with existing callers and are
+//     explicitly no-ops.
+//   · 2026-11-12 (CURRENT · auto-resolve directive) · when `drawerSession`
+//     is undefined, the header resolves it server-side via
+//     resolveSessionWithDevOverride so every mounting page carries an
+//     identity bar without having to thread it manually.
 //
-// What this test proves:
-//   · Brand slot still routes to /nex-native and carries the
-//     data-nex-page-header-brand attribute (entry-router contract).
-//   · Ping badge is mounted at size 56 (not 36 · owner directive).
-//   · Search icon still carries data-nex-page-header-search.
-//   · Shared drawer button is mounted at the end of the right cluster.
-//   · Home + Settings icons are NOT mounted in the shared header
-//     (both reachable via drawer · owner directive 2026-10-17).
-//   · SettingsHeaderSlot is NOT imported here any more (component
-//     preserved at its original path for future surfaces).
-//   · The retired opt-out props are not re-added without a consumer.
+// This file verifies the CURRENT shape only. The old brand+search
+// assertions are NOT reinstated · any drive to reintroduce them must
+// cite a new owner directive and update this file in the same change.
+//
+// Three-drawer system boundary (owner correction 2026-11-18)
+//   · Header "+" button (this file's drawer) = right-side navigation
+//     drawer via the shared ControlDrawer.
+//   · Bell icon = SEPARATE left-side notifications drawer (not here).
+//   · Lower-right three-dot = SEPARATE left-side product drawer (not
+//     here).
+//   These three drawers must stay independent · this test file must
+//   NOT assert about the bell or product drawers.
 //
 // Pure source read · no React rendering.
 
@@ -36,85 +42,85 @@ const PAGE_HEADER = fs.readFileSync(
   "utf8",
 );
 
-describe("shared NEX page header · sealed data attributes", () => {
-  it("brand link still routes to /nex-native and carries data-nex-page-header-brand", () => {
-    expect(PAGE_HEADER).toMatch(/href="\/nex-native"/);
-    expect(PAGE_HEADER).toMatch(/data-nex-page-header-brand\b/);
+describe("shared NEX page header · 2026-11-12 stripped shape", () => {
+  it("still emits the top-level header data attribute for layout tests", () => {
+    expect(PAGE_HEADER).toMatch(/data-nex-page-header\b/);
   });
 
-  it("search icon link routes to the canonical NEX Directory landing (2026-10-17 doctrine)", () => {
-    // Owner-sealed canonical directory · /search retired as competing surface.
-    expect(PAGE_HEADER).toMatch(/href="\/nex-native\/directory\/landing"/);
-    expect(PAGE_HEADER).toMatch(/data-nex-page-header-search\b/);
-    expect(PAGE_HEADER).not.toMatch(/href="\/nex-native\/search"/);
+  it("imports and mounts the shared drawer button client", () => {
+    expect(PAGE_HEADER).toMatch(
+      /import\s*\{\s*PageHeaderDrawerButtonClient\s*\}\s*from\s*["']\.\/_page-header-drawer-button-client["']/,
+    );
+    expect(PAGE_HEADER).toMatch(/<PageHeaderDrawerButtonClient\b/);
+  });
+
+  it("header is right-aligned (justifyContent: flex-end)", () => {
+    expect(PAGE_HEADER).toMatch(/justifyContent:\s*["']flex-end["']/);
   });
 });
 
-describe("shared NEX page header · Home + Settings removed (owner-authorised 2026-10-17)", () => {
-  it("Home icon is NOT mounted in the shared header (reachable via drawer)", () => {
+describe("shared NEX page header · retired surface elements", () => {
+  it("does NOT re-mount the NexPingBadge or a brand link", () => {
+    // Owner directive 2026-11-12 · brand ping-badge globally removed.
+    expect(PAGE_HEADER).not.toMatch(/<NexPingBadge\b/);
+    expect(PAGE_HEADER).not.toMatch(/data-nex-page-header-brand\b/);
+    expect(PAGE_HEADER).not.toMatch(/href="\/nex-native"/);
+  });
+
+  it("does NOT re-mount a search icon or route it anywhere", () => {
+    // Owner directive 2026-11-12 · magnifier globally removed. Search is
+    // reachable via the drawer (Directory row) not via a header icon.
+    expect(PAGE_HEADER).not.toMatch(/data-nex-page-header-search\b/);
+    expect(PAGE_HEADER).not.toMatch(/href="\/nex-native\/directory\/landing"/);
+    expect(PAGE_HEADER).not.toMatch(/href="\/nex-native\/search"/);
+  });
+
+  it("Home icon stays absent from the shared header", () => {
     expect(PAGE_HEADER).not.toMatch(/data-nex-page-header-home\b/);
     expect(PAGE_HEADER).not.toMatch(/href="\/nex-native\/home"/);
     expect(PAGE_HEADER).not.toMatch(/<HomeIcon\s*\/>/);
   });
 
-  it("SettingsHeaderSlot is NOT imported or mounted in the shared header", () => {
+  it("SettingsHeaderSlot stays unimported from the shared header", () => {
     expect(PAGE_HEADER).not.toMatch(/import\s*\{[^}]*SettingsHeaderSlot/);
     expect(PAGE_HEADER).not.toMatch(/<SettingsHeaderSlot\b/);
   });
 
-  it("the dead GearIcon helper is removed from the header file", () => {
+  it("the dead GearIcon helper stays removed", () => {
     expect(PAGE_HEADER).not.toMatch(/function\s+GearIcon\s*\(/);
   });
 });
 
-describe("shared NEX page header · ping-badge identity (hero-scale 2026-10-17)", () => {
-  it("imports NexPingBadge from the sealed shared primitive", () => {
+describe("shared NEX page header · drawer-session auto-resolve (2026-11-12)", () => {
+  it("imports the dev-override session resolver for identity-bar auto-mount", () => {
     expect(PAGE_HEADER).toMatch(
-      /import\s*\{\s*NexPingBadge\s*\}\s*from\s*["']@\/lib\/nex-native\/nex-ping-badge-client["']/,
+      /import\s*\{\s*resolveSessionWithDevOverride\s*\}\s*from\s*["']@\/lib\/nex-native\/app\/dev-impersonation["']/,
     );
   });
 
-  it("mounts the NexPingBadge inside the brand link slot at size 56 (matches /directory/landing hero scale)", () => {
-    expect(PAGE_HEADER).toMatch(/<NexPingBadge\s/);
-    expect(PAGE_HEADER).toMatch(/<NexPingBadge[\s\S]{0,120}size=\{\s*56\s*\}/);
-  });
-
-  it("the plain 'NE/X' wordmark spans are retired", () => {
-    expect(PAGE_HEADER).not.toMatch(/<span[^>]*>NE<\/span>/);
-    expect(PAGE_HEADER).not.toMatch(/<span[^>]*>X<\/span>/);
+  it("resolves a session only when drawerSession is undefined (explicit null is respected)", () => {
+    expect(PAGE_HEADER).toMatch(/drawerSession\s*===\s*undefined/);
+    // Non-threaded pages trigger the resolver; explicitly-null pages
+    // (welcome / sign-in) do not.
+    expect(PAGE_HEADER).toMatch(/resolveSessionWithDevOverride\s*\(/);
   });
 });
 
-describe("shared NEX page header · no opt-out props (owner-authorised re-scope 2026-10-17)", () => {
-  // The original 2026-10-17 scope introduced showHome / showSettings /
-  // pingBadgeSize as a Contacts-only opt-out. The Contacts route was
-  // then retired in favour of /nex-native/chat?tab=friends, which
-  // removes the only consumer of those props. The shared header
-  // reverts to its single-shape form · if a future surface needs
-  // to opt out, the props can be reintroduced in the same shape.
-  it("the retired opt-out props are not re-added without a consumer", () => {
+describe("shared NEX page header · legacy props kept inert (backward compat)", () => {
+  it("retains the legacy prop names but voids them so nothing renders", () => {
+    // Keeping the legacy props on the interface lets ~dozens of existing
+    // call-sites compile unchanged · the body must not render them.
+    expect(PAGE_HEADER).toMatch(/brandAvatarUrl:\s*_brandAvatarUrl/);
+    expect(PAGE_HEADER).toMatch(/hideSearch:\s*_hideSearch/);
+    expect(PAGE_HEADER).toMatch(/hideBrand:\s*_hideBrand/);
+    expect(PAGE_HEADER).toMatch(/void\s+_brandAvatarUrl/);
+    expect(PAGE_HEADER).toMatch(/void\s+_hideSearch/);
+    expect(PAGE_HEADER).toMatch(/void\s+_hideBrand/);
+  });
+
+  it("the retired opt-out props (showHome / showSettings / pingBadgeSize) are not re-added", () => {
     expect(PAGE_HEADER).not.toMatch(/showHome\s*\?/);
     expect(PAGE_HEADER).not.toMatch(/showSettings\s*\?/);
     expect(PAGE_HEADER).not.toMatch(/pingBadgeSize\s*\?/);
-  });
-});
-
-describe("shared NEX page header · three-dots drawer (owner-authorised 2026-10-17)", () => {
-  it("imports the shared drawer client component", () => {
-    expect(PAGE_HEADER).toMatch(
-      /import\s*\{\s*PageHeaderDrawerButtonClient\s*\}\s*from\s*["']\.\/_page-header-drawer-button-client["']/,
-    );
-  });
-
-  it("mounts the drawer button inside the right cluster", () => {
-    expect(PAGE_HEADER).toMatch(/<PageHeaderDrawerButtonClient\s*\/>/);
-  });
-
-  it("drawer is mounted AFTER the search icon (right-cluster order preserved)", () => {
-    const searchIdx = PAGE_HEADER.indexOf("data-nex-page-header-search");
-    const drawerIdx = PAGE_HEADER.indexOf("<PageHeaderDrawerButtonClient");
-    expect(searchIdx).toBeGreaterThan(-1);
-    expect(drawerIdx).toBeGreaterThan(-1);
-    expect(drawerIdx).toBeGreaterThan(searchIdx);
   });
 });

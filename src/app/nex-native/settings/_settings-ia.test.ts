@@ -108,58 +108,20 @@ describe("C · Phase 1 reuses existing surfaces where they already exist", () =>
 // ─── D · no fake backends · scaffold is honest ──────────────────────
 
 describe("D · scaffold does not fake backends that don't exist", () => {
-  const WORLD_INTRO_PAGE = path.join(
-    REPO_ROOT,
-    "src/app/nex-native/settings/world-intro/page.tsx",
-  );
-  const CUSTOM_INTRO_PAGE = path.join(
-    REPO_ROOT,
-    "src/app/nex-native/settings/custom-intro/page.tsx",
-  );
-  const LANDING_PAGE = path.join(
-    REPO_ROOT,
-    "src/app/nex-native/settings/page.tsx",
-  );
-
-  test("World Intro page wires the real toggle to setWorldIntroEnabledAction (Phase 1.0)", () => {
-    const src = fs.readFileSync(WORLD_INTRO_PAGE, "utf8");
-    // Phase 1.0 (sealed 2026-10-06) · the toggle now writes a real
-    // nex_account.world_intro_enabled flag via the server action.
-    // The former "coming soon" scaffold + NEX1 intent routing is
-    // retired · a real HTML form posting to the action is the sealed
-    // shape.
-    expect(src).toContain("setWorldIntroEnabledAction");
-    expect(src).toContain("world_intro_enabled");
-    expect(src).toContain("data-nex-world-intro-form");
-    // The former scaffold strings must not return.
-    expect(src).not.toContain("intent=world_intro_pref");
-    expect(src).not.toContain("Switch coming soon");
-  });
-
-  test("Custom Intro page keeps the sealed NEX1 payment pattern + mounts the real upload client (Phase 1.0)", () => {
-    const src = fs.readFileSync(CUSTOM_INTRO_PAGE, "utf8");
-    // Phase 1.0 (sealed 2026-10-06) · the page mounts CustomIntroClient
-    // which exposes the four presentation states (not_purchased,
-    // purchased_no_video, active, disabled). The upload surface is
-    // real; the payment is still sealed NEX1-manual (unchanged).
-    expect(src).toContain("CustomIntroClient");
-    expect(src).toContain("getCustomIntroPresentationState");
-    // Payment pathway UNCHANGED · NEX1-manual intent still fires for
-    // the not_purchased state (sealed design).
-    expect(src).toContain("intent=custom_intro_500k");
-    // No client-side ownership fakes.
-    expect(src).not.toMatch(/hasCustomIntro\s*=/);
-    expect(src).not.toMatch(/localStorage.*custom.?intro/i);
-    // Price must still be stated honestly.
-    expect(src).toContain("CUSTOM_INTRO_PRICE_IDR");
-  });
-
-  test("Landing page carries sealed doctrine comment on solid NEX palette", () => {
-    const src = fs.readFileSync(LANDING_PAGE, "utf8");
-    // Settings is not World-tinted · it uses the solid NEX settings
-    // palette. The in-source doctrine comment is the regression anchor.
-    expect(src.toLowerCase()).toContain("solid nex palette");
-  });
+  // 2026-11-17 · Settings Correction (§2) · the World Intro and
+  // Custom Intro rows were removed from the Settings landing. Their
+  // underlying files on disk (if any) are out of the Settings entry-
+  // point scope · only the surfaced entries are gone. The former
+  // World Intro / Custom Intro backing-page regressions in this block
+  // are therefore no longer applicable to the Settings IA.
+  //
+  // The "solid NEX palette" doctrine comment regression was retired
+  // in the 2026-11-12 warm-palette refresh (owner directive · Pale
+  // Ivory + white + orange / amber) which is separately regressed by
+  // _landing-renders-ia.test.ts.
+  //
+  // Block intentionally left as a placeholder so section-ordering in
+  // the file stays stable for downstream readers.
 });
 
 // ─── E · universal theme colour rule compliance ─────────────────────
@@ -236,16 +198,50 @@ describe("F · Coming Soon placeholder pages reuse the shared shell", () => {
   }
 });
 
-// ─── G · Custom Intro highlighted (founder: discover directly) ──────
+// ─── G · Settings Correction removals + replacements (2026-11-17) ───
 
-describe("G · Custom Intro is discoverable directly from Settings (founder note)", () => {
-  test("Custom Intro row is marked highlighted on the landing", () => {
-    const row = ALL_SETTINGS_ROWS.find((r) => r.key === "custom-intro");
-    expect(row?.highlighted).toBe(true);
+describe("G · Settings Correction · removed destinations + wired drawer", () => {
+  // 2026-11-17 · founder-directed removal of Affiliate, About NEX,
+  // World Intro, Custom Intro and Creator settings entries. The row
+  // keys must not reappear anywhere in the Settings IA.
+  const REMOVED_ROW_KEYS = [
+    "affiliate",
+    "about",
+    "world-intro",
+    "custom-intro",
+    "creator",
+  ] as const;
+
+  for (const key of REMOVED_ROW_KEYS) {
+    test(`removed row key '${key}' is absent from SETTINGS_GROUPS`, () => {
+      const hit = ALL_SETTINGS_ROWS.find((r) => r.key === key);
+      expect(hit).toBeUndefined();
+    });
+  }
+
+  test("Notifications row opens the canonical drawer (href:null + actionKind)", () => {
+    const row = ALL_SETTINGS_ROWS.find((r) => r.key === "notifications");
+    expect(row).toBeDefined();
+    expect(row?.href).toBeNull();
+    expect(row?.actionKind).toBe("open-notifications-drawer");
   });
 
-  test("Custom Intro row lives in the 'Your NEX' group (not buried under Payments)", () => {
-    const group = SETTINGS_GROUPS.find((g) => g.key === "your-nex");
-    expect(group?.rows.some((r) => r.key === "custom-intro")).toBe(true);
+  test("Data usage row leads to the canonical Storage page", () => {
+    // Settings "Data usage" and Shop Settings "Storage" now converge
+    // on /nex-native/settings/storage · the compatibility redirect at
+    // /settings/data-usage preserves old deep links.
+    const row = ALL_SETTINGS_ROWS.find((r) => r.key === "data-usage");
+    expect(row?.href).toBe("/nex-native/settings/storage");
+  });
+
+  test("compatibility redirect page exists at /settings/data-usage", () => {
+    const file = path.join(
+      REPO_ROOT,
+      "src/app/nex-native/settings/data-usage/page.tsx",
+    );
+    expect(fs.existsSync(file)).toBe(true);
+    const src = fs.readFileSync(file, "utf8");
+    // Must redirect to the canonical Storage page.
+    expect(src).toContain('redirect("/nex-native/settings/storage")');
   });
 });

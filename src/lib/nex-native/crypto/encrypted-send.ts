@@ -89,10 +89,22 @@ export type EncryptedSendOutcome = EncryptedSendResult | EncryptedSendFailure;
 export async function sendEncryptedPeerMessage(
   opts: EncryptedSendOptions,
 ): Promise<EncryptedSendOutcome> {
-  // 1. Peer + self device lists (Bridge 84 · 60s TTL client cache
-  // so repeat sends in one conversation don't re-hit the DB).
+  // 1. Peer + self device lists.
+  //    · Self reads tolerate the 60 s TTL cache — our own device
+  //      set rarely changes within a single tab lifetime.
+  //    · Peer reads at send-time BYPASS the cache (R4 chat-race fix
+  //      2026-11-17). Rationale: a 60 s stale miss here would drop
+  //      the recipient's just-registered device from the fan-out
+  //      plan, which the sealed no-queue invariant means the message
+  //      would not reach that device until the recipient re-opens
+  //      and triggers re-fan-out — a UX regression and the R3
+  //      diagnosed race. One fresh HTTP read bounds the window to
+  //      round-trip latency, which is the minimum any correct
+  //      recipient-list build can achieve without changing crypto.
+  //    · The fresh result is still written back to cache so repeat
+  //      sends in the same conversation benefit.
   const [peerRes, selfRes] = await Promise.all([
-    cachedListDeviceKeys(opts.peerAccountId),
+    cachedListDeviceKeys(opts.peerAccountId, { forceRefresh: true }),
     cachedListDeviceKeys(opts.selfAccountId),
   ]);
   if (!peerRes.ok) {

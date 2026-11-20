@@ -1,0 +1,305 @@
+STEP A · buyer sign-in + clear cart
+STEP B · add Product X
+STEP C · add Product Y
+STEP D · open header cart modal · assert 2 lines + centered
+STEP E · increase X qty to 2
+STEP F · decrease X qty back to 1
+STEP G · remove Product Y · X remains
+STEP H · remove Product X · empty state
+STEP I · reload empty cart · persists empty
+STEP J · re-add X and Y
+STEP K · reload with 2 items · persists both
+STEP L · /nex-native/cart · submit checkout w/ buyer note
+STEP M · DB verify nex_order row
+STEP O1 · buyer sends chat matrix-6 probe
+STEP N · seller sign-in · open order detail
+STEP O2 · seller verifies chat probe arrival
+
+DONE
+{
+  "when": "2026-11-17T17:28:25.322Z",
+  "unique_note": "CP-R5-1794936505322",
+  "chat_probe_text": "hellomatrixpmllhctm",
+  "product_x": {
+    "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+    "name": "E2E PLQ Widget X mwit8ina"
+  },
+  "product_y": {
+    "id": "681024eb-0c2e-41f6-b123-aee41c354cd1",
+    "name": "E2E PLQ Widget Y mwit8ina"
+  },
+  "disposable_records": [
+    {
+      "table": "nex_order",
+      "id": "1311daa2-046c-4b7d-a776-47dd233694b1",
+      "keyed_by": "CP-R5-1794936505322"
+    }
+  ],
+  "step_A": {
+    "signed_in": true,
+    "initial_cart": 0
+  },
+  "step_B": {
+    "cart_after_x": 1
+  },
+  "step_C": {
+    "cart_after_y": 2
+  },
+  "step_D": {
+    "dialog_center_x": 195,
+    "viewport_mid": 195,
+    "off_center_px": 0,
+    "lines": [
+      {
+        "key": "b34cb64a-d80f-461b-a440-e35e8a4b96e0",
+        "text": "E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional)"
+      },
+      {
+        "key": "18879ebc-8323-4380-a6a6-091673d1eae7",
+        "text": "E2E PLQ Widget Y mwit8ina €42.50€42.50 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "badge_count": 2,
+    "subtotal_text": "€60.49"
+  },
+  "step_E": {
+    "lines": [
+      {
+        "key": "b34cb64a-d80f-461b-a440-e35e8a4b96e0",
+        "text": "E2E PLQ Widget X mwit8ina €35.98€17.99 × 2 − 2 + × Notes for this item (optional)"
+      },
+      {
+        "key": "18879ebc-8323-4380-a6a6-091673d1eae7",
+        "text": "E2E PLQ Widget Y mwit8ina €42.50€42.50 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "subtotal_text": "€78.48",
+    "badge_count": 3
+  },
+  "step_F": {
+    "lines": [
+      {
+        "key": "b34cb64a-d80f-461b-a440-e35e8a4b96e0",
+        "text": "E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional)"
+      },
+      {
+        "key": "18879ebc-8323-4380-a6a6-091673d1eae7",
+        "text": "E2E PLQ Widget Y mwit8ina €42.50€42.50 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "subtotal_text": "€60.49",
+    "badge_count": 2
+  },
+  "step_G": {
+    "lines": [
+      {
+        "key": "b34cb64a-d80f-461b-a440-e35e8a4b96e0",
+        "text": "E2E PLQ Widget X mwit8ina €17.99€17.99 × 1 − 1 + × Notes for this item (optional)"
+      }
+    ],
+    "subtotal_text": "€17.99",
+    "badge_count": 1,
+    "cart_storage": [
+      {
+        "key": "b34cb64a-d80f-461b-a440-e35e8a4b96e0",
+        "kind": "product",
+        "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget X mwit8ina",
+        "price_pence": 1799,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794936525732
+      }
+    ]
+  },
+  "step_H": {
+    "empty_node_visible": true,
+    "lines_after": [],
+    "badge_count": 0,
+    "cart_storage": []
+  },
+  "step_I": {
+    "cart_storage_after_reload": [],
+    "badge_count": 0
+  },
+  "step_J": {
+    "cart_storage_after_readd": [
+      {
+        "key": "3d2d311f-0483-4c49-be54-1b2b95e88468",
+        "kind": "product",
+        "id": "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget X mwit8ina",
+        "price_pence": 1799,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794936543452
+      },
+      {
+        "key": "b3926029-36ce-4e3e-88ef-d75653facf0b",
+        "kind": "product",
+        "id": "681024eb-0c2e-41f6-b123-aee41c354cd1",
+        "shop_id": "099b2fca-dbaf-4a09-aa28-a2433a7b70fd",
+        "shop_slug": "e2e-ck5-seller-shop-mwhyjc0c",
+        "shop_owner_account_id": "b7a0cfb1-c71e-41c9-b84b-c20e515b63b3",
+        "shop_display_name": "E2E CK5 Seller Shop mwhyjc0c",
+        "shop_lat": null,
+        "shop_lng": null,
+        "name": "E2E PLQ Widget Y mwit8ina",
+        "price_pence": 4250,
+        "currency": "EUR",
+        "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP8/58BAAT/Av+GHHe6AAAAAElFTkSuQmCC",
+        "quantity": 1,
+        "variants": [],
+        "perks": [],
+        "perks_note": null,
+        "note": null,
+        "added_at": 1794936546839
+      }
+    ]
+  },
+  "step_K": {
+    "cart_items_after_reload": 2,
+    "cart_product_ids": [
+      "47bdf78e-84a9-4ca5-b33f-0676981df65b",
+      "681024eb-0c2e-41f6-b123-aee41c354cd1"
+    ],
+    "badge_count": 2
+  },
+  "step_L": {
+    "redirected_to": "http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1"
+  },
+  "step_M": {
+    "order_id": "1311daa2-046c-4b7d-a776-47dd233694b1",
+    "state": "created",
+    "is_truthful_unpaid": true,
+    "price_pence": "1799",
+    "currency": "EUR",
+    "customer_note": "CP-R5-1794936505322",
+    "customer_note_matches": true,
+    "order_rows_in_window": 1
+  },
+  "step_O1_debug": {
+    "composer_form_count": 1,
+    "composer_input_count": 1,
+    "send_btn_count": 1,
+    "url": "http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1",
+    "keypad_visible": true,
+    "send_active_attr": "true",
+    "keypresses": "hellomatrixpmllhctm"
+  },
+  "step_O1": {
+    "composer_strategy": "real-joker-keypad-clicks+enter-submit",
+    "keypad_visible": true,
+    "probe_text_sent": "hellomatrixpmllhctm",
+    "keypresses_count": 19,
+    "chat_sent": true,
+    "post_send_url": "http://localhost:3008/nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3?cart_sent=1",
+    "post_send_url_includes_e2e_required": false,
+    "e2e_required_banner_text": null
+  },
+  "step_N": {
+    "detail_rendered": true,
+    "match_tier": "deterministic_order_id",
+    "body_includes_unique_note": true,
+    "body_includes_product_x": true,
+    "body_includes_product_y": true
+  },
+  "step_O2": {
+    "chat_body_includes_probe_search": false,
+    "chat_body_includes_probe_full": false,
+    "chat_body_sample": "NEX E2E NEX · chatting with 9+ 🏪 REPLYING AS E2E CK5 SELLER SHOP MWHYJC0C SUNDAY E E2E 🛒 ORDER E2E CK5 Seller Shop mwhyjc0c 1× E2E D2 Widget Imaged 1794757021480 EUR 13 SUBTOTAL · 1 ITEM EUR 13 SEE SHOP → 🛒 New order · E2E CK5 Seller Shop mwhyjc0c · 1× E2E D2 Widget Imaged 1794757021480 Subtotal · EUR 13 · 1 item ⚠ PAYMENT REQUEST DETECTED Direct transfers before delivery are not protected by NEX. Ask for COD or Escrow (Rekber) instead · learn how. 🛒 ORDER E2E CK5 Seller Shop mwhyjc0c 1× E2",
+    "probe_search_token": "matrixpmllhctm",
+    "chat_body_includes_probe_search_after_reload": false,
+    "buyer_peer_messages_in_window": 1,
+    "buyer_msg_sample": [
+      {
+        "id": "d3307b9d-a7bd-4553-8921-adb56d5668e9",
+        "conversation_id": "f162688f-1fed-4b2b-8c5a-38fce7f4ee7f",
+        "encrypted": false,
+        "delivery_status": "pending",
+        "sent_at": "2026-11-17T17:29:20.680Z"
+      }
+    ]
+  },
+  "pending_row_investigation": {
+    "pending_row_id": "f44464b1-c91d-4e22-a293-5400a3929338",
+    "row_present": true,
+    "row_metadata": {
+      "id": "f44464b1-c91d-4e22-a293-5400a3929338",
+      "conversation_id": "f162688f-1fed-4b2b-8c5a-38fce7f4ee7f",
+      "sender_account_id": "d977070d-6210-4cd5-a731-f4892dc7047f",
+      "encrypted": false,
+      "delivery_status": "pending",
+      "sent_at": "2026-11-17T16:40:55.264Z",
+      "has_body": true,
+      "has_ciphertext": false,
+      "has_nonce": false,
+      "has_message_group": false,
+      "body_len": 181,
+      "ciphertext_len": null,
+      "attachment_url": null,
+      "attachment_type": null,
+      "reply_to_id": null
+    },
+    "schema_columns": [
+      "id",
+      "conversation_id",
+      "sender_account_id",
+      "body",
+      "sent_at",
+      "read_at",
+      "reply_to_id",
+      "deleted_for_everyone",
+      "deleted_at",
+      "attachment_url",
+      "attachment_type",
+      "attachment_meta",
+      "reactions",
+      "encrypted",
+      "ciphertext",
+      "nonce",
+      "sender_public_key",
+      "sender_device_id",
+      "recipient_device_id",
+      "message_group_id",
+      "delivered_at",
+      "send_intent_id",
+      "reactions_order",
+      "link_url",
+      "link_title",
+      "link_description",
+      "link_image_url",
+      "link_source_domain",
+      "delivery_status"
+    ]
+  },
+  "runtime_target": {
+    "supabase_hosts_observed": [
+      "kdstoyyeygcopkogqsyv.supabase.co"
+    ],
+    "positive_sandbox_match": true,
+    "any_prod_contact": false
+  }
+}

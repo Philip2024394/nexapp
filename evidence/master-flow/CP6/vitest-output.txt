@@ -1,0 +1,38 @@
+
+ RUN  v4.1.11 C:/Users/Victus/nexapp
+
+ ✓ src/app/nex-native/manage/orders/__tests__/fast-confirm.test.ts > sellerMarkOrderPaidAction · P5 fast-confirm gate > pending < 60s + no note · blocks with note_required_fast_confirm 34ms
+ ✓ src/app/nex-native/manage/orders/__tests__/fast-confirm.test.ts > sellerMarkOrderPaidAction · P5 fast-confirm gate > pending < 60s + note provided · proceeds + marks fast_confirm=true in audit 3ms
+ ✓ src/app/nex-native/manage/orders/__tests__/fast-confirm.test.ts > sellerMarkOrderPaidAction · P5 fast-confirm gate > pending > 60s + no note · proceeds · fast_confirm=false 2ms
+ ✓ src/app/nex-native/manage/orders/__tests__/fast-confirm.test.ts > sellerMarkOrderPaidAction · P5 fast-confirm gate > non-pending state (created) · no fast-confirm gate · proceeds without note 1ms
+ ✓ src/app/nex-native/manage/orders/__tests__/fast-confirm.test.ts > sellerMarkOrderPaidAction · P5 fast-confirm gate > non-owner is rejected before fast-confirm check runs 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 1 · QR-only seller > resolver returns qr destination for a QR-only seller 119ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 1 · QR-only seller > seller marks paid via sellerMarkOrderPaidAction · markOrderPaid + ledger recorded 3ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 1 · QR-only seller > idempotency · re-calling markOrderPaid on a paid order returns existing ledger entry 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 2 · Stripe webhook (member subscription path) > webhook · signed checkout.session.completed calls markOrderPaid · 200 129ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 2 · Stripe webhook (member subscription path) > webhook replay · markOrderPaid called TWICE · commerce-service idempotent · single ledger entry 2ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 2 · Stripe webhook (member subscription path) > webhook replay with 1-hour-old timestamp is REJECTED by 5-min tolerance 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 3 · Multi-method picker (deferred until PayPal wired) > CHECKOUT_URLS maps the picker + qr keys to the shared /pay page 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 3 · Multi-method picker (deferred until PayPal wired) > CHECKOUT_URLS has no `stripe` key after 2026-11-10 rule change 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 4 · No gateway (chat fallback) > resolver returns chat_only destination when 0 gateways 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 4 · No gateway (chat fallback) > chat_only path records awaiting_chat_arrangement · state stays 'created' 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 4 · No gateway (chat fallback) > seller later marks paid manually · markOrderPaid still the SOLE paid path 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 5 · Fast-confirm fraud gate > FAST_CONFIRM_THRESHOLD_MS is 60 seconds 3ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 5 · Fast-confirm fraud gate > note_required_fast_confirm is a valid action reason 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 5 · Fast-confirm fraud gate > sub-60s pending · empty-note path gates · markOrderPaid NOT called 2ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 5 · Fast-confirm fraud gate > sub-60s pending · WITH note · markOrderPaid is called 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 6 · Browser-redirect NEVER confirms payment > Stripe success_url carries ?paid=1 · but order state read fresh from DB stays pending 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 6 · Browser-redirect NEVER confirms payment > no gateway path · browser-side ?paid=1 does not invoke commerce-service 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 6 · Browser-redirect NEVER confirms payment > ONLY the signed webhook OR seller manual confirm flips state to paid 3ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 7 · PayPal + QRIS scaffolds refuse without creds > resolver treats paypal as false (no live creds · always false today) 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 7 · PayPal + QRIS scaffolds refuse without creds > paypal scaffold returns credentials_missing when env absent + seller has merchant id 16ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 7 · PayPal + QRIS scaffolds refuse without creds > paypal webhook route returns 503 credentials_missing when PAYPAL_WEBHOOK_ID absent 22ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 7 · PayPal + QRIS scaffolds refuse without creds > qris webhook returns 400 when provider header missing 17ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 7 · PayPal + QRIS scaffolds refuse without creds > qris midtrans returns 503 credentials_missing without MIDTRANS_SERVER_KEY 1ms
+ ✓ src/lib/nex-native/payments/__tests__/journey-e2e.test.ts > Journey 7 · PayPal + QRIS scaffolds refuse without creds > qris xendit returns 503 credentials_missing without XENDIT_WEBHOOK_TOKEN 1ms
+
+ Test Files  2 passed (2)
+      Tests  29 passed (29)
+   Start at  12:32:00
+   Duration  691ms (transform 258ms, setup 67ms, import 197ms, tests 377ms, environment 0ms)
+

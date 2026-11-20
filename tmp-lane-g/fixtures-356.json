@@ -1,0 +1,14 @@
+[
+  {
+    "email": "g2-fixture-A-1795088989985@nex-sandbox.invalid",
+    "supabase_user_id": "58013b91-caa6-4047-ac47-f53fa447256f",
+    "password": "LaneG356-1795088989985-46",
+    "nex_account_id": "bfcd2a0b-7c94-43d2-83c8-cc548bcf9f66"
+  },
+  {
+    "email": "g2-fixture-B-1795088989985@nex-sandbox.invalid",
+    "supabase_user_id": "c0d68671-3307-43f6-9848-114353465867",
+    "password": "LaneG356-1795088989985-46",
+    "nex_account_id": "c6ad3b74-75a6-4d01-9f78-77ce5122b32d"
+  }
+]

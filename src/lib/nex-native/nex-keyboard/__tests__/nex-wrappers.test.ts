@@ -79,8 +79,14 @@ describe("NexInput · props surface", () => {
     expect(INPUT_SRC).toMatch(/mode="single-line"/);
   });
 
-  it("defaults accentColor to NEX cyan", () => {
-    expect(INPUT_SRC).toMatch(/accentColor \?\?\s*"#00AFFF"/);
+  it("passes accentColor through without an inline hex fallback", () => {
+    /* Owner directive 2026-11-03 · the former `?? "#00AFFF"` fallback
+     * was removed so the Ireland world stylesheet CSS variable
+     * (`--nex-world-keypad-accent`) cascades through the keypad's
+     * paletteVars=={} branch · a hard-coded blue was masking the
+     * Ireland orange. Assert the forwarder, not the fallback. */
+    expect(INPUT_SRC).toMatch(/accentColor=\{accentColor\}/);
+    expect(INPUT_SRC).not.toMatch(/accentColor\s*\?\?\s*"#00AFFF"/);
   });
 
   it("ships a data-nex-keypad sentinel for the Phase 8 lint rule", () => {

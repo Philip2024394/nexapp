@@ -24,18 +24,23 @@
 // peer page mounts this at the top of the chat scrollable area.
 //
 // Known error contracts (sanitised at the setter · see _actions.ts):
-//   · message_error  = contacts_only | send_failed
+//   · message_error  = contacts_only | send_failed | e2e_required
 //   · sticker_error  = contacts_only | send_failed
 //   · upload_error   = too_large | unsupported_type | failed
 //   · delete_error   = not_found | not_allowed | too_late | failed
 //
 // Unknown enum values fall through to the generic failed-copy ·
 // the banner never renders raw server error strings.
+//
+// Owner-authorised 2026-11-17 R3 · e2e_required added when
+// sendPeerMessageAction refuses a plaintext body for a non-NEX1 peer.
+// The device-only encrypted send path (Bridge 76) must handle the
+// message; if it couldn't attach or was bypassed the user sees this.
 
 import * as React from "react";
 import Link from "next/link";
 
-const KNOWN_MESSAGE_ERRORS = ["contacts_only", "send_failed"] as const;
+const KNOWN_MESSAGE_ERRORS = ["contacts_only", "send_failed", "e2e_required"] as const;
 const KNOWN_STICKER_ERRORS = ["contacts_only", "send_failed"] as const;
 const KNOWN_UPLOAD_ERRORS = ["too_large", "unsupported_type", "failed"] as const;
 const KNOWN_DELETE_ERRORS = ["not_found", "not_allowed", "too_late", "failed"] as const;
@@ -82,6 +87,17 @@ function copyForMessage(code: ReturnType<typeof narrow>, peer: string): BannerCo
       severity: "blocking",
       title: "Message not sent",
       body: `${peer} only accepts messages from their contacts. Send a connection request first, then try again.`,
+    };
+  }
+  if (code === "e2e_required") {
+    // Owner-authorised 2026-11-17 R3 · the server refused a plaintext
+    // body because the encrypted send path didn't fire or ${peer}'s
+    // device key wasn't ready. Calm honest copy · no retry affordance
+    // because the state needed to re-encrypt lives in the composer.
+    return {
+      severity: "non_blocking",
+      title: "Message didn't send",
+      body: `Encryption is required for private chat. ${peer}'s device may not be ready yet, or your message couldn't be encrypted. Open the chat again and try sending.`,
     };
   }
   // send_failed · failed · unknown fallback

@@ -72,6 +72,16 @@ import { FreeChatComposerClient } from "./_composer-client";
 // bounces to /contacts (home chat has no peer to send to).
 import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
 import { freeChatShopSharePendingAction } from "./_shop-share-pending-action";
+// Owner directive 2026-11-18 prompt-4 · identity-aware shop drawer wiring.
+// The drawer was previously mounted with `viewerHasShop={true}` hardcoded,
+// which combined with the Phase-1 MOCK_SHOP_PRODUCTS fallback leaked demo
+// cards (Treaty Bar Hoodie / Dublin print / Roasted Blend) to every
+// visitor including signed-out Nex Guests. We now resolve the real viewer
+// state (guest · no-shop · shop) and real `nex_product` rows server-side,
+// scoped strictly to the viewer's own `nex_business.owner_account_id`.
+import * as businessServiceForShopDrawer from "@/lib/nex-native/business-service";
+import * as productServiceForShopDrawer from "@/lib/nex-native/product-service";
+import type { ShopProduct } from "@/lib/nex-native/shop-drawer/mock-shop-products";
 import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
 // Owner directive 2026-11-05 later-same-day iter 6 · parity with peer
 // chat · mount the inline NotificationsDrawer bell + feed it the same
@@ -81,6 +91,9 @@ import {
   MOCK_NOTIFICATIONS,
   type NotificationItem,
 } from "@/lib/nex-native/notifications/mock-notifications-data";
+// Owner-authorised 2026-11-16 · bounded read-path wiring of the LEFT
+// notifications drawer's Orders section to real seller orders.
+import { listSellerOrderNotifications } from "@/lib/nex-native/notifications/seller-order-notifications";
 import * as friendService from "@/lib/nex-native/friend-service";
 import * as peerConversationServiceForNotifs from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageServiceForNotifs from "@/lib/nex-native/peer-message-service";
@@ -384,13 +397,119 @@ export default async function FreeChatPage({
     if (!badge) return n;
     return { ...n, senderHasShop: true };
   };
+  // Owner-authorised 2026-11-16 · real seller orders replace the mock
+  // "orders" rows. Returns [] for buyers / signed-out / query failure
+  // so the drawer still renders correctly in every case. `senderHasShop`
+  // enrichment is skipped: these rows have no sender (they are the
+  // seller's own inbound orders · title+subtitle are the subject).
+  const sellerOrderNotifsFC = await listSellerOrderNotifications(
+    notifySessionAccountId,
+  );
   const freeChatNotifications: NotificationItem[] = [
     ...incomingInviteNotifsFC.map(enrichSenderShopFC),
     ...unreadChatNotifsFC.map(enrichSenderShopFC),
+    ...sellerOrderNotifsFC,
     ...MOCK_NOTIFICATIONS.filter(
-      (n) => n.section !== "follows" && n.section !== "chats",
+      (n) =>
+        n.section !== "follows" &&
+        n.section !== "chats" &&
+        n.section !== "orders",
     ),
   ];
+
+  // Owner directive 2026-11-18 prompt-4 · resolve the viewer's own shop
+  // state server-side so the LEFT seller-products drawer renders the
+  // correct identity-scoped branch:
+  //
+  //   · signedInSession === null                      → viewerKind="guest"
+  //       (viewerHasShop=false · no product fetch · drawer paints the
+  //       GuestCreateAccountContainer with /sign-in?mode=signup CTA)
+  //
+  //   · signedInSession && no owned nex_business      → viewerKind="no-shop"
+  //       (viewerHasShop=false · no product fetch · drawer paints the
+  //       existing ActivateShopContainer with /manage/shop CTA)
+  //
+  //   · signedInSession && owns at least one business → viewerKind="shop"
+  //       (viewerHasShop=true · product fetch scoped by
+  //       owner_account_id → business_id · drawer paints real
+  //       nex_product rows, or ShopHasNoProductsContainer when empty)
+  //
+  // Guarantees:
+  //   · No MOCK_SHOP_PRODUCTS can reach the viewer (drawer suppresses
+  //     the fallback when viewerKind is defined).
+  //   · Fetch is server-side per-request · a sign-out → sign-in-as-other
+  //     flow re-renders with the new account's business and products,
+  //     so there is no late-response window in which another identity's
+  //     cards could repaint.
+  //   · All reads are strictly scoped by the signed-in account id
+  //     (listBusinessesByOwner · listProductsByBusiness use UUID eq).
+  const shopDrawerSession = signedInSession ?? null;
+  let shopDrawerViewerKind: "guest" | "no-shop" | "shop" = "guest";
+  let shopDrawerViewerHasShop = false;
+  let shopDrawerProducts: ReadonlyArray<ShopProduct> = [];
+  if (shopDrawerSession?.account?.id) {
+    try {
+      const ownBusinesses =
+        await businessServiceForShopDrawer.listBusinessesByOwner(
+          shopDrawerSession.account.id,
+        );
+      if (ownBusinesses.length === 0) {
+        shopDrawerViewerKind = "no-shop";
+        shopDrawerViewerHasShop = false;
+      } else {
+        shopDrawerViewerKind = "shop";
+        shopDrawerViewerHasShop = true;
+        // First-owned-business is the current catalogue scope; the
+        // multi-business owner UX is a separate authorised surface.
+        const primaryBusiness = ownBusinesses[0]!;
+        try {
+          const rows =
+            await productServiceForShopDrawer.listProductsByBusiness(
+              primaryBusiness.id,
+            );
+          shopDrawerProducts = rows.map((p): ShopProduct => {
+            const pence =
+              typeof (p as { price_pence?: unknown }).price_pence === "number"
+                ? ((p as { price_pence: number }).price_pence)
+                : null;
+            const ccy =
+              typeof (p as { currency?: unknown }).currency === "string"
+                ? ((p as { currency: string }).currency)
+                : null;
+            let priceLabel = "";
+            if (pence !== null && ccy) {
+              try {
+                priceLabel = new Intl.NumberFormat("en-IE", {
+                  style: "currency",
+                  currency: ccy,
+                }).format(pence / 100);
+              } catch {
+                priceLabel = `${(pence / 100).toFixed(2)} ${ccy}`;
+              }
+            }
+            return {
+              id: p.id,
+              name: (p as { name?: string }).name ?? "",
+              priceLabel,
+              imageUrl:
+                typeof (p as { image_url?: unknown }).image_url === "string"
+                  ? ((p as { image_url: string }).image_url)
+                  : null,
+            };
+          });
+        } catch {
+          // Fail-closed · empty list renders the "no products yet"
+          // container rather than any mock fallback.
+          shopDrawerProducts = [];
+        }
+      }
+    } catch {
+      // Account present but business lookup failed · treat as no-shop
+      // rather than risk leaking cards from a cached prior render.
+      shopDrawerViewerKind = "no-shop";
+      shopDrawerViewerHasShop = false;
+    }
+  }
 
   // Owner directive 2026-10-21 (iteration 53) · read the first-visit
   // theme row cookies server-side so returning visitors see no flash
@@ -570,11 +689,23 @@ export default async function FreeChatPage({
             Owner directive 2026-11-05 later-same-day iter 14 · Shop
             FAB + left-slide drawer added to /free-chat. shareAction
             stashes the chosen product id in a short-lived cookie +
-            bounces to /contacts (no peer on home chat). viewerHasShop
-            is always true so founders without a nex_business row
-            still see the empty state (prototype UX fix). */}
+            bounces to /contacts (no peer on home chat).
+
+            Owner directive 2026-11-18 prompt-4 · viewerHasShop was
+            previously HARDCODED true "so founders without a nex_business
+            row still see the empty state (prototype UX fix)". That
+            prototype choice combined with the Phase-1 MOCK_SHOP_PRODUCTS
+            fallback inside shop-drawer-client.tsx and leaked demo
+            cards (Treaty Bar Hoodie / Dublin print / Roasted Blend) to
+            every visitor, including signed-out guests on
+            localhost:3008. The mount now passes the identity-scoped
+            viewerKind + real viewerHasShop + real products resolved
+            above · the drawer suppresses the mock fallback whenever
+            viewerKind is defined. */}
         <ShopDrawer
-          viewerHasShop={true}
+          viewerHasShop={shopDrawerViewerHasShop}
+          viewerKind={shopDrawerViewerKind}
+          products={shopDrawerProducts}
           peerDisplayName="your pick"
           shareAction={freeChatShopSharePendingAction}
         />

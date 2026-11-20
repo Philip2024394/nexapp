@@ -30,7 +30,7 @@ import { useRouter } from "next/navigation";
 import type { NexProductSpec } from "@/lib/nex-native/types";
 import { AddToCartButton, type AddToCartItemInit } from "../../_add-to-cart-button";
 import { openShopChatAction } from "../../[businessSlug]/_open-shop-chat-action";
-import { HeaderCartIcon } from "../../_header-cart-icon";
+import { CartHeaderButton } from "@/components/nex-native/cart-header-button/cart-header-button-client";
 // Owner-authorised 2026-11-16 · MOCK-ONLY review-demo integration.
 // Reviews state is read via a hook · when the explicit demo flag is
 // off the hook returns a zero-count summary and the rating row stays
@@ -333,7 +333,7 @@ export function ProductPageClient({
             flexShrink: 0,
           }}
         >
-          <HeaderCartIcon variant="inline" />
+          <CartHeaderButton variant="inline" />
           <button
             type="button"
             data-nex-product-header-back

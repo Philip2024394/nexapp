@@ -1,0 +1,17 @@
+{
+  "when": "2026-11-17T09:06:38.046Z",
+  "results": {
+    "cartLink_count": 1,
+    "cartBtn_count": 0,
+    "cartIcon_count": 0,
+    "click": {
+      "tagName": "a",
+      "href": "/nex-native/cart",
+      "beforeUrl": "http://localhost:3008/nex-native/product/preview",
+      "afterUrl": "http://localhost:3008/nex-native/sign-in?next=/nex-native/cart",
+      "navigated": true,
+      "popupOverlay": 1,
+      "cartPopup": 0
+    }
+  }
+}

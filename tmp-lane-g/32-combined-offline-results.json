@@ -1,0 +1,272 @@
+{
+  "generatedAt": "2026-11-19T12:40:54.655Z",
+  "banner": "════════════════════════════════════════════════════════════════════\nOFFLINE JS MODEL ONLY · DOES NOT PROVE POSTGRESQL LOCK SEMANTICS ·\nSOURCE ASSERTIONS ARE NOT SQL-RUNTIME PROOF · GB-WHITESPACE-GUARD\nAND GB-4CAP BOTH REMAIN OPEN AT THE DB BOUNDARY.\n════════════════════════════════════════════════════════════════════",
+  "combinedSqlPath": "C:\\Users\\Victus\\nexapp\\nex-supabase\\candidate-migrations\\CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW.sql",
+  "combinedSqlPresent": true,
+  "cases": [
+    {
+      "id": "p1_session_with_dot_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "dot (.) is not in POSIX class [0-9a-f-]"
+    },
+    {
+      "id": "p1_session_with_underscore_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "underscore (_) not in class"
+    },
+    {
+      "id": "p1_session_all_hyphens_contract_accept",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "contract-faithful acceptance of 36-hyphen session segment · noted as observation not defect · Postgres POSIX behaviour UNVERIFIED"
+    },
+    {
+      "id": "p1_session_non_ascii_e_acute_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "é is outside [0-9a-f-] even case-insensitive"
+    },
+    {
+      "id": "p1_session_non_ascii_u_umlaut_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "ü outside class"
+    },
+    {
+      "id": "p1_duplicate_accept_param_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "trailing &accept=1 violates $ anchor"
+    },
+    {
+      "id": "p1_extra_param_after_accept_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "trailing &foo=bar violates $ anchor"
+    },
+    {
+      "id": "p1_absolute_url_with_host_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "no scheme/authority allowed by grammar"
+    },
+    {
+      "id": "p1_protocol_relative_url_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "leading // or /… prefix violates ^ anchor"
+    },
+    {
+      "id": "p1_trailing_fragment_rejected",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": false,
+      "actual": false,
+      "status": "PASS",
+      "detail": "trailing #foo violates $ anchor"
+    },
+    {
+      "id": "p1_uppercase_hex_accepted_case_insensitive",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "case-insensitive flag covers A-F"
+    },
+    {
+      "id": "p1_mixed_case_hex_accepted",
+      "part": "P1",
+      "kind": "js_model",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "mixed case within hex range"
+    },
+    {
+      "id": "p2_contains_contract_regex_literal",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "regex literal byte-match with Agent A candidate"
+    },
+    {
+      "id": "p2_uses_not_match_case_insensitive",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "guard uses POSIX ERE case-insensitive not-match (!~*)"
+    },
+    {
+      "id": "p2_no_btrim_body_guard",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "superseded btrim(p_attachment_url)) = 0 form must NOT appear in executable SQL · comments allowed to reference it"
+    },
+    {
+      "id": "p2_contains_for_update_perform",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "PERFORM 1 FROM nex_group_call_session WHERE id = v_session_id FOR UPDATE;"
+    },
+    {
+      "id": "p2_for_update_between_session_block_and_participant_insert",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "lock sits strictly between session ownership block and participant INSERT"
+    },
+    {
+      "id": "p2_attachment_url_guard_before_session_block",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "attachment_url guard is the first 22023-raising check after identity"
+    },
+    {
+      "id": "p2_dedup_catch_right_below_participant_insert",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "EXCEPTION WHEN unique_violation follows participant INSERT in same BEGIN block"
+    },
+    {
+      "id": "p2_security_definer_preserved",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "SECURITY DEFINER retained"
+    },
+    {
+      "id": "p2_search_path_preserved",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "SET search_path = public, pg_temp retained"
+    },
+    {
+      "id": "p2_grants_preserved",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "REVOKE FROM PUBLIC/anon/service_role + GRANT TO authenticated"
+    },
+    {
+      "id": "p2_no_migration_history_row",
+      "part": "P2",
+      "kind": "source_assertion",
+      "expected": true,
+      "actual": true,
+      "status": "PASS",
+      "detail": "preview must not claim a sequential version number"
+    },
+    {
+      "id": "p3_caseE_5concurrent_plus_retry",
+      "part": "P3",
+      "kind": "js_model",
+      "expected": "count=4, 1 cap raise, dedup>=1",
+      "actual": {
+        "count": 4,
+        "capRaises": 1,
+        "dedupReturns": 1
+      },
+      "status": "PASS",
+      "detail": "models: cap holds at 4, one over-cap raise, retry on existing participant dedups"
+    },
+    {
+      "id": "p3_caseF_4concurrent_with_duplicate_invitee",
+      "part": "P3",
+      "kind": "js_model",
+      "expected": "count=3, dedup=1, no cap raise",
+      "actual": {
+        "count": 3,
+        "dedupReturns": 1,
+        "capRaises": 0
+      },
+      "status": "PASS",
+      "detail": "dedup via UNIQUE(session_id, account_id) prevents double-write even when racing"
+    },
+    {
+      "id": "p3_caseG_two_sessions_independent",
+      "part": "P3",
+      "kind": "js_model",
+      "expected": "SA=3, SB=3, no rejections",
+      "actual": {
+        "SA": 3,
+        "SB": 3,
+        "allOk": true
+      },
+      "status": "PASS",
+      "detail": "scope `WHERE id = v_session_id` does not serialise unrelated sessions"
+    },
+    {
+      "id": "p3_caseH_reinvite_after_leave_still_raises",
+      "part": "P3",
+      "kind": "js_model",
+      "expected": "raise on 5th participant regardless of any left_at state",
+      "actual": {
+        "raised": true,
+        "raisedCode": "P0001"
+      },
+      "status": "PASS",
+      "detail": "contract observation: mig-133 cap invariant = '4 rows ever' not '4 active rows' · soft or re-join design must consider this"
+    }
+  ],
+  "totals": {
+    "total": 27,
+    "pass": 27,
+    "fail": 0,
+    "pending": 0
+  }
+}

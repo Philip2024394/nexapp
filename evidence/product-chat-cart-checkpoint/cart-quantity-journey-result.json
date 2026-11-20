@@ -1,0 +1,49 @@
+{
+  "when": "2026-11-17T11:43:11.344Z",
+  "picked": {
+    "p1": {
+      "id": "ebc88a97-0323-4820-9cfd-27dd8c2bd4ff",
+      "name": "Irish Pride Band T-Shirt (Emerald)"
+    },
+    "p2": {
+      "id": "e8043853-573e-4b7a-8930-425cc60fcd43",
+      "name": "Signed Hotel California (Irish Style) Vinyl"
+    }
+  },
+  "steps": {
+    "step_1": {
+      "cart_after_add_1": null,
+      "badge_after_add_1": "1"
+    },
+    "step_2": {
+      "cart_after_increase": null,
+      "badge_after_increase": "3",
+      "subtotal_text": "€75.00"
+    },
+    "step_3": {
+      "cart_after_decrease": null,
+      "badge_after_decrease": "2"
+    },
+    "step_4": {
+      "cart_on_cart_page": null,
+      "body_includes_subtotal_word": false,
+      "body_includes_checkout": false
+    },
+    "step_5": {
+      "cart_after_add_p2": null
+    },
+    "step_6": {
+      "remove_buttons_seen": 0,
+      "cart_after_remove_one": null
+    },
+    "step_7": {
+      "cart_after_remove_all": null,
+      "body_includes_empty_copy": false,
+      "badge_after_empty": null
+    },
+    "step_8": {
+      "cart_after_reload": null,
+      "body_includes_empty_copy_after_reload": false
+    }
+  }
+}

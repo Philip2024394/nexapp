@@ -53,6 +53,44 @@ export interface ProcessEventOptions {
    *  the misconfiguration). Tests inject a registry; production code
    *  passes `getPriceRegistry()`. */
   readonly priceRegistry?: PriceRegistry;
+  /** A06 · trial reminder wiring · injected so the webhook handler is
+   *  pure. Omit entirely to keep the invoice.upcoming handler in SHIM
+   *  mode (applied + provider_not_configured, no send, no lookup). */
+  readonly trialReminder?: TrialReminderHandlerOptions;
+}
+
+/** A06 · caller-provided wiring for the invoice.upcoming handler.
+ *  Each piece is OPTIONAL · the handler composes the pieces present and
+ *  fails closed on any missing precondition. A production webhook route
+ *  passes a complete object; tests pass a subset to exercise each gate.
+ *
+ *  Durable-dedupe invariant: the handler refuses to dispatch when an
+ *  adapter is present but the caller has not declared `dedupeContract
+ *  === "durable"` with BOTH callbacks wired. A provider being present
+ *  alone cannot enable sending.
+ */
+export interface TrialReminderHandlerOptions {
+  /** Supabase admin client for `nex_account` + `auth.users` READ.
+   *  Shape matches `TrialReminderLookupAdmin`. Omit → no lookup · the
+   *  handler reports `email_lookup_not_wired`. */
+  readonly admin?: import("./trial-reminder-lookup").TrialReminderLookupAdmin;
+  /** Provider adapter · inert mock in tests. Omit / null → the dispatcher
+   *  returns provider_not_configured. */
+  readonly adapter?: import("./trial-reminder").TrialReminderSendAdapter | null;
+  /** Dedupe contract declaration. Only `"durable"` with both callbacks
+   *  wired allows dispatch when an adapter is present. */
+  readonly dedupeContract?:
+    | { kind: "durable"; alreadySentFor: NonNullable<import("./trial-reminder").DispatchOptions["alreadySentFor"]>; onSent: NonNullable<import("./trial-reminder").DispatchOptions["onSent"]> }
+    | { kind: "none" };
+  /** Timing window gate · default 2-6 days between `now` and
+   *  `next_payment_attempt`. Outside this window, the handler emits
+   *  `wrong_timing_window` with the computed delta. See
+   *  docs/doctrine/trial-reminder-design-2026-11-18.md §timing. */
+  readonly timingWindow?: { minDays: number; maxDays: number };
+  /** Cancel URL used in the email body when a send is actually
+   *  authorised. Defaults to `/nex-native/settings/tier` on the
+   *  configured app origin · the shim never embeds this value. */
+  readonly cancelUrlBase?: string;
 }
 
 /** Process one Stripe webhook event. Returns the outcome actually recorded.
@@ -129,6 +167,15 @@ export async function processStripeEvent(
         break;
       case "invoice.payment_failed":
         result = await handleInvoicePaymentFailed(event, ids, resolved, store, now);
+        break;
+      // A06 · Guardrail 2 · day-5 trial reminder on invoice.upcoming.
+      // Fail-closed shim · the handler returns a non-send outcome
+      // until the SendAdapter + dedupe store + account-email lookup
+      // are wired in a separate owner-authorised round. Until then
+      // this case ensures the event is logged + marked 'applied'
+      // without a user-visible failure.
+      case "invoice.upcoming":
+        result = await handleInvoiceUpcoming(event, ids, resolved, now, options.trialReminder);
         break;
       case "charge.refunded":
         result = await handleChargeRefunded(event, ids, resolved, store);
@@ -845,5 +892,173 @@ export async function adminClearRevocation(
     detail: ok
       ? `Admin cleared adverse event ${input.adverseEventId}`
       : `Adverse event ${input.adverseEventId} not found or already cleared`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// A06 · Guardrail 2 · invoice.upcoming handler (fail-closed shim)
+// ---------------------------------------------------------------------------
+//
+// Owner-authorised 2026-11-18 · local wiring only. The SendAdapter,
+// dedupe-store, and account-email lookup are NOT provisioned in this
+// change. This handler:
+//   · acknowledges the event so Stripe sees a 200 + 'applied' log row.
+//   · lazy-imports trial-reminder.ts so the pure helpers are reachable
+//     from the real-provider commit without a second processor edit.
+//   · returns 'provider_not_configured' audit detail · a reminder is
+//     never actually sent from this shim.
+//
+// When the owner authorises activation, this handler can be replaced
+// with the full version documented in docs/doctrine/trial-reminder-
+// design-2026-11-18.md §3 (account-email resolution + adapter wiring
+// + dedupe persistence). The pure helpers in trial-reminder.ts do
+// not change.
+// Default timing window: a 7-day trial charges on day 8 · Stripe's
+// upcoming-invoice "advance notice" setting must be set to 3 days for
+// the event to fire on day 5. We accept a generous 2-6 day window to
+// tolerate small clock skew + Stripe's own send-time drift. Outside
+// this window we refuse to dispatch · the audit record surfaces the
+// computed delta so the dashboard setting can be corrected.
+//
+// REQUIRED DASHBOARD CONFIG (for the 7-day trial · owner-sealed 2026-11-08):
+//   Stripe Billing → Settings → Subscriptions and emails
+//   → "Send emails N days before a renewal" · set N = 3
+// This handler ENFORCES the window regardless of that setting · a
+// misconfigured dashboard results in `wrong_timing_window` events,
+// not duplicate emails.
+const DEFAULT_TIMING_WINDOW: Readonly<{ minDays: number; maxDays: number }> = {
+  minDays: 2,
+  maxDays: 6,
+};
+
+async function handleInvoiceUpcoming(
+  event: StripeWebhookEvent,
+  ids: StripeIds,
+  resolved: { accountId: string; product: NexProduct } | null,
+  now: Date,
+  trialReminder?: TrialReminderHandlerOptions,
+): Promise<ProcessEventResult> {
+  // Lazy-imports · keep the Stripe webhook cold path minimal when
+  // the event is absent from the endpoint (default · not yet
+  // registered in the Dashboard).
+  const [{ dispatchDayFiveReminder }, { resolveTrialReminderRecipient }] =
+    await Promise.all([
+      import("./trial-reminder"),
+      import("./trial-reminder-lookup"),
+    ]);
+
+  const invoice = (event.data.object ?? {}) as Partial<{
+    amount_due: number;
+    currency: string;
+    next_payment_attempt: number; // epoch seconds per Stripe
+    subscription: string;
+  }>;
+
+  const subscriptionId = ids.subscriptionId ?? invoice.subscription ?? "";
+
+  // --- 1 · account resolution ------------------------------------------
+  if (!resolved?.accountId) {
+    return {
+      outcome: "applied",
+      outcomeDetail:
+        `invoice.upcoming · no NEX account mapped to subscription ${subscriptionId || "<none>"}`,
+    };
+  }
+
+  // --- 2 · timing-window gate ------------------------------------------
+  // Even without any provider wiring we validate the dashboard config.
+  const nextChargeMs =
+    typeof invoice.next_payment_attempt === "number"
+      ? invoice.next_payment_attempt * 1000
+      : NaN;
+  const nextChargeAtIso = Number.isFinite(nextChargeMs)
+    ? new Date(nextChargeMs).toISOString()
+    : new Date().toISOString();
+  const window = trialReminder?.timingWindow ?? DEFAULT_TIMING_WINDOW;
+  const nowMs = now.getTime();
+  const deltaDays = Number.isFinite(nextChargeMs)
+    ? (nextChargeMs - nowMs) / 86_400_000
+    : NaN;
+  if (
+    !Number.isFinite(deltaDays) ||
+    deltaDays < window.minDays ||
+    deltaDays > window.maxDays
+  ) {
+    return {
+      outcome: "applied",
+      outcomeDetail:
+        `invoice.upcoming · wrong_timing_window · delta_days=${
+          Number.isFinite(deltaDays) ? deltaDays.toFixed(2) : "NaN"
+        } · window=${window.minDays}-${window.maxDays} · account=${resolved.accountId}`,
+    };
+  }
+
+  // --- 3 · email lookup (only if admin is wired) -----------------------
+  let accountEmail = "";
+  let displayName: string | null = null;
+  if (trialReminder?.admin) {
+    const lookup = await resolveTrialReminderRecipient(
+      trialReminder.admin,
+      resolved.accountId,
+    );
+    if (!lookup.ok) {
+      return {
+        outcome: "applied",
+        outcomeDetail:
+          `invoice.upcoming · lookup_failed:${lookup.reason}${
+            lookup.detail ? `:${lookup.detail}` : ""
+          } · account=${resolved.accountId}`,
+      };
+    }
+    accountEmail = lookup.email;
+    displayName = lookup.displayName;
+  } else {
+    return {
+      outcome: "applied",
+      outcomeDetail:
+        `invoice.upcoming · email_lookup_not_wired · account=${resolved.accountId}`,
+    };
+  }
+
+  // --- 4 · durable-dedupe gate -----------------------------------------
+  // Owner directive · a provider being present alone cannot enable
+  // sending. The dedupe contract must be declared `durable` with BOTH
+  // callbacks. Anything else → refuse without calling the dispatcher.
+  const adapter = trialReminder.adapter ?? null;
+  const contract = trialReminder.dedupeContract ?? { kind: "none" };
+  if (adapter && contract.kind !== "durable") {
+    return {
+      outcome: "applied",
+      outcomeDetail:
+        `invoice.upcoming · dedupe_not_configured · account=${resolved.accountId}`,
+    };
+  }
+
+  // --- 5 · dispatcher call --------------------------------------------
+  const res = await dispatchDayFiveReminder(
+    {
+      accountId: resolved.accountId,
+      subscriptionId,
+      amountDue: invoice.amount_due ?? 0,
+      currency: (invoice.currency ?? "eur").toLowerCase(),
+      nextChargeAt: nextChargeAtIso,
+      cancelUrl: `${trialReminder.cancelUrlBase ?? "https://nex.app"}/nex-native/settings/tier`,
+      accountEmail,
+      displayName,
+    },
+    contract.kind === "durable"
+      ? {
+          adapter,
+          alreadySentFor: contract.alreadySentFor,
+          onSent: contract.onSent,
+        }
+      : { adapter },
+  );
+
+  return {
+    outcome: "applied",
+    outcomeDetail: `invoice.upcoming · reminder dispatcher: ${
+      res.sent ? "sent" : `not_sent:${res.reason}`
+    } · account=${resolved.accountId}`,
   };
 }

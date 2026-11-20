@@ -1,0 +1,25 @@
+    "body_includes_product_y": true
+  },
+  "step_O2": {
+    "chat_body_includes_probe": false,
+    "chat_body_sample": "NEX E2E NEX · chatting with 9+ 🏪 REPLYING AS E2E CK5 SELLER SHOP MWHYJC0C SUNDAY E E2E 🛒 ORDER E2E CK5 Seller Shop mwhyjc0c 1× E2E D2 Widget Imaged 1794757021480 EUR 13 SUBTOTAL · 1 ITEM EUR 13 SEE SHOP → 🛒 New order · E2E CK5 Seller Shop mwhyjc0c · 1× E2E D2 Widget Imaged 1794757021480 Subtotal · EUR 13 · 1 item ⚠ PAYMENT REQUEST DETECTED Direct transfers before delivery are not protected by ",
+    "chat_body_includes_probe_after_reload": false,
+    "buyer_peer_messages_in_window": 1,
+    "buyer_msg_sample": [
+      {
+        "id": "f44464b1-c91d-4e22-a293-5400a3929338",
+        "conversation_id": "f162688f-1fed-4b2b-8c5a-38fce7f4ee7f",
+        "encrypted": false,
+        "delivery_status": "pending",
+        "sent_at": "2026-11-17T16:40:55.264Z"
+      }
+    ]
+  },
+  "runtime_target": {
+    "supabase_hosts_observed": [
+      "kdstoyyeygcopkogqsyv.supabase.co"
+    ],
+    "positive_sandbox_match": true,
+    "any_prod_contact": false
+  }
+}

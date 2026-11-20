@@ -1,0 +1,58 @@
+{
+  "startedAt": "2026-11-20T07:42:20.977Z",
+  "cases": {
+    "caseA_no_lock_race": {
+      "pass": true,
+      "expected": "count > 4 (race produces cap violation)",
+      "finalCount": 5,
+      "participants": [
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5"
+      ],
+      "outcomes": [
+        "fulfilled",
+        "fulfilled"
+      ]
+    },
+    "caseB_with_lock_blocks_second": {
+      "pass": true,
+      "expected": "count === 4 and exactly one rejection",
+      "finalCount": 4,
+      "rejections": [
+        "cap_exceeded · session S1 already has 4"
+      ]
+    },
+    "caseC_different_sessions_independent": {
+      "pass": true,
+      "expected": "both sessions reach cap 4, no rejection",
+      "SA": 4,
+      "SB": 4,
+      "outcomes": [
+        "fulfilled",
+        "fulfilled"
+      ]
+    },
+    "caseD_dedup_retry_no_increment": {
+      "pass": true,
+      "expected": "count stays 3, second call returns dedup=true",
+      "finalCount": 3,
+      "first": {
+        "ok": true,
+        "dedup": false
+      },
+      "second": {
+        "ok": true,
+        "dedup": true
+      }
+    }
+  },
+  "finishedAt": "2026-11-20T07:42:20.983Z",
+  "summary": {
+    "passCount": 4,
+    "total": 4,
+    "allPass": true
+  }
+}

@@ -8,6 +8,8 @@ import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
 import type { NexUuid } from "./types";
 import {
+  isCustomButtonEnabled,
+  isFaqItemEnabled,
   NEX_INFO_BODY_MAX,
   NEX_INFO_CUSTOM_ICONS,
   NEX_INFO_FAQ_ANSWER_MAX,
@@ -137,6 +139,84 @@ export function normaliseInfoPages(raw: NexInfoPagesJson): NexInfoPagesJson {
     services_scope: clampText(raw.services_scope, NEX_INFO_BODY_MAX),
     custom_buttons: customButtons,
     faq_items: faqItems,
+  };
+}
+
+/**
+ * Server-side projection for PUBLIC consumption. Strips every unpublished
+ * item BEFORE the object crosses the server/client boundary · the client
+ * component must never receive drafts (even inside an un-rendered branch
+ * of its props, which the RSC wire format still serialises).
+ *
+ * Projection rules (matches the three customer-facing filters already
+ * enforced at render time · see faq-publish-filter.test.ts):
+ *   · faq_items    · keep only `enabled !== false` rows where question
+ *                    AND answer trim to non-empty; drop the `enabled`
+ *                    flag from the projected shape (public reader never
+ *                    needs it).
+ *   · custom_buttons · keep only `enabled !== false` rows with a non-
+ *                      empty label; drop the `enabled` flag.
+ *   · delivery_details / custom_orders / services_scope · pass through
+ *                      the owner's authored text; visibility is already
+ *                      gated per-page via the `enabled` record and the
+ *                      consuming component skips the row when the text
+ *                      is nullish/empty.
+ *   · enabled · pass through (purely visibility flags, no draft payload).
+ *
+ * Null in → null out. Everything the function returns is safe to ship to
+ * anonymous / authenticated buyers.
+ */
+export function projectPublicInfoPages(
+  info: NexInfoPagesJson | null | undefined,
+): NexInfoPagesJson | null {
+  if (!info) return null;
+
+  const publicFaqItems: NexInfoFaqItem[] = Array.isArray(info.faq_items)
+    ? info.faq_items
+        .filter(
+          (row): row is NexInfoFaqItem =>
+            !!row &&
+            typeof row.question === "string" &&
+            typeof row.answer === "string" &&
+            isFaqItemEnabled(row) &&
+            row.question.trim().length > 0 &&
+            row.answer.trim().length > 0,
+        )
+        .map((row) => ({
+          id: row.id,
+          question: row.question,
+          answer: row.answer,
+        }))
+    : [];
+
+  const publicCustomButtons: NexInfoCustomButton[] = Array.isArray(
+    info.custom_buttons,
+  )
+    ? info.custom_buttons
+        .filter(
+          (btn): btn is NexInfoCustomButton =>
+            !!btn &&
+            typeof btn.label === "string" &&
+            isCustomButtonEnabled(btn) &&
+            btn.label.trim().length > 0,
+        )
+        .map((btn) => ({
+          id: btn.id,
+          icon: btn.icon,
+          label: btn.label,
+          body: btn.body,
+          image_url: btn.image_url ?? null,
+          external_url: btn.external_url ?? null,
+        }))
+    : [];
+
+  return {
+    enabled: info.enabled,
+    delivery_details: info.delivery_details ?? null,
+    custom_orders: info.custom_orders ?? null,
+    services_scope: info.services_scope ?? null,
+    custom_buttons: publicCustomButtons,
+    faq_items: publicFaqItems,
   };
 }
 

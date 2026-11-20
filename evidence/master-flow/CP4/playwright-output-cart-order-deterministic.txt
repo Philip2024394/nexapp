@@ -1,0 +1,13 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:325:7 › #14 real activation · production code path creates nex_order deterministically › 1 · buyer signs in (8.2s)
+  ✓  2 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:330:7 › #14 real activation · production code path creates nex_order deterministically › 2 · buyer visits seller shop (3.1s)
+  ✓  3 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:337:7 › #14 real activation · production code path creates nex_order deterministically › 3 · FIRST identical cart → real sendCartOrderAction submits · redirect to chat?cart_sent=1 (11.7s)
+  ✓  4 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:343:7 › #14 real activation · production code path creates nex_order deterministically › 4 · SECOND identical cart (same product · same qty · same price · same address · different note) (12.9s)
+  ✓  5 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:349:7 › #14 real activation · production code path creates nex_order deterministically › 5 · production code path produced TWO nex_order rows · ids match embedded cart UUIDs · no fixtures inserted (1.4s)
+  ✓  6 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:399:7 › #14 real activation · production code path creates nex_order deterministically › 6 · seller /manage/orders lists BOTH orders (links to each order id) (9.6s)
+  ✓  7 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:422:7 › #14 real activation · production code path creates nex_order deterministically › 7 · order A detail · Tier 0 deterministic match · own note · not B's (3.5s)
+  ✓  8 [cart-order-deterministic-390] › tests\e2e-p6-isolation\cart-order-deterministic.spec.ts:438:7 › #14 real activation · production code path creates nex_order deterministically › 8 · order B detail · Tier 0 deterministic match · own note · not A's (2.6s)
+
+  8 passed (1.0m)
