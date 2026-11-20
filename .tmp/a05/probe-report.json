@@ -1,0 +1,54 @@
+{
+  "tier": {
+    "http": 200,
+    "final_url": "http://localhost:3008/nex-native/sign-in?next=/nex-native/settings/tier"
+  },
+  "posts": 2,
+  "checkout_posts": 0,
+  "screenshots": [
+    "tier-desktop.png",
+    "tier-390.png"
+  ],
+  "responses_sample": [
+    {
+      "status": 200,
+      "url": "http://localhost:3008/nex-native/settings/tier"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/src_app_nex-native_nex-native_1bh6er6.css"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/node_modules_next_dist_compiled_1amofcm._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_164kp-6._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/node_modules_%40swc_helpers_cjs_1r9vbqw._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/_1anvha4._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/_02udr6z._.js"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:3008/_next/static/chunks/turbopack-_08bm286._.js"
+    }
+  ]
+}
