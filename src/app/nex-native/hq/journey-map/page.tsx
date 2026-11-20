@@ -650,6 +650,28 @@ const GREEN_FLOW_REGISTRY: readonly GreenFlowRubric[] = [
         "NEX_CART_ORDER_TX stays 0 until mig 364 is approved + applied " +
         "and T3/T6/T7/T8 contract checks pass. Production " +
         "ijvqdvsvwtwxzcqmoqit SEALED · no prod apply.",
+      "E-SECURITY migration 364 APPLIED to sandbox 2026-11-20 by " +
+        "owner word-trigger 'apply mig 364 to sandbox'. Body md5 " +
+        "ef5cdf9d → 08dce8e0 · v_send_intent_uuid::uuid cast " +
+        "present · anon still revoked, authenticated+service_role " +
+        "preserved (CREATE OR REPLACE kept the mig-363 ACL). The " +
+        "fix unblocks past the SQLSTATE 42804 wall but immediately " +
+        "surfaces a SECOND pre-existing latent bug: the message " +
+        "INSERT uses ON CONFLICT (sender_account_id, send_intent_" +
+        "id) DO NOTHING against a PARTIAL unique index " +
+        "uq_nex_peer_message_send_intent WHERE send_intent_id IS " +
+        "NOT NULL. Postgres rejects with SQLSTATE 42P10 'no unique " +
+        "or exclusion constraint matching the ON CONFLICT " +
+        "specification' because the inference clause lacks the " +
+        "matching WHERE. Same latent-until-NEX_CART_ORDER_TX=1 " +
+        "pattern · hidden by the cast bug · also pre-existing in " +
+        "mig 354 + 363 + 364. Fix prepared as candidate-migrations" +
+        "/365_fix_cart_order_tx_on_conflict_partial_PROPOSAL.sql · " +
+        "byte-identical to mig 364 except the ON CONFLICT WHERE " +
+        "predicate. NOT AUTHORISED for apply. Security contract " +
+        "post-mig-364: still 5/9 PASS (same four T3/T6/T7/T8 now " +
+        "failing on 42P10 instead of 42804). Flag NEX_CART_ORDER_" +
+        "TX stays 0.",
       "E-SECURITY-WALKER extended walker 2026-11-20: genuine " +
         "authentication (NOT dev-impersonation) for Hamrex nex-99901 " +
         "+ Rosa nex-99903 via admin.generateLink magiclink · fetch " +
