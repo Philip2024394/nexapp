@@ -588,17 +588,23 @@ const GREEN_FLOW_REGISTRY: readonly GreenFlowRubric[] = [
         "idempotency-dedup retry does NOT re-notify. 7/7 wire-shape " +
         "regressions green (send-cart-order-e-notify-wire.test.ts). " +
         "BROWSER + PERSISTED verification still owed against sandbox.",
-      "E-ATOM UNAPPLIED candidate PREPARED · round 17 · 2026-11-19. " +
-        "SECURITY DEFINER PL/pgSQL function nex_create_cart_order_tx " +
-        "lives at nex-supabase/candidate-migrations/C002 (rollback " +
-        "anchor) + 354_..._PREVIEW.sql (apply sibling) + matching " +
-        "_rollback_PREVIEW + apply-script PREVIEW. TypeScript wrapper " +
-        "candidate at src/lib/nex-native/calls/send-cart-order." +
-        "transactional-candidate.ts (unactivated · no production " +
-        "import). 16/16 mocked RPC error-mapping specs green. The " +
-        "wrapper is NOT wired into production code · activation needs " +
-        "a separate feature-flag authorisation (planned " +
-        "NEX_CART_ORDER_TX=1) AFTER a separate sandbox-apply approval.",
+      "E-ATOM caller wire LANDED · 2026-11-20 · commit c8ff3b5c. " +
+        "sendCartOrderAction in src/app/nex-native/_actions.ts now " +
+        "routes through createCartOrderTransactionalCandidate behind " +
+        "NEX_CART_ORDER_TX=1. Flag OFF default · legacy direct-write " +
+        "path preserved verbatim and taken on flag-unset, missing " +
+        "session.supabaseUserId, rpc_unavailable, or any other RPC " +
+        "error. Post-RPC seller notify mirrors the legacy nested " +
+        "block and reuses the 'seller_notified' event-marker dedup. " +
+        "Migration 354 promoted into nex-supabase/migrations/ with " +
+        "matching rollback and apply-script scripts/apply-migration-" +
+        "354-sandbox.mjs. Wrapper's 16/16 mocked RPC tests remain " +
+        "green; _actions.ts tsc introduced 0 new errors. STILL OPEN: " +
+        "sandbox apply of migration 354 is gated on founder handoff " +
+        "(host IPv6 blocker · Lane E ledger). Production " +
+        "ijvqdvsvwtwxzcqmoqit sealed · no prod apply. BROWSER + " +
+        "PERSISTED verification still owed after sandbox apply + " +
+        "flag flip.",
       "E-PRIVACY exact blocker IDENTIFIED · round 17 · 2026-11-19. " +
         "Removing delivery_address plaintext from attachment_meta.cart " +
         "requires Path A Phase A schema to land first (new nex_order " +
