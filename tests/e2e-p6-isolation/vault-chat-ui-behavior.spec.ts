@@ -768,8 +768,10 @@ test.describe("Vault Privacy Completion Pass · sandbox UI journey", () => {
     const cookieHeader = cookies
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
+    const baseURL =
+      process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3010";
     const res = await fetch(
-      `http://localhost:3010/nex-native/chat/peer/${SELLER_ACCOUNT_ID}?e2e=1`,
+      `${baseURL}/nex-native/chat/peer/${SELLER_ACCOUNT_ID}?e2e=1`,
       {
         headers: { cookie: cookieHeader },
         redirect: "follow",
