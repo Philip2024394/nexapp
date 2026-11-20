@@ -409,15 +409,21 @@ test.describe("Option B · signup → mailbox → confirm → signed-in", () => 
     await emailInput.fill(email);
     await passwordInput.fill(password);
 
-    await Promise.all([
-      page.waitForURL(
-        (u) =>
-          u.pathname === "/nex-native/contacts" ||
-          u.pathname.startsWith("/nex-native/"),
-        { timeout: 60_000 },
-      ),
-      submit.click(),
-    ]);
+    // 2026-11-20 · the earlier Promise.all([waitForURL, click]) pattern
+    // false-matches on the starting URL (/sign-in startsWith /nex-native/)
+    // and returns before the server action fires. Click first, then wait
+    // for the signed-in landing with a STRICT predicate that excludes
+    // the sign-in path.
+    await submit.click();
+    await page.waitForURL(
+      (u) =>
+        u.pathname.startsWith("/nex-native/") &&
+        u.pathname !== "/nex-native/sign-in",
+      { timeout: 60_000 },
+    );
+    await page
+      .waitForLoadState("networkidle", { timeout: 10_000 })
+      .catch(() => undefined);
 
     const landed = new URL(page.url());
     expect(landed.pathname.startsWith("/nex-native/")).toBe(true);
