@@ -55,6 +55,19 @@ import {
   notifyInviteDeclined,
   type CallCountry,
 } from "@/lib/nex-native/calls/invite-service";
+// 2026-11-19 (§16.33) · decline-lifecycle fix · after a participant
+// flips left_at we call maybeEndSessionIfAllParticipantsLeft so a 1:1
+// call whose only invitee declines no longer leaves the session row
+// stuck at state='ringing'. Multi-participant sessions remain
+// unaffected: the helper is a no-op when any participant row still
+// has left_at IS NULL.
+import { maybeEndSessionIfAllParticipantsLeft } from "@/lib/nex-native/calls/group-call-service";
+// §16.48.25 Lane 1 · shared roster authorization guard. Any service-role
+// read of nex_group_call_participant is gated through this function so a
+// signed-in user cannot swap in an unrelated session UUID and read its
+// roster. Caller identity comes from the resolved server session · never
+// from the URL.
+import { assertCanViewSession } from "@/lib/nex-native/calls/roster-authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -132,6 +145,21 @@ async function fetchParticipants(
   sessionId: string,
   selfAccountId: string | null,
 ): Promise<readonly Participant[]> {
+  // §16.48.25 Lane 1 · fail-closed authorization gate.
+  // The service-role read below bypasses RLS, so we must authorize the
+  // caller in TypeScript: only the session host (W1 creator with no
+  // participant row) or an active (non-left) participant may see the
+  // roster. Anyone else — including a signed-in user who guesses or
+  // swaps in another session UUID — gets the empty-roster view.
+  const gate = await assertCanViewSession({
+    callerAccountId: selfAccountId,
+    sessionId,
+    // SupabaseClient satisfies RosterAdminLike structurally at runtime.
+    admin: nexSupabaseAdmin as unknown as Parameters<
+      typeof assertCanViewSession
+    >[0]["admin"],
+  });
+  if (!gate.ok) return [];
   try {
     const { data: rows, error } = await nexSupabaseAdmin
       .from("nex_group_call_participant")
@@ -209,9 +237,17 @@ async function acceptInviteOnLoad(
   }
   const nowIso = new Date().toISOString();
   const crossCountry = accept && isCrossCountry(hostCountry, joinerCountry);
+  // §16.48.25 Lane 2 · 2026-11-20 · do NOT write joined_at here. Tapping
+  // Accept is acceptance, not room presence — joined_at is the sole
+  // "actually connected to the room" signal and is written only by the
+  // `confirmRoomJoin` server action after a trusted peer-connection
+  // event from the GroupCallEngine. Acceptance should write to
+  // `accepted_at` (migration 362 PROPOSAL) once that column is
+  // approved and applied. Until then, acceptance is represented by the
+  // continued absence of `left_at` + the chat bubble's state — we stop
+  // faking it with joined_at. left_at on decline is unchanged.
   const patch = accept
     ? {
-        joined_at: nowIso,
         joined_from_country: joinerCountry,
         // Owner principle #2 · cross-country permitted when the
         // participant explicitly accepts · the accept URL carries
@@ -254,6 +290,22 @@ async function acceptInviteOnLoad(
       });
     } catch {
       /* fail-soft · the decline is durable regardless */
+    }
+    // 2026-11-19 (§16.33) · decline-lifecycle fix.
+    // The raw UPDATE above flips participant.left_at but does NOT
+    // transition the session. For a 1:1 invite (host → single
+    // invitee · host is never added to nex_group_call_participant
+    // by inviteToCall) this leaves nex_group_call_session.state at
+    // 'ringing' forever, so the caller's outgoing-call UI would
+    // keep ringing even though the only invitee declined. The
+    // helper is idempotent + safe for multi-participant sessions:
+    // it ends the session ONLY when every participant row has
+    // left_at set. Fail-soft wrapper · the decline is already
+    // durable from the UPDATE above.
+    try {
+      await maybeEndSessionIfAllParticipantsLeft(sessionId);
+    } catch {
+      /* fail-soft · session-state transition is advisory for the host UI */
     }
   }
 }

@@ -78,6 +78,13 @@ export class GroupCallEngine {
   private muted = false;
   private cameraOff = false;
   private closed = false;
+  // §16.48.25 Lane 2 · 2026-11-20 · one-shot latch for confirmRoomJoin.
+  // The POST fires at the first connecting→live transition (the engine
+  // has observed at least one peer). Dedup via instance flag so a flaky
+  // presence stream doesn't re-fire. Fail-soft: errors never leave this
+  // module · the server UPDATE is idempotent (eq session,account,left_at
+  // IS NULL) so a retry on reconnect is also safe.
+  private joinConfirmed = false;
 
   constructor(private readonly opts: GroupCallEngineOptions) {}
 
@@ -237,6 +244,32 @@ export class GroupCallEngine {
 
     if (this.state === "connecting" && this.peers.size > 0) {
       this.setState("live");
+      // §16.48.25 Lane 2 · at the first moment the engine has at least
+      // one peer entry, mark joined_at server-side. This is the sole
+      // trusted writer of nex_group_call_participant.joined_at. We fire
+      // once per engine instance; the server guard is independent and
+      // will deny callers who are not a member.
+      void this.confirmRoomJoinOnce();
+    }
+  }
+
+  /** One-shot POST to /api/nex-native/calls/confirm-room-join. Fail-soft:
+   *  the call is advisory for server-side analytics / UI roster accuracy
+   *  and must not degrade the WebRTC path. */
+  private async confirmRoomJoinOnce(): Promise<void> {
+    if (this.joinConfirmed) return;
+    this.joinConfirmed = true;
+    try {
+      await fetch("/api/nex-native/calls/confirm-room-join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: this.opts.sessionId }),
+        // keepalive helps the request survive if the user navigates
+        // away immediately after the state flip.
+        keepalive: true,
+      });
+    } catch {
+      // Intentional swallow · analytics / roster refinement only.
     }
   }
 

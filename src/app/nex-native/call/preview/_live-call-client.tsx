@@ -64,6 +64,24 @@ export function LiveCallClient({
   const [muted, setMuted] = React.useState(false);
   const [cameraOff, setCameraOff] = React.useState(false);
   const engineRef = React.useRef<GroupCallEngine | null>(null);
+  // §16.48.25 caller-popup · 2026-11-20. Rides the existing presence
+  // channel the engine already consumes (zero new Supabase Realtime
+  // subscription · zero added user data cost · aligns with owner's
+  // "broadcast is user phone system and data · NEX is the application
+  // only" directive 2026-11-20). Dedup is purely client-side: a Set of
+  // account IDs we've ever seen since mount. Self is pre-seeded so the
+  // user never sees their own arrival. Scope is one session (component
+  // is keyed to sessionId), matching the dedup tuple (accountId,
+  // sessionId). No broadcast, no network call.
+  const seenAccountIdsRef = React.useRef<Set<string>>(
+    new Set<string>([selfAccountId]),
+  );
+  interface CallerToast {
+    readonly id: string;
+    readonly accountId: string;
+    readonly displayName: string;
+  }
+  const [callerToasts, setCallerToasts] = React.useState<readonly CallerToast[]>([]);
 
   // Cleanup · engine.leave() stops tracks + closes presence channel
   // + tears down peers. Fires on unmount OR when the sessionId
@@ -79,6 +97,18 @@ export function LiveCallClient({
     };
   }, []);
 
+  // Auto-dismiss caller-popup toasts after a short window. One timer per
+  // toast id · cleaned up on unmount. The dedup set is intentionally
+  // NOT cleared here · once seen, a reconnect flap won't re-popup.
+  React.useEffect(() => {
+    if (callerToasts.length === 0) return;
+    const latest = callerToasts[callerToasts.length - 1]!;
+    const handle = setTimeout(() => {
+      setCallerToasts((prev) => prev.filter((t) => t.id !== latest.id));
+    }, 3500);
+    return () => clearTimeout(handle);
+  }, [callerToasts]);
+
   async function enable(): Promise<void> {
     if (engineRef.current) return;
     setError(null);
@@ -91,7 +121,24 @@ export function LiveCallClient({
         onStateChange: setState,
         onLocalStream: (s) => setLocalStream(s),
         onRemoteStreams: (rs) => setRemoteStreams(rs),
-        onPresenceChange: (m) => setPresence(m),
+        onPresenceChange: (m) => {
+          setPresence(m);
+          // Pure client-side diff · derives "new arrival" from data the
+          // engine already delivered. Does NOT subscribe to anything new.
+          const arrivals: CallerToast[] = [];
+          for (const member of m) {
+            if (seenAccountIdsRef.current.has(member.accountId)) continue;
+            seenAccountIdsRef.current.add(member.accountId);
+            arrivals.push({
+              id: `${member.accountId}:${Date.now()}`,
+              accountId: member.accountId,
+              displayName: member.displayName || "A caller",
+            });
+          }
+          if (arrivals.length > 0) {
+            setCallerToasts((prev) => [...prev, ...arrivals]);
+          }
+        },
         onError: (msg) => setError(msg),
       },
     });
@@ -116,6 +163,8 @@ export function LiveCallClient({
     setLocalStream(null);
     setRemoteStreams([]);
     setPresence([]);
+    setCallerToasts([]);
+    seenAccountIdsRef.current = new Set<string>([selfAccountId]);
   }
 
   function toggleMute(): void {
@@ -157,7 +206,7 @@ export function LiveCallClient({
     <div
       data-nex-live-call
       data-nex-live-state={state}
-      style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0 }}
+      style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0, position: "relative" }}
     >
       {error && <InlineError message={error} onDismiss={() => setError(null)} />}
 
@@ -181,6 +230,61 @@ export function LiveCallClient({
         onHangup={hangup}
         mediaType={mediaType}
       />
+
+      <CallerToastStack toasts={callerToasts} />
+    </div>
+  );
+}
+
+// ─── Caller-popup overlay ─────────────────────────────────────────
+// Renders a vertical stack of brief arrival notices in the top-right
+// of the live view. Driven entirely by state the engine ALREADY emits
+// via onPresenceChange (no new subscription · no network call · no
+// server broadcast). Per owner directive 2026-11-20: NEX is the
+// application layer only; this surface adds zero ongoing user data.
+
+function CallerToastStack({
+  toasts,
+}: {
+  readonly toasts: readonly { readonly id: string; readonly displayName: string }[];
+}): React.JSX.Element | null {
+  if (toasts.length === 0) return null;
+  return (
+    <div
+      data-nex-caller-toasts
+      aria-live="polite"
+      style={{
+        position: "absolute",
+        top: 8,
+        right: 8,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        pointerEvents: "none",
+        zIndex: 20,
+      }}
+    >
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          data-nex-caller-toast
+          style={{
+            padding: "8px 12px",
+            borderRadius: 10,
+            border: `1px solid ${NEX.emeraldBorder}`,
+            background: NEX.bgPanel,
+            color: NEX.text,
+            fontSize: 12,
+            fontWeight: 700,
+            maxWidth: 220,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          <span style={{ color: NEX.emerald, marginRight: 6 }} aria-hidden>●</span>
+          {t.displayName} joined
+        </div>
+      ))}
     </div>
   );
 }

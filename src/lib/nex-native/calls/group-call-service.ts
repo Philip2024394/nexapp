@@ -12,6 +12,28 @@
 import "server-only";
 import { nexSupabaseAdmin } from "../supabase-admin";
 import type { NexUuid } from "../types";
+// §16.48.25 Lane 1 · roster authorization guard. listParticipants is a
+// service-role read that bypasses RLS; the guard forces callers to pass
+// a server-resolved account id and denies callers who are neither the
+// host nor an active participant.
+import type { RosterAdminLike } from "./roster-authorization";
+import { assertCanViewSession } from "./roster-authorization";
+
+// The concrete SupabaseClient satisfies RosterAdminLike structurally at
+// runtime, but its generic/deep types defeat TS's assignability check.
+// A one-time narrow cast keeps the call-site tidy.
+const rosterAdmin: RosterAdminLike =
+  nexSupabaseAdmin as unknown as RosterAdminLike;
+
+/** Returned when a roster read is denied by the authorization guard. */
+export type ListParticipantsDenial = {
+  denied: true;
+  reason: "unauthenticated" | "session_not_found" | "not_member" | "error";
+};
+
+export type ListParticipantsResult =
+  | { denied: false; participants: GroupCallParticipantRow[] }
+  | ListParticipantsDenial;
 
 export type GroupCallMediaType = "audio" | "video";
 export type GroupCallState = "ringing" | "live" | "ended";
@@ -76,22 +98,35 @@ export async function createGroupCallSession(
     );
   }
 
-  // Host always joins · joined_at marks "actually in the room".
-  const nowIso = new Date().toISOString();
-  const participantsToInsert = [
+  // §16.48.25 Lane 2 · 2026-11-20 · do NOT write joined_at for the host
+  // at session creation time. joined_at means "peer connection confirmed
+  // live by the server"; the host still needs to mount GroupCallEngine
+  // and complete WebRTC negotiation before that is true. The row is
+  // inserted with joined_at NULL; `confirmRoomJoin` is the only trusted
+  // writer of joined_at.
+  //
+  // For the W2 1:1→group upgrade path (the caller in
+  // chat/peer/.../_add-to-call-action.ts), the host IS currently in a
+  // 1:1 call but that 1:1 lives in `nex_peer_call`, not this group
+  // session — so the host is not yet in THIS session's room at creation.
+  interface InsertableParticipant {
+    session_id: NexUuid;
+    account_id: NexUuid;
+    role: GroupParticipantRole;
+  }
+  const participantsToInsert: InsertableParticipant[] = [
     {
       session_id: session.id,
       account_id: input.hostAccountId,
-      role: "host" as const,
-      joined_at: nowIso,
+      role: "host",
     },
     ...(input.inviteeAccountIds ?? [])
       .filter((id) => id !== input.hostAccountId)
       .slice(0, 3) // host + 3 guests = 4 cap
-      .map((id) => ({
+      .map<InsertableParticipant>((id) => ({
         session_id: session.id,
         account_id: id,
-        role: "guest" as const,
+        role: "guest",
       })),
   ];
   const rejectedCount =
@@ -133,9 +168,26 @@ export async function getGroupCallSession(
   return (data as GroupCallSessionRow | null) ?? null;
 }
 
+/**
+ * §16.48.25 Lane 1 · roster read requires caller identity and passes
+ * through the shared authorization guard before the service-role query.
+ * Callers MUST pass `callerAccountId` resolved from the authenticated
+ * server session (never from client input). Denial returns a reason
+ * rather than throwing so callers can render an empty-roster view
+ * without leaking "this session exists but you're not in it".
+ */
 export async function listParticipants(
   sessionId: NexUuid,
-): Promise<GroupCallParticipantRow[]> {
+  callerAccountId: NexUuid | null,
+): Promise<ListParticipantsResult> {
+  const gate = await assertCanViewSession({
+    callerAccountId,
+    sessionId,
+    admin: rosterAdmin,
+  });
+  if (!gate.ok) {
+    return { denied: true, reason: gate.reason };
+  }
   const { data, error } = await nexSupabaseAdmin
     .from("nex_group_call_participant")
     .select("*")
@@ -144,7 +196,10 @@ export async function listParticipants(
   if (error) {
     throw new Error(`group-call-service.listParticipants: ${error.message}`);
   }
-  return (data as GroupCallParticipantRow[]) ?? [];
+  return {
+    denied: false,
+    participants: (data as GroupCallParticipantRow[]) ?? [],
+  };
 }
 
 /** Upserts a participant row (idempotent for a given account+session).
@@ -220,8 +275,17 @@ export async function leaveGroupCallSession(input: {
   await maybeEndSession(input.sessionId);
 }
 
-/** If the last joined participant leaves, flip state=ended. */
-async function maybeEndSession(sessionId: NexUuid): Promise<void> {
+/** If the last joined participant leaves, flip state=ended. Exported
+ *  2026-11-19 (§16.33) so the preview-page decline path can call it
+ *  after flipping participant.left_at · prior to this export the
+ *  decline path only wrote the participant row, leaving session.state
+ *  at 'ringing' indefinitely for 1:1 calls. Idempotent + safe for
+ *  multi-participant sessions · it only ends when EVERY participant
+ *  has left_at set, so a decline by B while C is still pending leaves
+ *  the session ringing for C. */
+export async function maybeEndSessionIfAllParticipantsLeft(
+  sessionId: NexUuid,
+): Promise<void> {
   const { data, error } = await nexSupabaseAdmin
     .from("nex_group_call_participant")
     .select("id", { count: "exact", head: false })
@@ -235,6 +299,12 @@ async function maybeEndSession(sessionId: NexUuid): Promise<void> {
       .eq("id", sessionId)
       .in("state", ["ringing", "live"]);
   }
+}
+
+/** Legacy internal alias · kept so leaveGroupCallSession can continue
+ *  to call the private name without touching its own semantics. */
+async function maybeEndSession(sessionId: NexUuid): Promise<void> {
+  return maybeEndSessionIfAllParticipantsLeft(sessionId);
 }
 
 export async function endGroupCallSession(
