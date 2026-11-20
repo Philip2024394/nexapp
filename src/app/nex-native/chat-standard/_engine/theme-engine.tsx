@@ -59,6 +59,12 @@ function resolveColours(c: ColourSystem | undefined): Required<ColourSystem> {
     highlight: c?.highlight ?? NEX_DEFAULT_COLOURS.highlight!,
     glow: c?.glow ?? `${c?.primary ?? NEX_DEFAULT_COLOURS.primary}55`,
     deep: c?.deep ?? NEX_DEFAULT_COLOURS.deep!,
+    // Owner directive 2026-10-19 · when a package doesn't override the
+    // delivery-tick colour, fall back to the primary accent (same rule
+    // _bubble.tsx:149 uses at render time). This closes the
+    // Required<ColourSystem> contract without changing runtime colour.
+    deliveryTickColor:
+      c?.deliveryTickColor ?? c?.primary ?? NEX_DEFAULT_COLOURS.primary!,
   };
 }
 
