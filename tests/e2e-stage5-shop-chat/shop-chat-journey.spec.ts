@@ -69,34 +69,76 @@ test.describe("Stage 5 · Shop Chat journey (signed-in 99901 · sandbox)", () =>
     ).toBeVisible({ timeout: 30_000 });
   });
 
-  test("Step 2 · product detail sheet opens with Buy Now + More Details", async ({
+  test("Step 2 · product page renders with Ask Seller + Add to Cart enabled", async ({
     page,
   }) => {
+    // UI change 2026-11-16 · the slide-up product-detail SHEET on the
+    // shop surface is retired. `/nex-native/<slug>?product=<id>` now
+    // client-side redirects to `/nex-native/product/<id>` which renders
+    // a full product page (see _product-page-client.tsx · sealed mock).
+    //
+    // The original Step 2 assertions proved: (a) the product chrome
+    // opens for the selected product, (b) the primary purchase CTA
+    // ("Buy Now") is visible, (c) the chat-handoff CTA ("More Details")
+    // is visible AND wired to the server-submit branch (not the anon
+    // popup branch) for the signed-in viewer.
+    //
+    // On the new page: (a) becomes the product page mounting with the
+    // title, (b) becomes the sealed "Add to Cart" button rendered by
+    // AddToCartButton, (c) becomes the "Ask Seller" button inside the
+    // real <form action={askSellerAction}> (the signed-in path · anon
+    // viewers hit the same button but the server action redirects to
+    // sign-in instead of showing an in-page popup on this surface).
     await gotoFast(page, `/nex-native/${SHOP_SLUG}?product=${PRODUCT_ID}`);
-    const sheet = page.locator(
-      `[data-nex-product-detail-sheet="${PRODUCT_ID}"]`,
+    // The shop page's <ProductDetailSheet> client component fires a
+    // router.replace on mount when ?product is set · wait for the URL
+    // to settle on the canonical product page before asserting chrome.
+    await page.waitForURL(
+      new RegExp(`/nex-native/product/${PRODUCT_ID}`),
+      { timeout: 30_000, waitUntil: "commit" },
     );
-    await expect(sheet).toBeVisible({ timeout: 30_000 });
-    await expect(
-      page.locator(`[data-nex-product-sheet-buy-now="${PRODUCT_ID}"]`),
-    ).toBeVisible();
-    const moreDetails = page.locator(
-      `[data-nex-product-sheet-more-details="${PRODUCT_ID}"]`,
+    await page.waitForLoadState("domcontentloaded", { timeout: 30_000 });
+    // (a) product page mounted for this product
+    await expect(page.locator("[data-nex-product-page]")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator("[data-nex-product-title]")).toContainText(
+      "Classic hand-stitched leather tote",
     );
-    await expect(moreDetails).toBeVisible();
-    await expect(moreDetails).toHaveAttribute(
-      "data-nex-product-sheet-more-details-mode",
-      "submit",
-    );
+    // (c) Ask Seller button visible AND enabled (signed-in branch · the
+    // real server-action submit · not a demo no-op)
+    const askSeller = page.locator("[data-nex-product-ask-seller]");
+    await expect(askSeller).toBeVisible({ timeout: 15_000 });
+    await expect(askSeller).toBeEnabled();
+    // Signed-in viewer must get the real form-submit branch (the demo
+    // route sets `data-nex-product-demo`). Assert the demo marker is
+    // absent so the test fails if the live route ever regresses to the
+    // preview no-op button.
+    await expect(askSeller).not.toHaveAttribute("data-nex-product-demo", /.*/);
+    // (b) Add to Cart visible AND enabled. The sealed AddToCartButton
+    // renders as `<button>Add to Cart</button>` · we match by accessible
+    // name to avoid coupling to the button's internal data-attrs.
+    const addToCart = page.getByRole("button", { name: /add to cart/i });
+    await expect(addToCart).toBeVisible({ timeout: 15_000 });
+    await expect(addToCart).toBeEnabled();
   });
 
-  test("Step 3 · More Details routes to business chat with product chip pinned", async ({
+  test("Step 3 · Ask Seller routes to business chat with product chip pinned", async ({
     page,
   }) => {
+    // UI change 2026-11-16 · the chat-handoff CTA moved from the
+    // sheet's "More Details" button to the full product page's
+    // "Ask Seller" button. Same server action (openShopChatAction),
+    // same destination (/nex-native/conversations/<id>?product=<id>),
+    // same pending-product chip selectors · only the entry button
+    // changed.
     await gotoFast(page, `/nex-native/${SHOP_SLUG}?product=${PRODUCT_ID}`);
-    await page
-      .locator(`[data-nex-product-sheet-more-details="${PRODUCT_ID}"]`)
-      .click();
+    await page.waitForURL(
+      new RegExp(`/nex-native/product/${PRODUCT_ID}`),
+      { timeout: 30_000, waitUntil: "commit" },
+    );
+    await page.waitForLoadState("domcontentloaded", { timeout: 30_000 });
+    await page.locator("[data-nex-product-ask-seller]").click();
     await page.waitForURL(/\/nex-native\/conversations\//, {
       timeout: 60_000,
       waitUntil: "commit",
@@ -223,22 +265,53 @@ test.describe("Stage 5 · Shop Chat journey (signed-in 99901 · sandbox)", () =>
     await expect(anyChip).toHaveCount(0);
   });
 
-  test("Step 7 · signed-in branch marker verified · anon popup gap recorded", async ({
+  test("Step 7 · signed-in Ask Seller form wired · anon popup gap recorded", async ({
     page,
   }) => {
+    // UI change 2026-11-16 · the retired slide-up sheet carried a
+    // `data-nex-product-sheet-more-details-mode="submit"|"popup"`
+    // attribute that let the test prove which branch the viewer saw
+    // without having to intercept the server action. The new full
+    // product page (`_product-page-client.tsx`) does NOT branch the
+    // UI by auth state · both signed-in and anon viewers see the same
+    // real `<form action={askSellerAction}>` button, and the branch
+    // happens server-side (openShopChatAction redirects anon users to
+    // /nex-native/sign-in with ?next=<...>). As a result we can no
+    // longer assert the signed-in vs anon branch at the DOM layer on
+    // this surface.
+    //
+    // What we CAN still verify for the signed-in Rosa-99901 run:
+    //   · the Ask Seller button renders on the product page
+    //   · it is NOT the demo no-op (which would carry the
+    //     `data-nex-product-demo` attribute · used only by the
+    //     /nex-native/product/preview route)
+    //   · its parent form targets the real server action by carrying
+    //     the hidden product_id input the action requires
+    //
+    // That triad proves the signed-in viewer is on the real
+    // server-action branch · which is the intent the sealed attribute
+    // marker used to encode. Anon popup coverage remains an open gap
+    // and is annotated below exactly as before.
     await gotoFast(page, `/nex-native/${SHOP_SLUG}?product=${PRODUCT_ID}`);
-    const btn = page.locator(
-      `[data-nex-product-sheet-more-details="${PRODUCT_ID}"]`,
+    await page.waitForURL(
+      new RegExp(`/nex-native/product/${PRODUCT_ID}`),
+      { timeout: 30_000, waitUntil: "commit" },
     );
+    await page.waitForLoadState("domcontentloaded", { timeout: 30_000 });
+    const btn = page.locator("[data-nex-product-ask-seller]");
     await expect(btn).toBeVisible({ timeout: 30_000 });
-    await expect(btn).toHaveAttribute(
-      "data-nex-product-sheet-more-details-mode",
-      "submit",
+    await expect(btn).toBeEnabled();
+    await expect(btn).not.toHaveAttribute("data-nex-product-demo", /.*/);
+    // The server action binds `product_id` from the form's hidden
+    // input — assert it's present with the expected product UUID.
+    const hiddenProductInput = page.locator(
+      `form input[name="product_id"][value="${PRODUCT_ID}"]`,
     );
+    await expect(hiddenProductInput).toHaveCount(1);
     test.info().annotations.push({
       type: "info",
       description:
-        "Anon popup (mode='popup') requires impersonation-OFF server session · not covered by this run.",
+        "Anon popup (sign-in bounce) requires impersonation-OFF server session · not covered by this run. UI change 2026-11-16: sheet retired · full product page does not branch anon vs signed-in at the DOM layer.",
     });
   });
 });
