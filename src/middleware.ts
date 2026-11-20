@@ -177,14 +177,15 @@ function ensureDirectorySeedCookie(
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const pathname = req.nextUrl.pathname;
   const flagOn = isPrelaunchModeOn();
+  const cid = resolveCorrelationId(req);
 
   // Flag OFF · path was not matched by the pre-prelaunch matcher ·
-  // return a clean pass-through so we add no behaviour whatsoever.
+  // return a clean pass-through. 2026-11-20 · route through attachCid
+  // so every middleware response carries x-request-id (CADP4 contract) ·
+  // the header set is a single map write and does not change behaviour.
   if (!flagOn && !isLegacyMatchedPath(pathname)) {
-    return NextResponse.next();
+    return attachCid(NextResponse.next(), cid);
   }
-
-  const cid = resolveCorrelationId(req);
 
   // ── NEX prelaunch gate ────────────────────────────────────────────
   // Runs BEFORE every other decision when the flag is ON. The two

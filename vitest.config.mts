@@ -26,6 +26,28 @@ export default defineConfig({
     setupFiles: [
       fileURLToPath(new URL("./scripts/vitest-stubs/env-loader.ts", import.meta.url)),
     ],
+    // 2026-11-20 · scope-correct exclude list so vitest does NOT sweep up
+    // tests meant for other runners:
+    //   · tests/**           → Playwright E2E specs (own runners via playwright.*.config.ts)
+    //   · scripts/_tmp/**    → ad-hoc Playwright/pg probe scripts (not vitest)
+    //   · tmp-lane-g/**      → Lane G offline batch (node:test harness, not vitest)
+    //   · **/*.test.mjs      → node:test harness scripts (shebang + process.exit)
+    //   · src/**/tests/**/*.mjs
+    //                       → sibling node:test harness scripts under lib trees
+    // Default vitest include ("**/*.{test,spec}.?(c|m)[jt]s?(x)") previously
+    // hoovered ~216 files meant for other runners. This exclude keeps
+    // vitest's scope to true unit tests (src/**/*.test.ts, __tests__/).
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.next/**",
+      "tests/**",
+      "scripts/_tmp/**",
+      "tmp-lane-g/**",
+      "**/*.test.mjs",
+      "**/*.spec.mjs",
+      "src/**/tests/**/*.mjs",
+    ],
   },
   resolve: {
     alias: {

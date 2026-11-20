@@ -56,31 +56,40 @@ function rel(p)  { return relative(REPO, p).replace(/\\/g, "/"); }
 
 // ── Layer 1 CANARY adoption list ────────────────────────────────────
 //
-// These 5 routes are the Wave 11 Layer 1 canary set. Adding new
-// entries here requires design review (and typically Philip authorization).
-// Removing an entry means the route lost its runFromRequest wrapper ·
-// CADP1 will fail loudly.
+// FORK-CONTRACT · 2026-11-20
+// -----------------------------------------------------------------
+// This file was authored for the D:/trades monorepo, where the Wave 11
+// Layer-1 canary set lived under `src/app/api/nex/**`. The nexapp fork
+// (CLAUDE.md §"Fork boundary", 2026-10-10 seal) carries ONLY
+// `src/app/api/nex-native/**` and `src/app/api/dev-test/**` · the
+// legacy `src/app/api/nex/**` tree is NOT part of this fork.
+//
+// Per CLAUDE.md fork-hygiene rule ("clean up incrementally, not in one
+// pass"), the historical D:/trades allowlist is preserved below as
+// LEGACY_CANARY_SET for reference, but is NOT asserted against (those
+// routes do not exist here). The IN-FORK allowlist (LAYER1_ADOPTED)
+// names only routes that actually exist AND adopt runFromRequest in
+// the nexapp tree. Expanding it requires owner authorisation, matching
+// the original doctrine.
+//
+// Security assertions CADP2 · CADP3 · CADP4 · CADP5 remain unchanged
+// — they still enforce single-source correlation infrastructure across
+// `src/lib/nex/**` and `src/middleware.ts`, which ARE part of this
+// fork. CADP1 is now scoped to the in-fork set.
+//
+// Historical allowlist (D:/trades) · retained for traceability only:
+//   src/app/api/nex/knowledge-inbox/{upload,urls,dump,process}/route.ts
+//   src/app/api/nex/storage/gates/route.ts
+//   src/app/api/nex/brain/{supervisor-sweep,cron-tick,records,jobs,timeline,feedback}/route.ts
+//   src/app/api/nex/alerts/evaluate/route.ts
 const LAYER1_ADOPTED = new Set([
-  "src/app/api/nex/knowledge-inbox/upload/route.ts",
-  "src/app/api/nex/knowledge-inbox/urls/route.ts",
-  "src/app/api/nex/knowledge-inbox/dump/route.ts",
-  "src/app/api/nex/knowledge-inbox/process/route.ts",
-  "src/app/api/nex/storage/gates/route.ts",
-  // Wave 2 · Phase 6 · W-C-COMPANION supervisor entrypoint.
-  // Design §16.5 explicitly authorises this addition (Philip 2026-08-10).
-  "src/app/api/nex/brain/supervisor-sweep/route.ts",
-  // Wave 3 · H2.a · CID adoption broadened (Philip 2026-08-10).
-  // cron-tick is the pipeline entrypoint · every worker chain from cron
-  // inherits its CID via enterJobCorrelationScope in each worker.
-  "src/app/api/nex/brain/cron-tick/route.ts",
-  // The 4 D9-migrated brain routes explicitly named in
-  // WORLD-CLASS-OPS-REMEDIATION-PLAN.md §3.2 (H2.a).
-  "src/app/api/nex/brain/records/route.ts",
-  "src/app/api/nex/brain/jobs/route.ts",
-  "src/app/api/nex/brain/timeline/route.ts",
-  "src/app/api/nex/brain/feedback/route.ts",
-  // Wave 3 · H5 · alert evaluate/dispatch entrypoint (Philip 2026-08-10).
-  "src/app/api/nex/alerts/evaluate/route.ts",
+  // In-fork Layer-1 adopters (routes exist AND wrap in runFromRequest).
+  // Verified against the current nexapp `src/app/api/nex-native/**`
+  // tree via `grep -rl runFromRequest src/app/api/nex-native/` on
+  // 2026-11-20. Adding entries here requires owner authorisation ·
+  // removing an entry means the route lost its wrapper · CADP1 fails
+  // loudly either way.
+  "src/app/api/nex-native/surface-health/route.ts",
 ]);
 
 // ── CADP1 · adopted routes wrap in runFromRequest ───────────────────
@@ -173,8 +182,12 @@ test("CADP4 · middleware sets x-request-id on every response return", () => {
   const wrappedReturns  = (src.match(/return\s+attachCid\s*\(/g) ?? []).length;
   assert.equal(bareNextReturns, 0,
     `middleware has ${bareNextReturns} bare "return NextResponse.*" that bypass attachCid · every response return must attach the CID`);
-  assert.ok(wrappedReturns >= 7,
-    `middleware must have at least 7 attachCid-wrapped returns (matches current 8 return sites minus any that legitimately don't apply) · found ${wrappedReturns}`);
+  // 2026-11-20 · floor refreshed from 7 → 6. Middleware trimmed to 6
+  // return sites (early-exit pass-through, prelaunch-gate 2 branches,
+  // founder-bypass 2 branches, auth refresh). CADP4 intent preserved:
+  // every return attaches CID, zero bare NextResponse returns.
+  assert.ok(wrappedReturns >= 6,
+    `middleware must have at least 6 attachCid-wrapped returns (2026-11-20 snapshot) · found ${wrappedReturns}`);
 
   // Assertion 4 · resolveCorrelationId is invoked once in middleware()
   const invoked = /const\s+cid\s*=\s*resolveCorrelationId\s*\(\s*req\s*\)/.test(src);

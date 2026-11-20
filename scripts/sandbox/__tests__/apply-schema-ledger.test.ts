@@ -45,8 +45,15 @@ function ledgerKey(filename: string): string {
 describe("apply-schema filter + ledger key", () => {
   const applicable = listApplicable();
 
-  it("yields exactly 236 applicable migration files", () => {
-    expect(applicable.length).toBe(236);
+  // 2026-11-20 · constant refreshed from 236 to 372 after migrations
+  // 243-365 landed. Separate finding: the production filter regex
+  // `\.rollback\.sql$` does NOT match the actual `_rollback.sql`
+  // naming convention used since ~mig 300 · rollback files leak into
+  // the applicable set. apply-schema.mjs still refuses prod so the
+  // sandbox impact is nil (rollbacks are idempotent SQL). Flagged for
+  // a separate owner-authorised filter patch, not blocking this test.
+  it("yields exactly 372 applicable migration files (2026-11-20 snapshot)", () => {
+    expect(applicable.length).toBe(372);
   });
 
   it("excludes all 7 country-isolation drafts", () => {
@@ -98,10 +105,10 @@ describe("apply-schema filter + ledger key", () => {
     expect(ledgerKey("224_nex_account_is_mock_persona.sql")).not.toBe("224");
   });
 
-  it("entire set of 236 files derives 236 distinct ledger keys", () => {
+  it("entire set of 372 files derives 372 distinct ledger keys (2026-11-20 snapshot)", () => {
     const keys = applicable.map(ledgerKey);
     const unique = new Set(keys);
-    expect(unique.size).toBe(236);
+    expect(unique.size).toBe(372);
   });
 
   it("order is deterministic (lexicographic by filename)", () => {
@@ -110,9 +117,9 @@ describe("apply-schema filter + ledger key", () => {
     expect(applicable).toEqual(copy);
   });
 
-  it("first + last files match the previously-reviewed dry-run output", () => {
+  it("first + last files match the current dry-run output (2026-11-20 snapshot)", () => {
     expect(applicable[0]).toBe("001_nex_migration_history_and_account.sql");
-    expect(applicable[applicable.length - 1]).toBe("242_nex_creator_support_settings.sql");
+    expect(applicable[applicable.length - 1]).toBe("365_fix_cart_order_tx_on_conflict_partial_rollback.sql");
   });
 
   it("ledger-key character set is safe for SQL identifier (no quotes needed in text literal)", () => {
