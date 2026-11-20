@@ -201,6 +201,16 @@ test.describe("agreed-journey missing-UI · subscription return/cancel · auth c
       timeout: 60_000,
     });
     expect(res?.status()).toBeLessThan(400);
+    // 2026-11-20 · the server Component at /create/product calls
+    // redirect() when the signed-in seller has exactly one business.
+    // `waitUntil: "domcontentloaded"` returns before the client-side
+    // navigation to /category settles, so capturing page.url() right
+    // after goto can grab the stale pre-redirect URL. Wait until
+    // network settles (or 10s elapse, whichever first) before reading
+    // finalUrl.
+    await page
+      .waitForLoadState("networkidle", { timeout: 10_000 })
+      .catch(() => {});
     const finalUrl = page.url();
     // Owner-authorised 2026-11-15 · any ONE of:
     //   A. Category picker (one business · auto-redirect happened)
