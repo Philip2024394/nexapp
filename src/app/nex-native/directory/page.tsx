@@ -53,7 +53,11 @@ import { LandingDirectoryView } from "./_landing-directory-view";
 // and gates the Business Vault row by the Bisnis tier. Null session
 // is handled gracefully (anon identity + locked rows per the sealed
 // 2026-10-18 drawer-locks directive).
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-11-20 · dev-impersonation parity backfill. The ControlDrawer
+// for a dev-impersonated viewer must show the persona identity, not
+// anon, so this page's session read must honour the override. Aliased
+// to keep the existing call-site unchanged.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 // Owner directive 2026-10-18 · P1 of the discovery system · the

@@ -18,7 +18,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-11-20 · dev-impersonation parity backfill. The 2026-11-12
+// upload-bounce-to-sign-in bug was caused by a vault/manage server
+// action that resolved sessions via the legacy path; this import
+// closes the same gap for vault mutation actions. Aliased to keep
+// every call-site in this file unchanged.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as vaultEntryService from "@/lib/nex-native/vault-entry-service";
 // P1b-C 2026-10-15 · surface attachment-copy counts to the UI so the
 // user never sees unqualified success when some attachments failed.

@@ -25,7 +25,13 @@
 // activity after the PNG is served from /public.
 
 import Image from "next/image";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-11-20 · dev-impersonation parity backfill. The 2026-11-13
+// URGENT directive requires BOTH the pages AND the server actions
+// that gate on a NEX session to honour `resolveSessionWithDevOverride`,
+// otherwise `NEX_DEV_IMPERSONATE_HANDLE=nex-99901` cannot complete
+// the splash → `/contacts` route decision. Aliased to the legacy name
+// so the existing call-site at line 46 stays unchanged.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import SplashClient from "./_splash-client";
 
 export const dynamic = "force-dynamic";

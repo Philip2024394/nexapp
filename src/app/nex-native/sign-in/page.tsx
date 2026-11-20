@@ -22,7 +22,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-11-20 · dev-impersonation parity backfill. Dev-impersonated
+// callers visiting /sign-in must still see the "already signed-in"
+// bounce flow, so this page's session resolution must honour the
+// override. Aliased to keep the existing call-site unchanged.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { isAdminSession } from "@/lib/nex-native/app/admin";
 import {

@@ -17,7 +17,13 @@
 import type * as React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-11-20 · dev-impersonation parity backfill. The menu editor is
+// the one remaining `/manage/*` page that still resolved sessions via
+// the legacy path; dev-impersonated seller `nex-99903` was being
+// redirected to /sign-in on page load (same symptom as the sealed
+// 2026-11-12 upload-bounce bug). Aliased to keep the existing
+// call-site unchanged.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as menuService from "@/lib/nex-native/menu-service";
 import {
