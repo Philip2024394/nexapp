@@ -599,12 +599,19 @@ const GREEN_FLOW_REGISTRY: readonly GreenFlowRubric[] = [
         "Migration 354 promoted into nex-supabase/migrations/ with " +
         "matching rollback and apply-script scripts/apply-migration-" +
         "354-sandbox.mjs. Wrapper's 16/16 mocked RPC tests remain " +
-        "green; _actions.ts tsc introduced 0 new errors. STILL OPEN: " +
-        "sandbox apply of migration 354 is gated on founder handoff " +
-        "(host IPv6 blocker · Lane E ledger). Production " +
-        "ijvqdvsvwtwxzcqmoqit sealed · no prod apply. BROWSER + " +
-        "PERSISTED verification still owed after sandbox apply + " +
-        "flag flip.",
+        "green; _actions.ts tsc introduced 0 new errors. SANDBOX " +
+        "APPLIED · 2026-11-20 (owner execution round). Script run " +
+        "against kdstoyyeygcopkogqsyv returned '✓ mig 354 applied' · " +
+        "nex_create_cart_order_tx present with prosecdef=true + " +
+        "proconfig=[search_path=public,pg_temp] · EXECUTE granted to " +
+        "anon/authenticated/postgres/service_role · nex_migration_" +
+        "history row written for version 354. NEX_CART_ORDER_TX=1 " +
+        "appended to sandbox .env.local (gitignored). Production " +
+        "ijvqdvsvwtwxzcqmoqit sealed · no prod apply. STILL OPEN: " +
+        "dev server restart required so the running :3008 process " +
+        "picks up the flag; BROWSER + PERSISTED verification against " +
+        "sandbox DB (cart send → nex_order row → seller notify) " +
+        "still owed.",
       "E-PRIVACY exact blocker IDENTIFIED · round 17 · 2026-11-19. " +
         "Removing delivery_address plaintext from attachment_meta.cart " +
         "requires Path A Phase A schema to land first (new nex_order " +
