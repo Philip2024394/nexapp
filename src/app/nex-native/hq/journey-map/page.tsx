@@ -1763,12 +1763,12 @@ const DIAGRAM = `
        B · HTTP 400 (Email address is invalid)
        C · HTTP 429 (email rate limit exceeded)
      ROUND 2 (owner-approved Gmail candidates) · BLOCKED · exit 1
-       A · Philllipofarrell@gmail.com     ATTEMPTED · HTTP 429
+       A · <op-email>                     ATTEMPTED · HTTP 429
                                           (email rate limit exceeded)
-       B · Philllipofarrell+1@gmail.com   SKIPPED (never attempted;
+       B · <op-email+1>                   SKIPPED (never attempted;
                                           harness cascade-skipped
                                           after A 429)
-       C · Philllipofarrell+2@gmail.com   SKIPPED (never attempted;
+       C · <op-email+2>                   SKIPPED (never attempted;
                                           harness cascade-skipped
                                           after A 429)
      Round 2 replaced the .invalid generator in source with the
@@ -2482,7 +2482,7 @@ const DIAGRAM = `
      checks) · 10_grants.sql PASS (17 rows) ·
      20_signup_disposable_identities.mjs FAIL exit 1
      SUMMARY 0 OK · 3 BLOCKED. All three signUps for
-     Philllipofarrell / +1 / +2 returned Supabase "Error
+     <op-email> / +1 / +2 returned Supabase "Error
      sending confirmation email" synchronously · NOT a 429
      cascade. Stop-on-first-failure engaged: 30-82 scripts
      never dispatched; 90_cleanup excluded as always.
@@ -2967,6 +2967,89 @@ const DIAGRAM = `
        · BLOCKED-PROV unchanged at 5 (42/43/51/63/64).
        · Decisions queued carry forward: D1 credentials · D3
          provision D/E · D6 SMTP attest · D7 Config Y execute.
+
+     (§16.48.29 · 2026-11-20): direct-dispatch sandbox probe ·
+     owner A1 path · 10-case batch · 9 PASS + 1 PARTIAL. D1
+     (credentials) unblocked in-process via parent-held in-memory
+     passwords; identities A/B/C real sandbox Auth rows reset
+     once each via admin.updateUserById (no admin.createUser).
+     See evidence/master-flow/RECONCILIATION-LEDGER-2026-11-18.md
+     §16.48.29 for full report.
+
+     New file (additive · zero existing-file script edits):
+       · scripts/gate-a-connected-matrix/_reset-and-run-16-48-29.mjs
+         (573 lines · preserves every _runner.mjs safeguard
+         including production ref hard-refuse at URL + DB URL +
+         service-role JWT ref claim + anon JWT ref claim)
+       · scripts/gate-a-connected-matrix/_results.16-48-29.json.OUTPUT
+         (verdict file · atomic write)
+
+     Connected outcomes (child structured verdict takes precedence
+     over parent exit code):
+       · 40 V-W1-NEW         PASS   CONNECTED      → CBP
+       · 41 V-W1-EXIST       PASS   CONNECTED      → CBP
+       · 44 V-W1-WHITESPACE  PASS   CONNECTED      → CBP
+       · 45 V-W1-DUP         PASS   CONNECTED      → CBP
+       · 50 V-W2-OK          PASS   CONNECTED      → CBP
+       · 52 V-W2-DUP         PASS   CONNECTED      → CBP
+       · 60 V-W3-UPDATE      PASS   CONNECTED      → CBP
+       · 65 V-W3-PROMOTE     PASS   CONNECTED      → CBP
+       · 66 V-W3-NOPROMOTE   PASS   CONNECTED      → CBP
+       · 70 V-ATOMIC         PARTIAL PARTIAL-COVERAGE
+            "Only 3/4 rows. Single-write atomicity cannot be
+             fully tested without 5+ identities."
+
+     Classifier-bug disclosure (self-audit per A1 §6): parent
+     classify() in _reset-and-run-16-48-29.mjs decides PASS strictly
+     on exit===0; it does NOT read the child's structured verdict
+     field. Case 70 exits 0 on PARTIAL (script line 130), so the
+     parent one-line summary reported "PASS=10". Raw child JSON at
+     _results.16-48-29.json.OUTPUT:294-311 carries the correct
+     verdict; ledger + this entry record 70 as PARTIAL, not PASS.
+
+     Case G STATE_BLOCKER status: UNCHANGED. Two complementary
+     reasons:
+       (1) architectural — nex_invite_to_call_tx uses
+           BEGIN...EXCEPTION WHEN unique_violation THEN...END
+           which CATCHES and HANDLES (dedup path returning
+           out_skipped='already_invited'), does NOT re-raise · no
+           supported RPC path exposes a mid-function fault between
+           session INSERT and participant INSERT;
+       (2) identity count — 70_v_atomic needs preCount >= 4 to
+           reach the P0001 cap-trigger path; with A/B/C only,
+           preCount = 3 and the script short-circuits before any
+           failing RPC call. Even with D3 (D/E provisioned),
+           reason (1) still leaves Case G blocked.
+
+     Master gate board delta after §16.48.29 (relative to §16.48.27
+     baseline · additive to §16.48.28 deltas):
+       · CBP: 4 → 13 (+9 · 40/41/44/45/50/52/60/65/66).
+       · BLOCKED-CRED: 10 → 1 (−9 · 70 reclassified).
+       · PARTIAL-COVERAGE: 0 → 1 (+1 · 70).
+       · SANDBOX-APPLIED: carries §16.48.28 mig 362.
+       · PROG-VER: carries §16.48.28 unit tests.
+       · BLOCKED-PROV unchanged at 5 (42/43/51/63/64).
+       · STATE_BLOCKER unchanged at 1 (Case G).
+
+     What §16.48.29 does NOT upgrade:
+       · Case G architectural STATE_BLOCKER — unchanged.
+       · 42/43/51/63/64 BLOCKED-PROV — D3 still pending.
+       · Production ijvqdvsvwtwxzcqmoqit — SEALED and untouched.
+       · No CI/remote run · no commit · no push · no deploy.
+       · No _runner.mjs edit · no _shared.mjs edit.
+       · Engineering ceiling remains Verified. Prod-configured +
+         Live-verified stay owner-only.
+
+     Side effects landed in sandbox kdstoyyeygcopkogqsyv:
+       · 3 × auth.users rows updated (password hash + updated_at);
+       · 10 new nex_group_call_session rows + ~20 participant rows
+         + ~5 peer_conversation rows + ~10 peer_message rows
+         retained (GATE_A_SKIP_CLEANUP=1 · forensic retention);
+       · 0 production writes · 0 schema changes · 0 migrations.
+
+     Final classification per A1 §7: SANDBOX NOT COMPLETE.
+     Residual: 1 PARTIAL (70), 1 STATE_BLOCKER (Case G),
+     5 BLOCKED-PROV (D3 pending).
 
    H · vault idle/hidden lock (5 min / 1 min, startVaultIdleGuard)
         · locks every /vault/* route; unrelated journeys untouched.

@@ -406,3 +406,13 @@ public/dev/live-videos/
 # nex-music-directory-architecture-draft-2026-10-30.md §8.1 + §Active-Slot
 # Rotation Rule).
 .dev-music-data/
+
+# 2026-11-20 · Gate-A Connected Matrix harness outputs carry real
+# operator identity capture rows (email + supabase_user_id +
+# nex_account_id) when the full matrix is executed against the
+# sandbox. The harness scripts themselves are source of truth · the
+# .OUTPUT and .OUTPUT.prior-* files are per-run artefacts that must
+# never land in a public repo. The .PLACEHOLDER template stays tracked.
+scripts/gate-a-connected-matrix/*.OUTPUT
+scripts/gate-a-connected-matrix/*.OUTPUT.*
+!scripts/gate-a-connected-matrix/*.PLACEHOLDER

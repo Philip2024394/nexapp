@@ -1,0 +1,11 @@
+TARGET: sandbox kdstoyyeygcopkogqsyv
+
+SIGNUP A: <op-email>
+BLOCKED: signUp for A failed: email rate limit exceeded
+RATE LIMIT detected — marking remaining identities BLOCKED without retry
+
+Identity capture written to: C:\Users\Victus\nexapp\scripts\gate-a-connected-matrix\99_identity_capture.json.OUTPUT
+NOTE: passwords NOT in capture file — held in process.env GATE_A_TEST_PASSWORD_{A,B,C} only
+
+SUMMARY: 0 OK · 3 BLOCKED
+FAIL: no identities signed up successfully — all scenarios will be BLOCKED
