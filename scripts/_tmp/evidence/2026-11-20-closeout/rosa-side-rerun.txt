@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [rosa-side-390] › tests\e2e-stage5-shop-chat\rosa-side.spec.ts:34:7 › Stage 5 · Rosa side (impersonation = nex-99903) › Rosa can access the customer-created conversation (5.1s)
+  ✓  2 [rosa-side-390] › tests\e2e-stage5-shop-chat\rosa-side.spec.ts:51:7 › Stage 5 · Rosa side (impersonation = nex-99903) › Rosa sees 99901's product-share rows in history (muted · no device key) (2.1s)
+  ✓  3 [rosa-side-390] › tests\e2e-stage5-shop-chat\rosa-side.spec.ts:66:7 › Stage 5 · Rosa side (impersonation = nex-99903) › Rosa's view shows bubbles · peer identity correctly resolved (2.5s)
+
+  3 passed (11.1s)

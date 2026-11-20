@@ -624,6 +624,50 @@ const GREEN_FLOW_REGISTRY: readonly GreenFlowRubric[] = [
         "switch is a SEPARATE authorisation word-trigger · UI STILL " +
         "stamps delivery_address plaintext into attachment_meta.cart " +
         "until that trigger fires.",
+      "E-SECURITY migration 363 APPLIED to sandbox kdstoyyeygcopkogqsyv · " +
+        "2026-11-20 via aws-1-eu-west-3 pooler. Closes anon EXECUTE on " +
+        "nex_create_cart_order_tx (REVOKE PUBLIC + REVOKE anon · GRANT " +
+        "authenticated + service_role preserved) and adds defence-in- " +
+        "depth check: NULL auth.uid() callers must have current_" +
+        "setting('role') = 'service_role' or the function raises " +
+        "'caller_identity_denied'. Post-apply REST probe returns " +
+        "HTTP 401 42501 'permission denied for function' (was HTTP 400 " +
+        "P0001 caller_account_not_found pre-apply · evidence files at " +
+        "docs/evidence/mig-363-sandbox-2026-11-20/). Security contract " +
+        "5/9 PASS: T1 anon ACL denied · T2 authenticated+NULL fails " +
+        "closed · T4 buyer-ID tampering denied (caller_account_not_" +
+        "found) · T5 non-existent conv denied (conversation_not_found) " +
+        "· T9 forced product_not_found leaves zero orphan nex_order " +
+        "rows. 4/9 BLOCKED by pre-existing TEXT→UUID cast bug on " +
+        "nex_peer_message.send_intent_id (column is UUID, function " +
+        "passes NULLIF(p_send_intent_id,'') without ::uuid cast · " +
+        "SQLSTATE 42804). Latent since send_intent_id was migrated to " +
+        "UUID; hidden in production because NEX_CART_ORDER_TX=0 kept " +
+        "RPC callers off the message-insert path. Fix prepared as " +
+        "candidate-migrations/364_fix_cart_order_tx_send_intent_cast_" +
+        "PROPOSAL.sql · byte-identical to mig 363 except two ::uuid " +
+        "casts + local uuid var. NOT AUTHORISED for apply. " +
+        "NEX_CART_ORDER_TX stays 0 until mig 364 is approved + applied " +
+        "and T3/T6/T7/T8 contract checks pass. Production " +
+        "ijvqdvsvwtwxzcqmoqit SEALED · no prod apply.",
+      "E-SECURITY-WALKER extended walker 2026-11-20: genuine " +
+        "authentication (NOT dev-impersonation) for Hamrex nex-99901 " +
+        "+ Rosa nex-99903 via admin.generateLink magiclink · fetch " +
+        "manual-redirect extracts access_token from Location-header " +
+        "hash fragment. Both tokens verified against /auth/v1/user → " +
+        "auth.uid() matches persona. 10/10 PASS under real JWTs: P1 " +
+        "Hamrex POST message in shared conv (201) · P2 Rosa reads " +
+        "and sees Hamrex row · P3 Rosa POST reply (201) · P4 Hamrex " +
+        "reads and sees both rows · P5 fresh fetch after settle " +
+        "confirms persistence · N1 sender-spoof (Hamrex sending as " +
+        "Rosa) rejected HTTP 403 42501 'new row violates row-level " +
+        "security policy' · N2 non-participant conv insert rejected " +
+        "HTTP 403 42501 · N3 stranger-conv SELECT returns 0 rows. " +
+        "Evidence: scripts/_tmp/evidence/2026-11-20-closeout/" +
+        "full-walker-two-way-chat.json + .txt. Proves nex_peer_" +
+        "message INSERT and SELECT RLS policies correctly scope to " +
+        "nex_current_account_ids() derived from auth.uid() on real " +
+        "JWTs.",
     ],
   },
   {

@@ -1,0 +1,14 @@
+Target · sandbox kdstoyyeygcopkogqsyv via aws-1-eu-west-3.pooler.supabase.com:5432
+SHA · 88944c230557832ec28b5899cf36b15c78bf0162572a208e491ce79af0079440 VERIFIED
+CONNECTED · pooler
+Migration 363 SQL executed
+── POST-CHECK
+  pg_proc: secdef=true owner=postgres proconfig=["search_path=public, pg_temp"] body_md5=ef5cdf9d8d3757734ab505eb805614aa
+  priv public: false (exp false) → PASS
+  priv anon: false (exp false) → PASS
+  priv authenticated: true (exp true) → PASS
+  priv service_role: true (exp true) → PASS
+  ACL · {postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+  history · 363 @ Fri Nov 20 2026 18:00:34 GMT+0700 (Western Indonesia Time)
+
+Mig 363 apply complete · duration=3510ms · exitCode=0

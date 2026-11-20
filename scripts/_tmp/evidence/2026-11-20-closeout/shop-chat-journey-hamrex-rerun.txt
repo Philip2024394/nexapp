@@ -1,0 +1,12 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:57:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 1 · shop page renders shop identity + products (2.9s)
+  ✓  2 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:72:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 2 · product page renders with Ask Seller + Add to Cart enabled (4.5s)
+  ✓  3 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:126:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 3 · Ask Seller routes to business chat with product chip pinned (8.5s)
+  ✓  4 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:156:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 4 · Send flow · live send OR cooldown lock (both prove Stage 2) (2.3s)
+  ✓  5 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:230:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 5 · refresh preserves the product-share row in history (4.7s)
+  ✓  6 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:249:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 6 · cross-shop product id is silently refused (chip never renders) (6.1s)
+  ✓  7 [shop-chat-journey-390] › tests\e2e-stage5-shop-chat\shop-chat-journey.spec.ts:268:7 › Stage 5 · Shop Chat journey (signed-in 99901 · sandbox) › Step 7 · signed-in Ask Seller form wired · anon popup gap recorded (4.9s)
+
+  7 passed (36.4s)

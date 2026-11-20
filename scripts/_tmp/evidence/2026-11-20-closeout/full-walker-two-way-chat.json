@@ -1,0 +1,93 @@
+{
+  "base": "http://localhost:3008",
+  "sandbox": "kdstoyyeygcopkogqsyv",
+  "runTag": "walker-full-1795173926870",
+  "startedAt": "2026-11-20T11:25:29.477Z",
+  "fixtures": {
+    "hamrex": {
+      "handle": "nex-99901",
+      "account_id_prefix": "11111111",
+      "user_id_prefix": "8749b2ec"
+    },
+    "rosa": {
+      "handle": "nex-99903",
+      "account_id_prefix": "11111111",
+      "user_id_prefix": "421ef697"
+    },
+    "conversation_id_prefix": "d972e635"
+  },
+  "steps": [
+    {
+      "name": "mint JWTs for both personas",
+      "pass": true,
+      "hamrexTokenCaptured": true,
+      "rosaTokenCaptured": true
+    },
+    {
+      "name": "JWTs map to correct auth.uid()",
+      "pass": true,
+      "hamrex_matches": true,
+      "rosa_matches": true
+    },
+    {
+      "name": "P1 · Hamrex POST message in shared conv",
+      "pass": true,
+      "status": 201,
+      "msg_id_prefix": "51d590d5"
+    },
+    {
+      "name": "P2 · Rosa reads shared conv — sees Hamrex row",
+      "pass": true,
+      "status": 200,
+      "total_rows": 10,
+      "saw_hamrex_msg": true
+    },
+    {
+      "name": "P3 · Rosa POST reply in shared conv",
+      "pass": true,
+      "status": 201,
+      "msg_id_prefix": "a8af61b1"
+    },
+    {
+      "name": "P4 · Hamrex reads — sees both rows",
+      "pass": true,
+      "status": 200,
+      "total_rows": 2,
+      "saw_both": true
+    },
+    {
+      "name": "P5 · fresh fetch after settle · both rows persisted",
+      "pass": true,
+      "status": 200,
+      "total_rows": 2,
+      "both_persisted": true
+    },
+    {
+      "name": "N1 · Hamrex→spoof(sender=Rosa) · RLS blocks",
+      "pass": true,
+      "status": 403,
+      "body_hint": "{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security policy for table \\\"nex_peer_me"
+    },
+    {
+      "name": "N2 · Hamrex→non-participant conv · RLS blocks",
+      "pass": true,
+      "status": 403,
+      "body_hint": "{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security policy for table \\\"nex_peer_me"
+    },
+    {
+      "name": "N3 · Rosa SELECT stranger-conv · 0 rows",
+      "pass": true,
+      "status": 200,
+      "rows": 0
+    }
+  ],
+  "cleanup": {
+    "rows_deleted": 2
+  },
+  "finishedAt": "2026-11-20T11:25:34.618Z",
+  "summary": {
+    "passed": 10,
+    "total": 10,
+    "allPassed": true
+  }
+}

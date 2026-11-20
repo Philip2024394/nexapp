@@ -1,0 +1,13 @@
+Route smoke · :3008 (Hamrex nex-99901) · 2026-11-20
+====================================================
+GET /nex-native/contacts                    HTTP 200 · persona confirmed: nex-99901 (Hamrex), Rosa listed as contact
+GET /nex-native/free-chat                   HTTP 200 · persona string nex-99901 present in markup
+GET /nex-native/chat-themes-library         HTTP 200
+GET /nex-native/chat-themes-library/all     HTTP 200
+GET /nex-native/handbags-direct             HTTP 200 · shop page renders · "Handbags direct" + "Classic hand-stitched leather tote" visible
+GET /nex-native/handbags-direct?product=…   HTTP 200 · product detail renders · title + "Add to Cart" + "Ask Seller" visible
+GET /nex-native/orders/<id>                 HTTP 200 · buyer-side order page route EXISTS (journey #5 target present, build-in-scope NOT required)
+GET /nex-native/manage/orders               HTTP 200 · seller-side order list route EXISTS
+GET /nex-native/hq/journey-map              HTTP 200 (hot-reload noise from backtick-in-prose SWC parse but page serves)
+GET /nex-native/product/preview             HTTP 200
+GET /nex-generated/buying-guides            HTTP 200

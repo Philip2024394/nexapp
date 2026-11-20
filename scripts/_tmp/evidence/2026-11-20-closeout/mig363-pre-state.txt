@@ -1,0 +1,16 @@
+CONNECTED · pooler
+HISTORY HEAD (top 5):
+  354 @ Fri Nov 20 2026 16:08:26 GMT+0700 (Western Indonesia Time)
+  362 @ Fri Nov 20 2026 13:23:22 GMT+0700 (Western Indonesia Time)
+  360 @ Fri Nov 20 2026 10:09:05 GMT+0700 (Western Indonesia Time)
+  359 @ Thu Nov 19 2026 21:11:20 GMT+0700 (Western Indonesia Time)
+  358 @ Thu Nov 19 2026 21:11:13 GMT+0700 (Western Indonesia Time)
+MIG 363 ROW: <absent>
+FUNCTION META:
+  public.nex_create_cart_order_tx(p_self_supabase_user_id uuid, p_sender_account_id uuid, p_conversation_id uuid, p_message_body text, p_attachment_meta jsonb, p_send_intent_id text, p_order_id uuid, p_primary_product_id uuid, p_idempotency_key text, p_customer_note text) secdef=true owner=postgres proconfig=["search_path=public, pg_temp"] body_md5=22a16a816cd9c9e66a046d698fa0b107
+  PRIV public: false
+  PRIV anon: true
+  PRIV authenticated: true
+  PRIV service_role: true
+RAW ACL: {postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+DONE

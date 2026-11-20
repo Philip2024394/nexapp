@@ -1,0 +1,5 @@
+target=https://kdstoyyeygcopkogqsyv.supabase.co
+HTTP 400 
+body: {"code":"P0001","details":null,"hint":null,"message":"caller_account_not_found"}
+
+VERDICT: anon CAN REACH the function body · EXECUTE grant exposed to anon · the function executed and raised on its own internal checks

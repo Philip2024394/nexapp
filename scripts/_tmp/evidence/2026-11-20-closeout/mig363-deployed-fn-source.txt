@@ -1,0 +1,32 @@
+nex_peer_message columns:
+  attachment_meta · jsonb (jsonb)
+  body · text (text)
+  send_intent_id · uuid (uuid)
+  sender_account_id · uuid (uuid)
+
+=== deployed body · peer_message insert block ===
+nex_peer_message (
+    conversation_id,
+    sender_account_id,
+    body,
+    attachment_url,
+    attachment_type,
+    attachment_meta,
+    send_intent_id
+  ) VALUES (
+    p_conversation_id,
+    p_sender_account_id,
+    p_message_body,
+    NULL,
+    NULL,
+    p_attachment_meta,
+    NULLIF(p_send_intent_id, '')
+  )
+  ON CONFLICT (sender_account_id, send_intent_id) DO NOTHING
+  RETURNING id INTO v_message_id;
+
+  IF v_message_id IS NULL THEN
+    SELECT id INTO v_message_id
+    FROM nex_peer_message
+    WHERE sender_account_id = p_sender_account_id
+      AND send_intent_id = NULLIF(p_send_intent_id

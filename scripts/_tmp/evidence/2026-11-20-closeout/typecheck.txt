@@ -1,0 +1,20 @@
+src/lib/nex/truth-engine/verifier/rules/rules.test.ts(397,13): error TS2352: Conversion of type 'RuleVerdict' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'RuleVerdict'.
+src/lib/nex/truth-engine/verifier/rules/rules.test.ts(398,13): error TS2352: Conversion of type 'RuleVerdict' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'RuleVerdict'.
+src/lib/nex/truth-engine/verifier/rules/rules.test.ts(399,13): error TS2352: Conversion of type 'RuleVerdict' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'RuleVerdict'.
+src/lib/nex/universal-intent/classify.test.ts(13,14): error TS2339: Property 'needs_clarification' does not exist on type 'IntentClassification'.
+src/lib/nex/vision/metrics.ts(74,10): error TS18048: 'vision.materials' is possibly 'undefined'.
+src/lib/nex/vision/metrics.ts(75,11): error TS18048: 'vision.components' is possibly 'undefined'.
+src/lib/nex/vision/metrics.ts(76,11): error TS18048: 'vision.construction' is possibly 'undefined'.
+src/lib/nex/vision/metrics.ts(77,11): error TS18048: 'vision.styles' is possibly 'undefined'.
+src/lib/nex/vision/metrics.ts(78,11): error TS18048: 'vision.interior_context' is possibly 'undefined'.
+src/lib/nex/vision/visionExtractor.ts(111,3): error TS2740: Type '{ vision_model: string; vision_confidence: number; extracted_at: string; materials: never[]; components: never[]; construction: never[]; styles: never[]; interior_context: never[]; manufacturing_clues: never[]; ... 7 more ...; ai_generation_hints: { ...; }; }' is missing the following properties from type 'VisionExtraction': object, classification, visual_identification, construction_intelligence, and 5 more.
+tests/e2e-p6-isolation/vault-acceptance.spec.ts(130,12): error TS18047: 'r.rowCount' is possibly 'null'.
+tests/e2e-p6-isolation/vault-chat-behavior.spec.ts(351,16): error TS18047: 'r.rowCount' is possibly 'null'.
+tests/e2e/live-footer-3-dots-container.spec.ts(57,47): error TS2551: Property 'webkitBackdropFilter' does not exist on type 'CSSStyleDeclaration'. Did you mean 'backdropFilter'?
+tests/e2e/nex-feed-visual-verify.spec.ts(63,3): error TS2322: Type '{ url: string; viewport: { width: number; height: number; }; projectName: string; mainExists: boolean; mainRect: { x: number; y: number; width: number; height: number; } | null; frameRect: { x: number; y: number; width: number; height: number; } | null; ... 7 more ...; videoReadyState: number | null; }' is not assignable to type 'SlideMeasurements'.
+  Types of property 'videoPaused' are incompatible.
+    Type 'boolean | null' is not assignable to type 'boolean | undefined'.
+      Type 'null' is not assignable to type 'boolean | undefined'.

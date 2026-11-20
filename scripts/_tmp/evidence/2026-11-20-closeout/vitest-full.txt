@@ -1,0 +1,20 @@
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: process.exit unexpectedly called with "1"
+ ❯ process.exit node_modules/vitest/dist/chunks/base.B6Opl8PE.js:109:9
+ ❯ src/lib/nex/brain/tests/knowledge-dump-worker.test.mjs:200:49
+    198| }
+    199|
+    200| main().catch((e) => { console.error(e); process.exit(1); });
+       |                                                 ^
+    201|
+
+This error originated in "src/lib/nex/brain/tests/knowledge-dump-worker.test.mjs" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  383 failed | 1051 passed | 5 skipped (1439)
+      Tests  367 failed | 23189 passed | 338 skipped | 9 todo (23903)
+     Errors  3 errors
+   Start at  17:39:02
+   Duration  116.03s (transform 51.72s, setup 32.61s, import 123.02s, tests 392.65s, environment 35.47s)
+

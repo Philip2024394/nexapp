@@ -1,0 +1,13 @@
+PASS · mint JWTs for both personas · {"hamrexTokenCaptured":true,"rosaTokenCaptured":true}
+PASS · JWTs map to correct auth.uid() · {"hamrex_matches":true,"rosa_matches":true}
+PASS · P1 · Hamrex POST message in shared conv · {"status":201,"msg_id_prefix":"51d590d5"}
+PASS · P2 · Rosa reads shared conv — sees Hamrex row · {"status":200,"total_rows":10,"saw_hamrex_msg":true}
+PASS · P3 · Rosa POST reply in shared conv · {"status":201,"msg_id_prefix":"a8af61b1"}
+PASS · P4 · Hamrex reads — sees both rows · {"status":200,"total_rows":2,"saw_both":true}
+PASS · P5 · fresh fetch after settle · both rows persisted · {"status":200,"total_rows":2,"both_persisted":true}
+PASS · N1 · Hamrex→spoof(sender=Rosa) · RLS blocks · {"status":403,"body_hint":"{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security policy for table \\\"nex_peer_me"}
+PASS · N2 · Hamrex→non-participant conv · RLS blocks · {"status":403,"body_hint":"{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"new row violates row-level security policy for table \\\"nex_peer_me"}
+PASS · N3 · Rosa SELECT stranger-conv · 0 rows · {"status":200,"rows":0}
+CLEANUP · deleted=2
+
+SUMMARY · 10/10 steps PASS

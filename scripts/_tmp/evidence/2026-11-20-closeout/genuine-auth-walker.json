@@ -1,0 +1,108 @@
+{
+  "base": "http://localhost:3008",
+  "sandbox": "kdstoyyeygcopkogqsyv",
+  "startedAt": "2026-11-20T11:18:52.860Z",
+  "personas": [
+    {
+      "handle": "nex-99901",
+      "label": "Hamrex",
+      "account_id": "11111111",
+      "user_id": "8749b2ec",
+      "emailMask": "p***@nex.invalid",
+      "steps": [
+        {
+          "id": 1,
+          "name": "generateLink",
+          "ok": true,
+          "note": "magiclink minted (URL redacted)"
+        },
+        {
+          "id": 2,
+          "name": "magiclink exchange → access_token fragment",
+          "ok": true,
+          "status": 200,
+          "landedPath": "/nex-native",
+          "tokenInFragment": true
+        },
+        {
+          "id": 3,
+          "name": "GET /nex-native/chat/",
+          "ok": true,
+          "status": 200,
+          "persona_marker": false
+        },
+        {
+          "id": 4,
+          "name": "GET /nex-native/manage/",
+          "ok": true,
+          "status": 308,
+          "location": "/nex-native/manage"
+        },
+        {
+          "id": 5,
+          "name": "RLS checks with real user access_token",
+          "accessTokenCaptured": true,
+          "myConvStatus": 200,
+          "myConvCount": 5,
+          "strangerStatus": 200,
+          "strangerCount": 0,
+          "authUserStatus": 200,
+          "authUserId": "8749b2ec",
+          "authUserIdMatches": true,
+          "ok": true
+        }
+      ]
+    },
+    {
+      "handle": "nex-99903",
+      "label": "Rosa",
+      "account_id": "11111111",
+      "user_id": "421ef697",
+      "emailMask": "p***@nex.invalid",
+      "steps": [
+        {
+          "id": 1,
+          "name": "generateLink",
+          "ok": true,
+          "note": "magiclink minted (URL redacted)"
+        },
+        {
+          "id": 2,
+          "name": "magiclink exchange → access_token fragment",
+          "ok": true,
+          "status": 200,
+          "landedPath": "/nex-native",
+          "tokenInFragment": true
+        },
+        {
+          "id": 3,
+          "name": "GET /nex-native/chat/",
+          "ok": true,
+          "status": 200,
+          "persona_marker": false
+        },
+        {
+          "id": 4,
+          "name": "GET /nex-native/manage/",
+          "ok": true,
+          "status": 308,
+          "location": "/nex-native/manage"
+        },
+        {
+          "id": 5,
+          "name": "RLS checks with real user access_token",
+          "accessTokenCaptured": true,
+          "myConvStatus": 200,
+          "myConvCount": 2,
+          "strangerStatus": 200,
+          "strangerCount": 0,
+          "authUserStatus": 200,
+          "authUserId": "421ef697",
+          "authUserIdMatches": true,
+          "ok": true
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-11-20T11:19:02.764Z"
+}

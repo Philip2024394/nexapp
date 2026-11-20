@@ -1,0 +1,21 @@
+fixtures · hamrex=11111111 rosa=11111111
+conversation=d972e635
+product=1a0eb693 business=e375712a
+PASS · T1 · anon lacks EXECUTE · has_function_privilege=false
+PASS · T2 · authenticated + NULL auth.uid() → fails closed · P0001 caller_identity_denied · null auth.uid requires service_role (got authenticated)
+FAIL · T3 · service_role + NULL auth.uid() → success · 42804 column "send_intent_id" is of type uuid but expression is of type text
+PASS · T4 · buyer-ID tampering (sender != self owner) → denied · P0001 caller_account_not_found
+PASS · T5 · non-existent conversation → denied · P0001 conversation_not_found
+FAIL · T6 · invalid product_id → product_not_found · 42804 column "send_intent_id" is of type uuid but expression is of type text
+FAIL · T7 · duplicate idempotency_key → order_dedup_hit, same order_id · r1=undefined r2=undefined err1=column "send_intent_id" is of type uuid but expression is of type text err2=column "send_intent_id" is of type uuid but expression is of type text
+FAIL · T8 · concurrent same-key idempotency → single order id · err a=column "send_intent_id" is of type uuid but expression is of type text b=column "send_intent_id" is of type uuid but expression is of type text
+PASS · T9 · forced product_not_found → no orphan nex_order · rpc=FAIL order_rows=0 err=column "send_intent_id" is of type uuid but expression is of type text
+
+CLEANUP · orders=0 messages=0
+
+SUMMARY · 5/9 passed
+FAILED:
+  - T3 · service_role + NULL auth.uid() → success · 42804 column "send_intent_id" is of type uuid but expression is of type text
+  - T6 · invalid product_id → product_not_found · 42804 column "send_intent_id" is of type uuid but expression is of type text
+  - T7 · duplicate idempotency_key → order_dedup_hit, same order_id · r1=undefined r2=undefined err1=column "send_intent_id" is of type uuid but expression is of type text err2=column "send_intent_id" is of type uuid but expression is of type text
+  - T8 · concurrent same-key idempotency → single order id · err a=column "send_intent_id" is of type uuid but expression is of type text b=column "send_intent_id" is of type uuid but expression is of type text
