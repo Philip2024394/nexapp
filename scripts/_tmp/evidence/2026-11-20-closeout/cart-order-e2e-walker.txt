@@ -1,0 +1,15 @@
+CONNECTED · sandbox kdstoyyeygcopkogqsyv
+fixtures · hamrex=11111111 rosa=11111111
+conv=d972e635 product=1a0eb693
+PASS · S1 · fresh rpc call · msg=78d0011c order=539a7fff skipped=null
+PASS · S1a · nex_peer_message row · rows=1 send_intent=2e50f4df body=[cart-e2e-1795176526152] cart msg 1
+PASS · S1b · nex_order row · rows=1 state=created price=450000 cur=IDR
+PASS · S1c · nex_order_event row · rows=1 event=created meta.product=1a0eb693
+PASS · S2 · replay idempotency · skipped=order_dedup_hit order=539a7fff (expected 539a7fff)
+PASS · S2a · single order row preserved · n=1
+PASS · S3 · null-product msg-only · msg=4ac3b614 order=null skipped=no_product_item
+PASS · S3a · message row written · rows=1
+PASS · S4 · send_intent replay (42P10 path) · msg_count=1 reused=true
+CLEANUP · orders=2 messages=3
+
+SUMMARY · 9/9 passed

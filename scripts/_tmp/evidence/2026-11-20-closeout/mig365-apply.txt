@@ -1,0 +1,17 @@
+Target · sandbox kdstoyyeygcopkogqsyv via aws-1-eu-west-3.pooler.supabase.com:5432
+SHA · 606d2d04acf0167deb5fe30628c87ec788e398cb73bd6fcf3fbd4afb9c1ecf38 VERIFIED
+CONNECTED · pooler
+  pre body_md5=08dce8e000e6f30fd1e96dc8d8a79b4e
+  pre anon EXECUTE=false (must stay false)
+Migration 365 SQL executed
+── POST-CHECK
+  pg_proc: secdef=true owner=postgres proconfig=["search_path=public, pg_temp"] body_md5=065e806ecfab6b2e3322aa84189afecd
+  deployed body contains WHERE-predicate ON CONFLICT → PASS
+  priv public: false (exp false) → PASS
+  priv anon: false (exp false) → PASS
+  priv authenticated: true (exp true) → PASS
+  priv service_role: true (exp true) → PASS
+  ACL · {postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+  history · 365 @ Fri Nov 20 2026 19:04:58 GMT+0700 (Western Indonesia Time)
+
+Mig 365 apply complete · duration=3866ms · exitCode=0

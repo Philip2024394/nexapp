@@ -672,6 +672,30 @@ const GREEN_FLOW_REGISTRY: readonly GreenFlowRubric[] = [
         "post-mig-364: still 5/9 PASS (same four T3/T6/T7/T8 now " +
         "failing on 42P10 instead of 42804). Flag NEX_CART_ORDER_" +
         "TX stays 0.",
+      "E-SECURITY migration 365 APPLIED to sandbox 2026-11-20 by " +
+        "owner word-trigger 'apply mig 365 to sandbox'. Body md5 " +
+        "08dce8e0 → 065e806e · ON CONFLICT (sender_account_id, " +
+        "send_intent_id) WHERE send_intent_id IS NOT NULL DO NOTHING " +
+        "deployed (regex-matched on live pg_get_functiondef) · anon " +
+        "still revoked, authenticated + service_role preserved via " +
+        "CREATE OR REPLACE. Security contract 9/9 PASS: T1 anon ACL " +
+        "denied · T2 authenticated+NULL fails closed · T3 service_role " +
+        "success (order created) · T4 buyer-ID tampering denied · T5 " +
+        "non-existent conv denied · T6 invalid product rejected · T7 " +
+        "duplicate idempotency returns order_dedup_hit · T8 concurrent " +
+        "same-key race → single order id · T9 forced partial failure " +
+        "leaves zero orphan nex_order. SQLSTATE 42804 + 42P10 both " +
+        "cleared on the RPC path. Three-table E2E walker 9/9 PASS: " +
+        "fresh RPC writes nex_peer_message + nex_order + nex_order_" +
+        "event atomically · idempotency replay preserves single order " +
+        "row · null-product path writes message-only (no_product_item)" +
+        " · send_intent replay resolves via partial-index dedup. " +
+        "Evidence: scripts/_tmp/evidence/2026-11-20-closeout/mig365-" +
+        "apply.txt + mig365-security-contract.txt + cart-order-e2e-" +
+        "walker.txt. Production ijvqdvsvwtwxzcqmoqit SEALED · no " +
+        "prod apply. NEX_CART_ORDER_TX remains 0 in committed .env · " +
+        "the walker enabled it only within the isolated test " +
+        "connection (SET LOCAL ROLE service_role per txn).",
       "E-SECURITY-WALKER extended walker 2026-11-20: genuine " +
         "authentication (NOT dev-impersonation) for Hamrex nex-99901 " +
         "+ Rosa nex-99903 via admin.generateLink magiclink · fetch " +

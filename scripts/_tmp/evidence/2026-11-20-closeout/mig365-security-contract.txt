@@ -1,0 +1,16 @@
+fixtures · hamrex=11111111 rosa=11111111
+conversation=d972e635
+product=1a0eb693 business=e375712a
+PASS · T1 · anon lacks EXECUTE · has_function_privilege=false
+PASS · T2 · authenticated + NULL auth.uid() → fails closed · P0001 caller_identity_denied · null auth.uid requires service_role (got authenticated)
+PASS · T3 · service_role + NULL auth.uid() → success · order_id=d8f6522e skipped=null
+PASS · T4 · buyer-ID tampering (sender != self owner) → denied · P0001 caller_account_not_found
+PASS · T5 · non-existent conversation → denied · P0001 conversation_not_found
+PASS · T6 · invalid product_id → product_not_found · P0001 product_not_found
+PASS · T7 · duplicate idempotency_key → order_dedup_hit, same order_id · order=e553965f skipped=order_dedup_hit
+PASS · T8 · concurrent same-key idempotency → single order id · order=47c74fa9 skippedA= skippedB=order_dedup_race
+PASS · T9 · forced product_not_found → no orphan nex_order · rpc=FAIL order_rows=0 err=product_not_found
+
+CLEANUP · orders=3 messages=5
+
+SUMMARY · 9/9 passed

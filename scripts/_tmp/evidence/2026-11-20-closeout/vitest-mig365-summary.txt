@@ -1,0 +1,8 @@
+     × Directory Factory page never emits category_registry SQL 1ms
+
+ Test Files  383 failed | 1051 passed | 5 skipped (1439)
+      Tests  366 failed | 23198 passed | 330 skipped | 9 todo (23903)
+     Errors  2 errors
+   Start at  19:10:13
+   Duration  109.05s (transform 50.02s, setup 31.98s, import 117.81s, tests 367.99s, environment 33.13s)
+
