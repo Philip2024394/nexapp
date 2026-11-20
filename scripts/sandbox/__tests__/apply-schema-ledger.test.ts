@@ -21,6 +21,9 @@ import { readdirSync } from "node:fs";
 const EXCLUDE_PATTERNS = [
   /SUPERSEDED/,
   /\.rollback\.sql$/,
+  // 2026-11-20 · owner-authorised filter patch. Underscore form
+  // (`*_rollback.sql`) was leaking into the applied set since mig 300.
+  /_rollback\.sql$/,
   /^999_WIP_/,
   /^244_nex_country_column\.sql$/,
   /^245_nex_country_rls\.sql$/,
@@ -45,15 +48,13 @@ function ledgerKey(filename: string): string {
 describe("apply-schema filter + ledger key", () => {
   const applicable = listApplicable();
 
-  // 2026-11-20 · constant refreshed from 236 to 372 after migrations
-  // 243-365 landed. Separate finding: the production filter regex
-  // `\.rollback\.sql$` does NOT match the actual `_rollback.sql`
-  // naming convention used since ~mig 300 · rollback files leak into
-  // the applicable set. apply-schema.mjs still refuses prod so the
-  // sandbox impact is nil (rollbacks are idempotent SQL). Flagged for
-  // a separate owner-authorised filter patch, not blocking this test.
-  it("yields exactly 372 applicable migration files (2026-11-20 snapshot)", () => {
-    expect(applicable.length).toBe(372);
+  // 2026-11-20 · constant refreshed from 372 to 353 after the
+  // owner-authorised filter patch landed. The 19 `*_rollback.sql`
+  // (underscore-form) companion files that previously leaked into the
+  // applicable set are now excluded in both apply-schema.mjs AND this
+  // test's local EXCLUDE_PATTERNS copy. 372 − 19 = 353.
+  it("yields exactly 353 applicable migration files (2026-11-20 snapshot)", () => {
+    expect(applicable.length).toBe(353);
   });
 
   it("excludes all 7 country-isolation drafts", () => {
@@ -105,10 +106,10 @@ describe("apply-schema filter + ledger key", () => {
     expect(ledgerKey("224_nex_account_is_mock_persona.sql")).not.toBe("224");
   });
 
-  it("entire set of 372 files derives 372 distinct ledger keys (2026-11-20 snapshot)", () => {
+  it("entire set of 353 files derives 353 distinct ledger keys (2026-11-20 snapshot)", () => {
     const keys = applicable.map(ledgerKey);
     const unique = new Set(keys);
-    expect(unique.size).toBe(372);
+    expect(unique.size).toBe(353);
   });
 
   it("order is deterministic (lexicographic by filename)", () => {
@@ -119,7 +120,7 @@ describe("apply-schema filter + ledger key", () => {
 
   it("first + last files match the current dry-run output (2026-11-20 snapshot)", () => {
     expect(applicable[0]).toBe("001_nex_migration_history_and_account.sql");
-    expect(applicable[applicable.length - 1]).toBe("365_fix_cart_order_tx_on_conflict_partial_rollback.sql");
+    expect(applicable[applicable.length - 1]).toBe("365_fix_cart_order_tx_on_conflict_partial.sql");
   });
 
   it("ledger-key character set is safe for SQL identifier (no quotes needed in text literal)", () => {

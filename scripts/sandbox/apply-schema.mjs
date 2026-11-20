@@ -32,7 +32,14 @@ import { join } from "node:path";
 const PRODUCTION_PROJECT_ID = "ijvqdvsvwtwxzcqmoqit";
 const EXCLUDE_PATTERNS = [
   /SUPERSEDED/,
+  // Rollback companion files use two naming conventions in this tree:
+  //   · `*.rollback.sql`  (dot form · ~45 files, older + newer)
+  //   · `*_rollback.sql`  (underscore form · ~19 files, mig 300+)
+  // Both must be excluded from the applied set. The 2026-11-20 ledger
+  // test flagged the underscore form leaking in as a finding;
+  // owner-authorised 2026-11-20 to patch here.
   /\.rollback\.sql$/,
+  /_rollback\.sql$/,
   /^999_WIP_/,
   /^244_nex_country_column\.sql$/,
   /^245_nex_country_rls\.sql$/,
