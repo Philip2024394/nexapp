@@ -84,9 +84,13 @@ function stateTone(state: string): { bg: string; fg: string; label: string } {
 export function OrdersListClient({
   initialOrders,
   businessId,
+  productNameById,
 }: {
   readonly initialOrders: ReadonlyArray<NexOrderRow>;
   readonly businessId: string;
+  /** 2026-11-20 · product-name lookup supplied by the server page so
+   *  each row can show what was ordered (not just a truncated id). */
+  readonly productNameById?: Readonly<Record<string, string>>;
 }): React.ReactElement {
   void businessId;
   const [filter, setFilter] = React.useState<"all" | OrderState>("all");
@@ -211,7 +215,11 @@ export function OrdersListClient({
           }}
         >
           {visible.map((o) => (
-            <OrderRow key={o.id} order={o} />
+            <OrderRow
+              key={o.id}
+              order={o}
+              productName={productNameById?.[o.product_id] ?? null}
+            />
           ))}
         </ul>
       )}
@@ -256,7 +264,13 @@ function FilterChip({
   );
 }
 
-function OrderRow({ order }: { readonly order: NexOrderRow }): React.ReactElement {
+function OrderRow({
+  order,
+  productName,
+}: {
+  readonly order: NexOrderRow;
+  readonly productName: string | null;
+}): React.ReactElement {
   const tone = stateTone(order.state);
   return (
     <li>
@@ -299,6 +313,23 @@ function OrderRow({ order }: { readonly order: NexOrderRow }): React.ReactElemen
             </span>
             <StateChip tone={tone} />
           </div>
+          {productName ? (
+            <div
+              data-nex-order-row-product
+              style={{
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: PALETTE.text,
+                lineHeight: 1.35,
+                marginBottom: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {productName}
+            </div>
+          ) : null}
           <div style={{ fontSize: 13, color: PALETTE.textMuted, lineHeight: 1.4 }}>
             Customer{" "}
             <span style={{ color: PALETTE.textDim, fontFamily: "ui-monospace, Consolas, monospace", fontSize: 11 }}>

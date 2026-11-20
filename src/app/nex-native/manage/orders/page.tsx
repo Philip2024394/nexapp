@@ -21,6 +21,7 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import * as orderService from "@/lib/nex-native/order-service";
 import type { NexOrderRow } from "@/lib/nex-native/types";
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { OrdersListClient } from "./_client";
 
 export const runtime = "nodejs";
@@ -56,6 +57,26 @@ export default async function ManageOrdersPage(): Promise<React.JSX.Element> {
       });
     } catch {
       orders = [];
+    }
+  }
+
+  // 2026-11-20 · a seller orders list without product names is not
+  // usable (shop owner can't tell what was ordered at a glance). Join
+  // nex_product by id server-side so the row can render a title. Build
+  // a map keyed by product_id for O(1) lookup in the client.
+  const productNameById: Record<string, string> = {};
+  if (orders.length > 0) {
+    const ids = Array.from(new Set(orders.map((o) => o.product_id)));
+    if (ids.length > 0) {
+      const { data } = await nexSupabaseAdmin
+        .from("nex_product")
+        .select("id, name")
+        .in("id", ids);
+      if (data) {
+        for (const row of data as Array<{ id: string; name: string }>) {
+          productNameById[row.id] = row.name;
+        }
+      }
     }
   }
 
@@ -178,6 +199,7 @@ export default async function ManageOrdersPage(): Promise<React.JSX.Element> {
             <OrdersListClient
               initialOrders={orders}
               businessId={primary.id}
+              productNameById={productNameById}
             />
           )}
         </div>

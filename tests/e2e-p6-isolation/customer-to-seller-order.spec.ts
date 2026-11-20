@@ -300,6 +300,22 @@ test.describe("Checkpoint 4 · Customer → Seller → Order handoff (sandbox ·
             );
           }
         }
+        // 2026-11-20 · delete dependent rows first, child-to-parent.
+        // Scoped by product_id ∈ leftover set (fresh UUIDs owned by the
+        // E2E prefix on Rosa) · no risk to foreign rows.
+        const leftoverIds = leftovers.rows.map((r) => r.id as string);
+        // nex_order_event → nex_order (FK)
+        await c.query(
+          `DELETE FROM nex_order_event
+           WHERE order_id IN (
+             SELECT id FROM nex_order WHERE product_id = ANY($1::uuid[])
+           )`,
+          [leftoverIds],
+        );
+        await c.query(
+          `DELETE FROM nex_order WHERE product_id = ANY($1::uuid[])`,
+          [leftoverIds],
+        );
         await c.query(
           `DELETE FROM nex_product
            WHERE business_id = $1 AND name LIKE $2`,
@@ -394,19 +410,22 @@ test.describe("Checkpoint 4 · Customer → Seller → Order handoff (sandbox ·
       // beforeAll step) — those preconditions keep the WHERE clause
       // valid UUIDs only, never empty strings.
       if (rosaBusinessId && seededProductId && beforeAllTimestampIso) {
+        // 2026-11-20 · scope-by-product_id ONLY. The seeded product is a
+        // fresh UUID per run so this is still tightly scoped, but the
+        // original 4-key filter missed orders created by the handoff
+        // under non-identical customer_account_id/timestamp paths, which
+        // left FK dependents blocking the nex_product delete below.
+        // Delete nex_order_event children first (FK: order_id).
+        await c.query(
+          `DELETE FROM nex_order_event
+           WHERE order_id IN (SELECT id FROM nex_order WHERE product_id = $1)`,
+          [seededProductId],
+        );
         const delOrdersRes = await c.query(
           `DELETE FROM nex_order
-           WHERE customer_account_id = $1
-             AND business_id = $2
-             AND created_at >= $3::timestamptz
-             AND product_id = $4
+           WHERE product_id = $1
            RETURNING id`,
-          [
-            CUSTOMER_ACCOUNT_ID,
-            rosaBusinessId,
-            beforeAllTimestampIso,
-            seededProductId,
-          ],
+          [seededProductId],
         );
         void delOrdersRes;
       }
@@ -550,6 +569,11 @@ test.describe("Checkpoint 4 · Customer → Seller → Order handoff (sandbox ·
       pricePence: PRODUCT_PRICE_PENCE,
       currency: "IDR",
     };
+    // 2026-11-20 · the shop slug page may fire a splash-slide client
+    // navigation after DOMContentLoaded; wait until the network is
+    // quiet so the evaluate() below doesn't race with it. Keeps the
+    // test deterministic without changing the sealed cart contract.
+    await customerPage.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => {});
     const storageAfter = await customerPage.evaluate((p) => {
       const KEY = "nex_cart_v1"; // mirrors NEX_CART_STORAGE_KEY
       const item = {
