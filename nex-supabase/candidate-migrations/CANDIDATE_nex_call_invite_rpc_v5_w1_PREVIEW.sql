@@ -1,0 +1,114 @@
+-- ============================================================================
+-- CANDIDATE · nex_call_invite_rpc v5-W1 · W1 writer integration declaration
+-- UNAPPLIED · UNNUMBERED · PREVIEW ONLY · DO NOT APPLY
+-- ============================================================================
+--
+-- Purpose
+-- -------
+-- This is the W1 integration piece for the GB-4CAP race fix.
+-- It declares option (a): v5-W1 adopts the v4 combined preview as-is.
+-- No new DDL is introduced. The operator applies the v4 combined file
+-- directly; this file is the W1-layer declaration that binds the
+-- TypeScript wrapper (`invite-service.v5-candidate.ts`) to that RPC.
+--
+-- Option chosen: (a) — "v5-W1 uses v4 as the RPC body unchanged"
+-- Rationale: Review of the v4 SQL confirms that:
+--   · The 7-param signature (p_invitee_account_id, p_media_type,
+--     p_host_country, p_attachment_meta, p_invite_body, p_attachment_url,
+--     p_existing_session_id) is byte-compatible with the W1 wrapper's
+--     RPC call contract.
+--   · Identity derives from auth.uid() inside the function — no
+--     p_self_supabase_user_id parameter exists or is needed. The W1
+--     wrapper correctly omits it (see invite-service.v5-candidate.ts).
+--   · The FOR UPDATE lock (GB-4CAP fix) and POSIX ERE whitespace guard
+--     (GB-WHITESPACE-GUARD fix) are already present in v4.
+--   · No byte-additive changes are required by the TypeScript contract.
+--
+-- Relationship to v4
+-- ------------------
+-- This file POINTS TO v4 as the W1 RPC body. It does NOT supersede or
+-- modify v4.
+--
+-- v4 canonical file:
+--   nex-supabase/candidate-migrations/
+--     CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW.sql
+--
+-- v4 SHA-256 (sealed · DO NOT modify v4):
+--   de77e9a19eb49df85433bf66969b87a44b05885b302a23559e76134b799bfea7
+--
+-- What the operator does at promote-time
+-- ---------------------------------------
+-- 1. Inspect `nex_migration_history` on sandbox `kdstoyyeygcopkogqsyv`
+--    to pick the next sequential number N.
+-- 2. Copy v4 to `nex-supabase/migrations/N_nex_group_call_invite_v4.sql`
+--    (not this file — this file is the declaration only).
+-- 3. Run the migrate script against sandbox only.
+-- 4. Verify that the TypeScript wrapper (invite-service.v5-candidate.ts)
+--    can be activated via a separate feature-flag authorisation.
+--
+-- What this file is NOT
+-- ---------------------
+-- · It is NOT executable SQL (there is no DDL here). It carries the
+--   binding declaration, the locked v4 reference, and the invariant
+--   reminder. The operator applies v4 directly.
+-- · It does NOT touch mig-133 or mig-356 in place.
+-- · It does NOT write an `INSERT INTO nex_migration_history` row.
+-- · It does NOT touch application code.
+-- · It does NOT touch production (`ijvqdvsvwtwxzcqmoqit`).
+--
+-- RPC contract confirmed by this declaration (v4 signature verbatim)
+-- -------------------------------------------------------------------
+-- CREATE FUNCTION nex_invite_to_call_tx(
+--   p_invitee_account_id   UUID,
+--   p_media_type           TEXT,
+--   p_host_country         TEXT,
+--   p_attachment_meta      JSONB,
+--   p_invite_body          TEXT,
+--   p_attachment_url       TEXT,
+--   p_existing_session_id  UUID DEFAULT NULL
+-- ) RETURNS TABLE (
+--   out_session_id      UUID,
+--   out_participant_id  UUID,
+--   out_conversation_id UUID,
+--   out_message_id      UUID,
+--   out_skipped         TEXT
+-- )
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = public, pg_temp
+--
+-- Permission envelope (confirmed from v4 · unchanged)
+-- -----------------------------------------------------
+-- REVOKE ALL ON FUNCTION nex_invite_to_call_tx(...) FROM PUBLIC;
+-- REVOKE EXECUTE ON FUNCTION nex_invite_to_call_tx(...) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION nex_invite_to_call_tx(...) FROM service_role;
+-- GRANT EXECUTE ON FUNCTION nex_invite_to_call_tx(...) TO authenticated;
+--
+-- Defects closed by this declaration (via v4 application)
+-- --------------------------------------------------------
+-- · GB-4CAP: PERFORM 1 FROM nex_group_call_session WHERE id = v_session_id
+--   FOR UPDATE serialises concurrent invites to the same session before
+--   the mig-133 BEFORE INSERT trigger fires its COUNT(*) check.
+-- · GB-WHITESPACE-GUARD: POSIX ERE !~* contract-match against
+--   '^/nex-native/call/preview\?session=[0-9a-f-]{36}&accept=1$'
+--   replaces the btrim-only guard from mig-356.
+--
+-- Defects that remain open after v4 application
+-- -----------------------------------------------
+-- · Case B (NULL auth.uid() fail-closed path): UNVERIFIED
+-- · Case G (bounded intermediate-write fault): STATE_BLOCKER
+-- · mig-133 trigger counts ALL rows, not just active (left_at IS NULL)
+--   rows. If 4-active-row semantics are required, that is a separate
+--   schema change outside v4's scope.
+--
+-- Halt notice
+-- -----------
+-- Do NOT apply this file or v4 without fresh owner authorisation naming
+-- sandbox `kdstoyyeygcopkogqsyv`. Production `ijvqdvsvwtwxzcqmoqit`
+-- remains sealed.
+--
+-- ============================================================================
+--
+-- (No executable SQL in this file. DDL lives in the v4 file above.)
+--
+-- ============================================================================

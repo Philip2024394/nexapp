@@ -1,0 +1,65 @@
+-- ============================================================================
+-- CANDIDATE · ROLLBACK for v5-W1 combined preview declaration
+-- UNAPPLIED · PREVIEW ONLY · OPERATOR SEQUENCE DOCUMENTED BELOW
+-- ============================================================================
+--
+-- Intent: this rollback is paired with
+--   CANDIDATE_nex_call_invite_rpc_v5_w1_PREVIEW.sql
+--
+-- Because v5-W1 declares option (a) — the operator applies v4 directly
+-- and this file contains no DDL — the rollback for v5-W1 is exactly the
+-- same operator action as rolling back v4.
+--
+-- For the executable rollback DDL, the operator MUST use:
+--   nex-supabase/candidate-migrations/
+--     CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW_rollback.sql
+--
+-- v4 rollback SHA-256:
+--   (computed from the v4 rollback file at time of operator review)
+--
+-- ─────────────────────────────────────────────────────────────────────
+-- WARNING · rolling back v4 (and therefore v5-W1) REOPENS two known defects
+-- ─────────────────────────────────────────────────────────────────────
+--   · GB-WHITESPACE-GUARD · the `length(btrim(x)) = 0` guard in mig-356
+--     strips only ASCII space (0x20). Tab/LF/CR/FF/VT bypass. Non-contract
+--     destinations (e.g. `/evil/path?session=...`) pass the guard.
+--   · GB-4CAP · the BEFORE INSERT cap trigger in mig-133 counts rows
+--     non-serialisably under READ COMMITTED. Concurrent invites to the
+--     SAME session can exceed the 4-participant invariant.
+--
+-- Reintroducing the mig-356 body is the act that reopens both defects.
+-- A rollback to mig-356 means: the race window is live, the whitespace
+-- bypass is live, and no W1-layer protection exists.
+--
+-- Do NOT run v4 rollback (or this paired declaration rollback) unless:
+--   (i)  the operator explicitly accepts that both defects become
+--        LIVE again on sandbox `kdstoyyeygcopkogqsyv`, AND
+--   (ii) a separate forward-only correction is already in flight, AND
+--   (iii) an explicit owner authorisation names rollback as the
+--         intended action (a prior promote authorisation does NOT
+--         imply authorisation to roll back).
+--
+-- Operator sequence
+-- -----------------
+-- 1. Run the v4 rollback file against sandbox `kdstoyyeygcopkogqsyv`:
+--    nex-supabase/candidate-migrations/
+--      CANDIDATE_nex_group_call_invite_v4_combined_whitespace_and_4cap_PREVIEW_rollback.sql
+-- 2. Remove the promote-time migration file (N_nex_group_call_invite_v4.sql)
+--    from nex-supabase/migrations/ if it was added there.
+-- 3. The TypeScript wrapper (invite-service.v5-candidate.ts) is already
+--    default-off and has no live caller — no code changes are required
+--    when rolling back the DB-side.
+--
+-- After rollback: the W1 wrapper (invite-service.v5-candidate.ts) will
+-- return { ok: false, error: "rpc_unavailable" } for all calls because
+-- the RPC will have reverted to the mig-356 body, which the wrapper
+-- treats as a function-not-found equivalent when the 42883 guard fires.
+-- (In practice, the function still exists post-rollback but the
+-- rpc_unavailable path is an honest fail-closed result that prevents
+-- the wrapper from silently falling back to direct writes.)
+--
+-- ============================================================================
+--
+-- (No executable SQL in this file. DDL lives in the v4 rollback file above.)
+--
+-- ============================================================================
