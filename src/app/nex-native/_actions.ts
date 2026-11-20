@@ -72,6 +72,17 @@ import type { LocalRadiusEntryT } from "@/lib/nex-native/catalogue/delivery-spec
 // listing + nex_account updates. The import had been dropped; four
 // bare `nexSupabaseAdmin` references were failing to resolve.
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+// §16.13 / §16.27 atomicity fix · Item #5 caller wire · 2026-11-20. Behind
+// the `NEX_CART_ORDER_TX=1` flag `sendCartOrderAction` routes the cart
+// peer-message + representative-product `nex_order` insert through the
+// SECURITY DEFINER `nex_create_cart_order_tx` RPC so they commit together
+// or roll back together. The direct-write + fail-soft legacy path below
+// remains in place and is used when the flag is OFF, when the session
+// lacks a supabase user id, or when the RPC reports `rpc_unavailable`
+// (DB does not yet carry migration 354) / any other error. See
+// `nex-supabase/migrations/354_nex_cart_order_create_transactional.sql`
+// (sandbox apply pending founder-handoff; prod sealed).
+import { createCartOrderTransactionalCandidate } from "@/lib/nex-native/calls/send-cart-order.transactional-candidate";
 // Owner directive 2026-11-08 · Item 4 · per-IP rate-limit on account
 // creation (both signUpAction and createNexAccountAction). Imported
 // via static import so TypeScript catches signature changes · the
@@ -3722,107 +3733,223 @@ export async function sendCartOrderAction(
     redirect("/nex-native/cart?send_error=" + CONVERSATION_ERROR);
   }
 
-  await peerMessageService.sendPeerMessage({
-    conversation_id: conversation.id,
-    sender_account_id: session.account.id,
-    body,
-    // D2 fix · sealed 2026-11-15 · cart orders live ENTIRELY inside
-    // attachment_meta.cart. We MUST NOT stamp attachment_type='cart_order'
-    // because the sealed DB CHECK (nex_peer_message_attachment_type_check)
-    // only permits 'image'|'video'|'audio'|'call_invite' (plus other
-    // document/sticker/etc per later migrations · still never 'cart_order').
-    // Writing 'cart_order' here used to fail the insert outright when the
-    // lead item carried an image (CHECK violation) and silently dropped
-    // the snapshot off the seller's reader when it did not (both-or-neither
-    // pair check kept the row but downstream readers filtered on
-    // attachment_type='cart_order' and missed it). The snapshot already
-    // carries every item's image_url inside items[] · the bubble renderer
-    // hydrates the card from attachment_meta.cart, never from
-    // attachment_url. Readers now detect cart orders via attachment_meta
-    // -> 'cart' IS NOT NULL (see seller-insight-service, order detail
-    // page, peer chat page, portrait bloom shell).
-    attachment_url: null,
-    attachment_type: null,
-    attachment_meta: { cart: snapshot },
-    // Track C · owner-authorised 2026-10-20 · idempotency key.
-    // Undefined when the client did not supply a valid UUID · the
-    // service layer treats absent send_intent_id as "no idempotency
-    // requested" and uses the original insert path.
-    send_intent_id: sendIntentId,
-  });
+  // §16.13 / §16.27 atomicity wire · Item #5 · 2026-11-20.
+  // When `NEX_CART_ORDER_TX=1` and the sandbox RPC is reachable, route
+  // the cart peer-message + representative-product nex_order insert
+  // through `nex_create_cart_order_tx` so both land atomically. On ANY
+  // RPC error (including `rpc_unavailable` when the DB has not yet
+  // been migrated) we log and fall through to the legacy direct-write
+  // path below · the legacy path's behaviour is byte-for-byte
+  // preserved and remains the shipped default until flag flip.
+  const useAtomicCartOrderTx = process.env.NEX_CART_ORDER_TX === "1";
+  let atomicTxHandled = false;
+  let atomicTxCreatedOrderId: string | null = null;
 
-  // #14 real activation · sealed 2026-11-16 · owner-authorised fresh
-  // word-trigger "Wire the cart snapshot order id into the actual
-  // checkout creation path". Persist a deterministic nex_order row
-  // keyed by the EXACT UUID already stamped into
-  // attachment_meta.cart.order_id so the seller's manage/orders list
-  // and the per-order detail page resolve the originating cart
-  // snapshot via Tier 0 exact-UUID match (no heuristic fallback).
-  //
-  // Representative-product rule: the first `kind: "product"` item
-  // supplies product_id · price_pence · currency for the nex_order
-  // row's snapshot columns. The full item list + totals live in
-  // attachment_meta.cart (already written) and are rendered from
-  // there by the sealed order detail reader. For carts that contain
-  // no `kind: "product"` items (pure menu_item / food) we skip the
-  // insert · those flows continue to live entirely as peer-messages
-  // (no nex_order row, same as before this change).
-  //
-  // Fail-soft: the cart peer-message is already persisted. An
-  // order-row insert failure must not reverse the send. The user's
-  // chat always reflects the sent cart. A missing nex_order row for
-  // this cart means the seller sees it ONLY in chat (same pre-#14
-  // behaviour) · never a false-success.
-  const primaryProductItem = items.find((it) => it.kind === "product");
-  if (primaryProductItem?.id) {
-    try {
-      const createdOrder = await orderService.createOrder({
-        id: futureOrderId,
-        customer_account_id: session.account.id,
-        product_id: primaryProductItem.id,
-        source_conversation_id: null,
-        // Lane E · prompt-7 round 8 continuation · 2026-11-19. The
-        // send_intent_id UUID already gates nex_peer_message against
-        // double-tap via UNIQUE (sender_account_id, send_intent_id)
-        // (Migration 102 Part C). Propagate it to nex_order as the
-        // idempotency_key so a double-tap that races past the message
-        // dedupe still converges on ONE order row instead of two.
-        // Fail-soft: when the client did not supply a valid UUID (per
-        // the UUID_SHAPE check above), sendIntentId is undefined and
-        // we fall back to the pre-existing null behaviour — matching
-        // the sendPeerMessage branch that treats absent send_intent_id
-        // as "no idempotency requested" instead of throwing.
-        idempotency_key: sendIntentId ?? null,
-        customer_note:
-          typeof buyerNotes === "string" && buyerNotes.trim().length > 0
-            ? buyerNotes.trim().slice(0, 500)
-            : null,
-      });
-
-      // Lane E · round 17 · E-NOTIFY · 2026-11-19. Wire the supported
-      // seller push-notification path (same one placeOrderAction uses
-      // at _actions.ts:~7707) into the cart-send flow, ONLY after the
-      // nex_order row is confirmed present. Privacy-safe generic copy
-      // ("You have received a new order.") · no PII in visible body ·
-      // dispatched via notifications/notification-dispatch-service.
-      //
-      // Retry/dedup safeguard: `createOrder` is idempotent on
-      // `idempotency_key = sendIntentId` and returns the EXISTING row
-      // on a race / retry. Without a dedup check, the second tap would
-      // re-notify the seller for the same cart. Before notifying, we
-      // check `nex_order_event` for a prior `seller_notified` marker
-      // on this order.id · if present, skip · else notify then record
-      // the marker. The check-then-write is not atomic · a concurrent
-      // double-tap CAN still double-notify in the narrow window before
-      // the event row lands. That residual race is acknowledged · the
-      // push-subscription + browser layers already deduplicate on
-      // `eventKind + orderId` so this is defence-in-depth, not a
-      // guarantee.
-      //
-      // Fail-soft: notification failure MUST NOT reverse the cart send
-      // or the order row · both are already persisted. Matches the
-      // placeOrderAction pattern exactly.
+  if (useAtomicCartOrderTx) {
+    const selfSupabaseUserId = session.supabaseUserId;
+    if (selfSupabaseUserId) {
+      const primaryProductItemForTx = items.find(
+        (it) => it.kind === "product",
+      );
       try {
+        // The candidate wrapper's `AdminLike` shape asks only for
+        // `.rpc(name, params)` returning `{ data, error }`. The real
+        // SupabaseClient's rpc has richer overloads · we narrow via
+        // an unknown cast at the callsite instead of broadening the
+        // wrapper's reviewable interface. The wrapper is quarantined
+        // under `src/lib/nex-native/calls/` and used only here · this
+        // cast lives WITH the caller that chose that narrowing.
+        const txResult = await createCartOrderTransactionalCandidate(
+          nexSupabaseAdmin as unknown as Parameters<
+            typeof createCartOrderTransactionalCandidate
+          >[0],
+          {
+            selfSupabaseUserId,
+            senderAccountId: session.account.id,
+            conversationId: conversation.id,
+            messageBody: body,
+            attachmentMeta: { cart: snapshot },
+            sendIntentId: sendIntentId ?? null,
+            orderId: futureOrderId,
+            primaryProductId: primaryProductItemForTx?.id ?? null,
+            idempotencyKey: sendIntentId ?? null,
+            customerNote:
+              typeof buyerNotes === "string" && buyerNotes.trim().length > 0
+                ? buyerNotes.trim().slice(0, 500)
+                : null,
+          },
+        );
+        if (txResult.ok) {
+          atomicTxHandled = true;
+          atomicTxCreatedOrderId = txResult.orderId ?? null;
+        } else {
+          console.warn(
+            "[cart-order #5 wire] atomic RPC refused · falling back to legacy direct-write path",
+            txResult.error,
+          );
+        }
+      } catch (rpcErr) {
+        console.warn(
+          "[cart-order #5 wire] atomic RPC threw · falling back to legacy direct-write path",
+          rpcErr instanceof Error ? rpcErr.message : rpcErr,
+        );
+      }
+    } else {
+      console.warn(
+        "[cart-order #5 wire] NEX_CART_ORDER_TX=1 but session.supabaseUserId missing · falling back to legacy direct-write path",
+      );
+    }
+  }
+
+  if (!atomicTxHandled) {
+    await peerMessageService.sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: session.account.id,
+      body,
+      // D2 fix · sealed 2026-11-15 · cart orders live ENTIRELY inside
+      // attachment_meta.cart. We MUST NOT stamp attachment_type='cart_order'
+      // because the sealed DB CHECK (nex_peer_message_attachment_type_check)
+      // only permits 'image'|'video'|'audio'|'call_invite' (plus other
+      // document/sticker/etc per later migrations · still never 'cart_order').
+      // Writing 'cart_order' here used to fail the insert outright when the
+      // lead item carried an image (CHECK violation) and silently dropped
+      // the snapshot off the seller's reader when it did not (both-or-neither
+      // pair check kept the row but downstream readers filtered on
+      // attachment_type='cart_order' and missed it). The snapshot already
+      // carries every item's image_url inside items[] · the bubble renderer
+      // hydrates the card from attachment_meta.cart, never from
+      // attachment_url. Readers now detect cart orders via attachment_meta
+      // -> 'cart' IS NOT NULL (see seller-insight-service, order detail
+      // page, peer chat page, portrait bloom shell).
+      attachment_url: null,
+      attachment_type: null,
+      attachment_meta: { cart: snapshot },
+      // Track C · owner-authorised 2026-10-20 · idempotency key.
+      // Undefined when the client did not supply a valid UUID · the
+      // service layer treats absent send_intent_id as "no idempotency
+      // requested" and uses the original insert path.
+      send_intent_id: sendIntentId,
+    });
+
+    // #14 real activation · sealed 2026-11-16 · owner-authorised fresh
+    // word-trigger "Wire the cart snapshot order id into the actual
+    // checkout creation path". Persist a deterministic nex_order row
+    // keyed by the EXACT UUID already stamped into
+    // attachment_meta.cart.order_id so the seller's manage/orders list
+    // and the per-order detail page resolve the originating cart
+    // snapshot via Tier 0 exact-UUID match (no heuristic fallback).
+    //
+    // Representative-product rule: the first `kind: "product"` item
+    // supplies product_id · price_pence · currency for the nex_order
+    // row's snapshot columns. The full item list + totals live in
+    // attachment_meta.cart (already written) and are rendered from
+    // there by the sealed order detail reader. For carts that contain
+    // no `kind: "product"` items (pure menu_item / food) we skip the
+    // insert · those flows continue to live entirely as peer-messages
+    // (no nex_order row, same as before this change).
+    //
+    // Fail-soft: the cart peer-message is already persisted. An
+    // order-row insert failure must not reverse the send. The user's
+    // chat always reflects the sent cart. A missing nex_order row for
+    // this cart means the seller sees it ONLY in chat (same pre-#14
+    // behaviour) · never a false-success.
+    const primaryProductItem = items.find((it) => it.kind === "product");
+    if (primaryProductItem?.id) {
+      try {
+        const createdOrder = await orderService.createOrder({
+          id: futureOrderId,
+          customer_account_id: session.account.id,
+          product_id: primaryProductItem.id,
+          source_conversation_id: null,
+          // Lane E · prompt-7 round 8 continuation · 2026-11-19. The
+          // send_intent_id UUID already gates nex_peer_message against
+          // double-tap via UNIQUE (sender_account_id, send_intent_id)
+          // (Migration 102 Part C). Propagate it to nex_order as the
+          // idempotency_key so a double-tap that races past the message
+          // dedupe still converges on ONE order row instead of two.
+          // Fail-soft: when the client did not supply a valid UUID (per
+          // the UUID_SHAPE check above), sendIntentId is undefined and
+          // we fall back to the pre-existing null behaviour — matching
+          // the sendPeerMessage branch that treats absent send_intent_id
+          // as "no idempotency requested" instead of throwing.
+          idempotency_key: sendIntentId ?? null,
+          customer_note:
+            typeof buyerNotes === "string" && buyerNotes.trim().length > 0
+              ? buyerNotes.trim().slice(0, 500)
+              : null,
+        });
+
+        // Lane E · round 17 · E-NOTIFY · 2026-11-19. Wire the supported
+        // seller push-notification path (same one placeOrderAction uses
+        // at _actions.ts:~7707) into the cart-send flow, ONLY after the
+        // nex_order row is confirmed present. Privacy-safe generic copy
+        // ("You have received a new order.") · no PII in visible body ·
+        // dispatched via notifications/notification-dispatch-service.
+        //
+        // Retry/dedup safeguard: `createOrder` is idempotent on
+        // `idempotency_key = sendIntentId` and returns the EXISTING row
+        // on a race / retry. Without a dedup check, the second tap would
+        // re-notify the seller for the same cart. Before notifying, we
+        // check `nex_order_event` for a prior `seller_notified` marker
+        // on this order.id · if present, skip · else notify then record
+        // the marker. The check-then-write is not atomic · a concurrent
+        // double-tap CAN still double-notify in the narrow window before
+        // the event row lands. That residual race is acknowledged · the
+        // push-subscription + browser layers already deduplicate on
+        // `eventKind + orderId` so this is defence-in-depth, not a
+        // guarantee.
+        //
+        // Fail-soft: notification failure MUST NOT reverse the cart send
+        // or the order row · both are already persisted. Matches the
+        // placeOrderAction pattern exactly.
+        try {
+          const priorEvents = await orderService.listOrderEvents(createdOrder.id);
+          const alreadyNotified = priorEvents.some(
+            (ev) => ev.event === "seller_notified",
+          );
+          if (!alreadyNotified) {
+            await notifySellerNewOrder(createdOrder);
+            try {
+              await orderService.recordOrderEvent({
+                order_id: createdOrder.id,
+                event: "seller_notified",
+                actor_account_id: null,
+                metadata: {
+                  source: "cart_order",
+                  send_intent_id: sendIntentId ?? null,
+                },
+              });
+            } catch (markErr) {
+              console.warn(
+                "[cart-order E-NOTIFY] seller_notified marker write failed · notify did fire",
+                markErr instanceof Error ? markErr.message : markErr,
+              );
+            }
+          }
+        } catch (notifyErr) {
+          console.warn(
+            "[cart-order E-NOTIFY] seller notification failed · order persisted",
+            notifyErr instanceof Error ? notifyErr.message : notifyErr,
+          );
+        }
+      } catch (e) {
+        console.warn(
+          "[cart-order #14] deterministic nex_order insert failed · cart message retained",
+          e instanceof Error ? e.message : e,
+        );
+      }
+    }
+  } else if (atomicTxCreatedOrderId) {
+    // Post-RPC seller notification. Mirrors the legacy nested notify
+    // block · same `seller_notified` event-marker dedup so a tx-path
+    // double-tap converges on exactly one push notification. Fail-soft:
+    // the RPC already committed message + order atomically, so notify
+    // failures MUST NOT invalidate what the user and seller see.
+    try {
+      const createdOrder = await orderService.getOrderById(
+        atomicTxCreatedOrderId,
+      );
+      if (createdOrder) {
         const priorEvents = await orderService.listOrderEvents(createdOrder.id);
         const alreadyNotified = priorEvents.some(
           (ev) => ev.event === "seller_notified",
@@ -3837,25 +3964,21 @@ export async function sendCartOrderAction(
               metadata: {
                 source: "cart_order",
                 send_intent_id: sendIntentId ?? null,
+                via: "atomic_tx",
               },
             });
           } catch (markErr) {
             console.warn(
-              "[cart-order E-NOTIFY] seller_notified marker write failed · notify did fire",
+              "[cart-order #5 wire · E-NOTIFY] seller_notified marker write failed · notify did fire",
               markErr instanceof Error ? markErr.message : markErr,
             );
           }
         }
-      } catch (notifyErr) {
-        console.warn(
-          "[cart-order E-NOTIFY] seller notification failed · order persisted",
-          notifyErr instanceof Error ? notifyErr.message : notifyErr,
-        );
       }
-    } catch (e) {
+    } catch (notifyErr) {
       console.warn(
-        "[cart-order #14] deterministic nex_order insert failed · cart message retained",
-        e instanceof Error ? e.message : e,
+        "[cart-order #5 wire · E-NOTIFY] seller notification failed · order persisted via RPC",
+        notifyErr instanceof Error ? notifyErr.message : notifyErr,
       );
     }
   }
