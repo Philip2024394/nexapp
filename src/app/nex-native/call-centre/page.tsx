@@ -19,13 +19,20 @@
 // Ireland identity flips the palette automatically. Under HQ identity
 // the fallbacks hold.
 
-import { BackLink } from "../_back-link";
 import { CallCentreClient } from "./_client";
-// Owner directive 2026-11-04 later-same-day · grid-icon button in the
-// Call Centre header · opens the same 6-tile Live-worlds overlay
-// (Live World · Live Ireland · Live Music · Live Food · Live Stays ·
-// Live Trades) that the free-chat and contacts headers already wire.
-import { CallCentreGridTrigger } from "./_grid-trigger";
+// Owner directive 2026-11-21 (iter 8) · the side-menu button in the
+// header is the GLOBAL side-menu button + drawer · sealed
+// NexPageHeader, which internally renders the black "+" trigger via
+// PageHeaderDrawerButtonClient and the shared ControlDrawer. This
+// supersedes:
+//   · the shamrock-badge header (iter 1)
+//   · the grid-icon "Discover / What's live right now?" trigger
+//     (removed · iter 7)
+//   · the bespoke CallCentreSideDrawerTrigger (iter 5 · retired)
+// The sealed header auto-resolves session identity via
+// resolveSessionWithDevOverride so the drawer identity bar matches
+// every other NEX Native surface.
+import { NexPageHeader } from "../_page-header";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,7 +72,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
           background: "#F5F1E8",
           color: "#1A1A1A",
           padding:
-            "calc(env(safe-area-inset-top,0) + 16px) 20px calc(env(safe-area-inset-bottom,0) + 20px)",
+            "calc(env(safe-area-inset-top,0) + 12px) 16px calc(env(safe-area-inset-bottom,0) + 12px)",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
           boxSizing: "border-box",
           display: "flex",
@@ -83,33 +90,13 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             minHeight: 0,
           }}
         >
-          {/* Header row · back link on the left · grid button on the
-              right (same gold-circle grid-icon pattern the contacts
-              and free-chat headers use). The grid button opens the
-              sealed SearchOverlay with the 6 Live-world tiles. */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              margin: "0 0 4px",
-            }}
-          >
-            <BackLink
-              fallbackHref="/nex-native/contacts"
-              style={{
-                color: "#1A1A1A",
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              ← Back
-            </BackLink>
-            <CallCentreGridTrigger />
-          </div>
+          {/* Owner directive 2026-11-21 (iter 8) · the top-right
+              header is the sealed global NexPageHeader · it renders
+              the global "+" side-menu button + ControlDrawer. "← Back"
+              text/arrow stays removed (iter 5). */}
+          <NexPageHeader dataScope="call-centre" />
 
-          <header style={{ margin: "14px 0 18px", textAlign: "center" }}>
+          <header style={{ margin: "8px 0 10px", textAlign: "center" }}>
             {/* Owner directive 2026-11-21 · replaced the shamrock ☘
                 (Ireland world mark) with a phone-handset glyph in the
                 sealed keypad accent (orange). The surface is now a
@@ -121,18 +108,18 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 72,
-                height: 72,
-                marginBottom: 10,
+                width: 54,
+                height: 54,
+                marginBottom: 6,
                 borderRadius: "50%",
                 background:
                   "linear-gradient(140deg, var(--nex-kp-accent, #FF7200), color-mix(in srgb, var(--nex-kp-accent, #FF7200) 65%, #000))",
                 color: "#FFFFFF",
                 boxShadow:
-                  "0 8px 24px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 45%, transparent)",
+                  "0 6px 18px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 40%, transparent)",
               }}
             >
-              <svg width="38" height="38" viewBox="0 0 24 24" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   d="M4.5 3.5a2 2 0 0 1 2-2h2.4a1 1 0 0 1 .97.76l1.18 4.72a1 1 0 0 1-.5 1.13l-1.9 1.03a13 13 0 0 0 5.72 5.72l1.03-1.9a1 1 0 0 1 1.13-.5l4.72 1.18a1 1 0 0 1 .76.97V18a2 2 0 0 1-2 2A17.5 17.5 0 0 1 4.5 3.5z"
                   fill="currentColor"
@@ -142,39 +129,25 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             <h1
               style={{
                 margin: 0,
-                fontSize: 22,
+                fontSize: 19,
                 fontWeight: 800,
                 letterSpacing: "-0.01em",
+                lineHeight: 1.1,
               }}
             >
               Call Centre
             </h1>
             <p
               style={{
-                margin: "6px auto 0",
+                margin: "4px auto 0",
                 maxWidth: 380,
-                fontSize: 13,
+                fontSize: 12,
                 color: "#4A4A4A",
-                lineHeight: 1.5,
+                lineHeight: 1.35,
                 opacity: 0.92,
               }}
             >
               Pick how you want to connect.
-            </p>
-            {/* Owner directive 2026-11-21 (iter 4) · the usage blurb
-                moves from the footer to directly under the hero
-                subtitle · footer is now empty and removed below. */}
-            <p
-              style={{
-                margin: "6px auto 0",
-                maxWidth: 380,
-                fontSize: 11,
-                color: "rgba(26, 26, 26, 0.72)",
-                lineHeight: 1.45,
-              }}
-            >
-              Voice and video calls use your phone's camera and microphone.
-              Up to 3 friends on the same call.
             </p>
           </header>
 
@@ -182,6 +155,31 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             <CallCentreClient />
           </div>
 
+          {/* Owner directive 2026-11-21 (iter 6) · usage blurb returns
+              to the footer area · copy updated from "3 friends" to
+              "3 contacts" per the same directive. mt:auto pins it to
+              the floor of the phone frame. */}
+          <footer
+            style={{
+              marginTop: "auto",
+              paddingTop: 8,
+              borderTop: "1px solid rgba(26, 26, 26, 0.08)",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                margin: "0 auto",
+                maxWidth: 420,
+                fontSize: 10,
+                color: "rgba(26, 26, 26, 0.72)",
+                lineHeight: 1.4,
+              }}
+            >
+              Voice and video calls use your phone's camera and microphone.
+              Up to 3 contacts on the same call.
+            </p>
+          </footer>
         </div>
       </main>
     </>

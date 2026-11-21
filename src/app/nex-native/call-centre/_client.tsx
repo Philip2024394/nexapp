@@ -20,7 +20,7 @@ interface Tile {
 
 function PhoneIcon(): React.ReactElement {
   return (
-    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M4.5 3.5a2 2 0 0 1 2-2h2.4a1 1 0 0 1 .97.76l1.18 4.72a1 1 0 0 1-.5 1.13l-1.9 1.03a13 13 0 0 0 5.72 5.72l1.03-1.9a1 1 0 0 1 1.13-.5l4.72 1.18a1 1 0 0 1 .76.97V18a2 2 0 0 1-2 2A17.5 17.5 0 0 1 4.5 3.5z"
         fill="currentColor"
@@ -31,7 +31,7 @@ function PhoneIcon(): React.ReactElement {
 
 function VideoIcon(): React.ReactElement {
   return (
-    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
       <rect x="2" y="6" width="14" height="12" rx="2.5" fill="currentColor" />
       <path
         d="M16 10.5v3l4.3 2.4a1 1 0 0 0 1.5-.87V9a1 1 0 0 0-1.5-.87L16 10.5z"
@@ -43,7 +43,7 @@ function VideoIcon(): React.ReactElement {
 
 function CameraIcon(): React.ReactElement {
   return (
-    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M9 3.5 7.7 5.5H4.5A2.5 2.5 0 0 0 2 8v10a2.5 2.5 0 0 0 2.5 2.5h15A2.5 2.5 0 0 0 22 18V8a2.5 2.5 0 0 0-2.5-2.5h-3.2L15 3.5H9z"
         fill="currentColor"
@@ -134,7 +134,7 @@ export function CallCentreClient(): React.JSX.Element {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 14,
+          gap: 10,
         }}
       >
         {TILES.map((tile) => (
@@ -148,20 +148,15 @@ export function CallCentreClient(): React.JSX.Element {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 16,
-              padding: "18px 20px",
-              borderRadius: 18,
-              // Owner directive 2026-11-21 (iter 2) · tiles are
-              // light-gray containers on the cream page background ·
-              // the orange accent lives in the icon pod + chevron, not
-              // in the container fill. Supersedes the black-container
-              // interpretation earlier same day.
+              gap: 12,
+              padding: "12px 14px",
+              borderRadius: 16,
               background: "#EAE6DD",
               border: "1.5px solid rgba(26, 26, 26, 0.08)",
               color: "#1A1A1A",
               textDecoration: "none",
-              minHeight: 88,
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
+              minHeight: 68,
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
             }}
           >
             <span
@@ -170,8 +165,8 @@ export function CallCentreClient(): React.JSX.Element {
               style={{
                 display: "grid",
                 placeItems: "center",
-                width: 56,
-                height: 56,
+                width: 46,
+                height: 46,
                 borderRadius: "50%",
                 flexShrink: 0,
                 background:
@@ -194,19 +189,20 @@ export function CallCentreClient(): React.JSX.Element {
             >
               <span
                 style={{
-                  fontSize: 17,
+                  fontSize: 15,
                   fontWeight: 800,
                   letterSpacing: "-0.01em",
                   color: "#1A1A1A",
+                  lineHeight: 1.15,
                 }}
               >
                 {tile.label}
               </span>
               <span
                 style={{
-                  fontSize: 13,
+                  fontSize: 12,
                   color: "#4A4A4A",
-                  lineHeight: 1.4,
+                  lineHeight: 1.35,
                   opacity: 0.92,
                 }}
               >
