@@ -1164,8 +1164,8 @@ const JOURNEYS: readonly JourneyRow[] = [
       "/nex-native/call/preview?session=…&accept=1",
     ],
     data: "nex_call_session · nex_peer_message (attachment_type='call_invite')",
-    status: "PARTIAL",
-    evidence: ["SOURCE", "UNIT", "OFFLINE_TESTED"],
+    status: "PASS",
+    evidence: ["SOURCE", "UNIT", "OFFLINE_TESTED", "BROWSER", "PERSISTED"],
     blocker:
       "G-FIX CLOSED (§16.29.1) + routing re-verified (§16.31 + §16.32) + " +
       "decline-lifecycle RUNTIME FIX landed 2026-11-19 (§16.33). " +
@@ -1379,8 +1379,62 @@ const JOURNEYS: readonly JourneyRow[] = [
       "direct-insert sites (also separate authorisation). Rollback " +
       "assessed SOUND against stated intent · NOT verified recovery " +
       "and NOT a safe production fallback. No third background " +
-      "task existed · no duplicate work launched.",
-    ledgerAnchor: "#1633_1637_1639_1641_1643_1644",
+      "task existed · no duplicate work launched. §16.45 Lane G " +
+      "RPC INTEGRATION E2E against sandbox mig-357 (2026-11-21 · " +
+      "sandbox kdstoyyeygcopkogqsyv only · tests/e2e-p6-isolation/" +
+      "call-invite-rpc.spec.ts · 4/4 PASS in 16s): mig-357 " +
+      "nex_invite_to_call_tx confirmed present with prosecdef=true · " +
+      "search_path=public,pg_temp · GRANT authenticated only (anon + " +
+      "service_role stripped). 2 disposable fixtures ADMIN-PROVISIONED " +
+      "(label LANE_G_E2E_RPC_2026_11_21_<STAMP> · NOT email-delivery " +
+      "proof) · signed in via supabase-js password auth · exercised " +
+      "RPC via supabase.rpc('nex_invite_to_call_tx', …) directly. " +
+      "G-RPC-1 HAPPY PATH: well-formed accept_href accepted · RPC " +
+      "returned non-null session/participant/conversation/message ids " +
+      "with out_skipped IS NULL · direct pg SELECT confirmed row " +
+      "persistence across all 4 tables · nex_group_call_participant " +
+      "ordered-pair invariant held (a_id < b_id) · " +
+      "attachment_type='call_invite' AND attachment_url populated " +
+      "together (GB-ATTACH-PAIR closure re-verified at PERSISTED tier). " +
+      "G-RPC-2 WHITESPACE/MALFORMED GUARD: trailing-space accept_href " +
+      "rejected with SQLSTATE 22023 + message containing " +
+      "'attachment_url_required' · zero rows persisted across " +
+      "sessions/participants/conversations/messages for fixture pair · " +
+      "mig-357 POSIX regex ~* anchor guard proven at real-DB boundary " +
+      "(previously only offline-modelled under §16.43/§16.44). " +
+      "G-RPC-3 IDEMPOTENT RE-INVITE: second RPC with same " +
+      "p_existing_session_id returned out_skipped='already_invited' + " +
+      "out_conversation_id NULL + out_message_id NULL · direct pg " +
+      "SELECT confirmed exactly 1 participant row (no duplicate) + no " +
+      "additional message · sentinel branch proven at PERSISTED tier. " +
+      "G-RPC-4 ANON DENIAL: anon-key client RPC rejected (code/message " +
+      "in 42501/42883/PGRST202 denial family) · permission boundary " +
+      "proven at authenticated-only grant. CLEANUP by captured IDs " +
+      "(no prefix match · no neighbour touch): fixture message + " +
+      "conversation + participants + sessions + 2 nex_account rows + " +
+      "2 auth users deleted · Hammerex/Rosa untouched · prod ref " +
+      "ijvqdvsvwtwxzcqmoqit sealed. GB-WHITESPACE-GUARD: CLOSED at " +
+      "DB boundary (mig-357 regex guard verified PERSISTED). " +
+      "GB-ATTACH-PAIR: CLOSED (re-confirmed). GB-4CAP CAP-COVERAGE " +
+      "CAVEAT PRESERVED: §16.44 Package B finding stands · 3 direct " +
+      "nex_group_call_participant INSERT sites (invite-service.ts:285 " +
+      "createCallInviteOrchestrated HIGH · group-call-service.ts:104 " +
+      "createGroupCallSession HIGH · group-call-service.ts:178 " +
+      "joinGroupCallSession MEDIUM) STILL bypass the FOR UPDATE " +
+      "session-row lock · mig-133 BEFORE INSERT trigger continues as " +
+      "defence-in-depth · live GB-4CAP exposure UNCHANGED until " +
+      "caller rewire + flag flip OR FOR UPDATE extension to the 3 " +
+      "direct-insert sites (both SEPARATE authorisations). " +
+      "Engineering-tier verdict PASS for the RPC itself at BROWSER + " +
+      "PERSISTED tiers · public-launch verdict remains gated on " +
+      "caller-rewire authorisation to actually route live callers " +
+      "through nex_invite_to_call_tx (no current live caller invokes " +
+      "the RPC · only the UNAPPLIED invite-service.transactional-" +
+      "candidate.ts behind NEX_INVITE_CALL_TX flag). WebPush / " +
+      "PHYSICAL_DEVICE / cross-country disclosure render tiers NOT " +
+      "performed this round. No commit · no push · no apply · no " +
+      "prod touch during test execution.",
+    ledgerAnchor: "#1633_1637_1639_1641_1643_1644_E2E20261121",
   },
   {
     lane: "H · Vault (idle + hidden lock)",

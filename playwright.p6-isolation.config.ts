@@ -295,5 +295,23 @@ export default defineConfig({
       testMatch: /delivery-quote-flow\.spec\.ts/,
       timeout: 240_000,
     },
+    {
+      // 2026-11-21 · Lane G · nex_invite_to_call_tx RPC integration
+      // against the applied mig-357 (SECURITY DEFINER wrapper with
+      // POSIX regex guard on p_attachment_url + FOR UPDATE session-row
+      // lock for GB-4CAP). Not a browser spec; uses Playwright as the
+      // runner and invokes the RPC via supabase-js + verifies rows
+      // via direct pg. Fixtures ADMIN-PROVISIONED and cleaned up.
+      // Hard-refuses prod ref + protected identities.
+      name: "call-invite-rpc-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /call-invite-rpc\.spec\.ts/,
+      timeout: 240_000,
+    },
   ],
 });
