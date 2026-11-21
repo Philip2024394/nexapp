@@ -275,15 +275,16 @@ const WORLD_LIVE_DRAWER_FOOTER_IMAGE_DISPLAY: Record<string, string> = {
 };
 // Owner-authorised 2026-11-01 · Social Commerce palette sweep · Path A ·
 // Keypad theming. The sealed JokerKeypad consumes these when set,
-// falling back to its original dark-navy + Joker-green when not.
-// Ireland registers: forest-green backdrop + Irish gold accent. Other
-// worlds leave this empty and keep the sealed Joker palette.
-const WORLD_KEYPAD_BG_TOP: Record<string, string> = {
-  ireland: "#0A1F15",
-};
-const WORLD_KEYPAD_BG_BOTTOM: Record<string, string> = {
-  ireland: "#123D2B",
-};
+// falling back to the sealed 2026-11-21 pure-black backdrop otherwise.
+// Owner directive 2026-11-21 · "back ground of the kepad is black
+// color" · supersedes the Social-Commerce Ireland forest-green
+// keypad backdrop (previously #0A1F15 → #123D2B). Ireland now
+// inherits the universal black backdrop from the keypad's own
+// fallbacks in _joker-keypad.tsx:62-77. The Ireland keypad ACCENT
+// (NEX Orange, sealed 2026-11-03) stays set below · only the
+// backdrop maps are emptied.
+const WORLD_KEYPAD_BG_TOP: Record<string, string> = {};
+const WORLD_KEYPAD_BG_BOTTOM: Record<string, string> = {};
 const WORLD_KEYPAD_ACCENT: Record<string, string> = {
   // Owner directive 2026-11-03 · "kepad is global on nex chat ireland
   // and the blue keys change to orange color" · Ireland keypad accent
