@@ -161,30 +161,14 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             >
               Pick how you want to connect.
             </p>
-          </header>
-
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <CallCentreClient />
-          </div>
-
-          {/* Owner directive 2026-11-21 (iter 3) · move the usage
-              blurb into a proper semantic <footer> pinned at the
-              bottom of the phone frame, separated from the tile block
-              by a hairline. mt:auto keeps it sitting on the floor
-              regardless of how tall the tile region grows. */}
-          <footer
-            style={{
-              marginTop: "auto",
-              paddingTop: 12,
-              borderTop: "1px solid rgba(26, 26, 26, 0.08)",
-              textAlign: "center",
-            }}
-          >
+            {/* Owner directive 2026-11-21 (iter 4) · the usage blurb
+                moves from the footer to directly under the hero
+                subtitle · footer is now empty and removed below. */}
             <p
               style={{
-                margin: "0 auto",
-                maxWidth: 420,
-                fontSize: 10,
+                margin: "6px auto 0",
+                maxWidth: 380,
+                fontSize: 11,
                 color: "rgba(26, 26, 26, 0.72)",
                 lineHeight: 1.45,
               }}
@@ -192,7 +176,12 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
               Voice and video calls use your phone's camera and microphone.
               Up to 3 friends on the same call.
             </p>
-          </footer>
+          </header>
+
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <CallCentreClient />
+          </div>
+
         </div>
       </main>
     </>
