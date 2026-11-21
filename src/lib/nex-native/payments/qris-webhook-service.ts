@@ -45,12 +45,22 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 export const NEX_QRIS_SYSTEM_ACTOR_ID =
   "00000000-0000-4000-8000-000000000002" as const;
 
-/** Narrow discriminated union · only events the NEX webhook route handles. */
-export type QrisWebhookEvent =
+/**
+ * Narrow discriminated union · only events the NEX webhook route handles.
+ *
+ * 2026-11-21 · Made generic on provider so the `MidtransWebhookEvent` /
+ * `XenditWebhookEvent` extracts below produce real union variants
+ * instead of resolving to `never`. The default `P = "midtrans" | "xendit"`
+ * preserves the pre-change shape for any external caller that imported
+ * `QrisWebhookEvent` without a provider argument.
+ */
+export type QrisWebhookEvent<
+  P extends "midtrans" | "xendit" = "midtrans" | "xendit",
+> =
   | {
       readonly id: string;
       readonly type: "settlement";
-      readonly provider: "midtrans" | "xendit";
+      readonly provider: P;
       readonly orderId: string | null;
       readonly grossAmount: string | null;
       readonly currency: string | null;
@@ -59,35 +69,35 @@ export type QrisWebhookEvent =
   | {
       readonly id: string;
       readonly type: "pending";
-      readonly provider: "midtrans" | "xendit";
+      readonly provider: P;
       readonly orderId: string | null;
       readonly rawStatus: string;
     }
   | {
       readonly id: string;
       readonly type: "expire";
-      readonly provider: "midtrans" | "xendit";
+      readonly provider: P;
       readonly orderId: string | null;
       readonly rawStatus: string;
     }
   | {
       readonly id: string;
       readonly type: "cancel";
-      readonly provider: "midtrans" | "xendit";
+      readonly provider: P;
       readonly orderId: string | null;
       readonly rawStatus: string;
     }
   | {
       readonly id: string;
       readonly type: "deny";
-      readonly provider: "midtrans" | "xendit";
+      readonly provider: P;
       readonly orderId: string | null;
       readonly rawStatus: string;
     }
   | {
       readonly id: string;
       readonly type: "unhandled";
-      readonly provider: "midtrans" | "xendit";
+      readonly provider: P;
       readonly originalStatus: string;
       readonly orderId: string | null;
     };
@@ -191,7 +201,7 @@ export function verifyXenditSignature(
 }
 
 /** Narrow Midtrans subset of QrisWebhookEvent (all provider:"midtrans"). */
-export type MidtransWebhookEvent = Extract<QrisWebhookEvent, { provider: "midtrans" }>;
+export type MidtransWebhookEvent = QrisWebhookEvent<"midtrans">;
 
 /**
  * Parse a verified Midtrans notification into a narrow QrisWebhookEvent.
@@ -250,7 +260,7 @@ export function parseMidtransWebhookEvent(
 }
 
 /** Narrow Xendit subset of QrisWebhookEvent (all provider:"xendit"). */
-export type XenditWebhookEvent = Extract<QrisWebhookEvent, { provider: "xendit" }>;
+export type XenditWebhookEvent = QrisWebhookEvent<"xendit">;
 
 /**
  * Parse a verified Xendit QR code callback into a narrow QrisWebhookEvent.

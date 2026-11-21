@@ -14,7 +14,7 @@
 // the failure must not propagate into unrelated conversation state or
 // optional visual systems.
 
-import { Component, type ReactNode } from "react";
+import { Component, type ReactElement, type ReactNode } from "react";
 import { emitSurfaceHealthEvent } from "./telemetry-client";
 import {
   classifyBoundaryError,
@@ -76,7 +76,7 @@ export class ChatCoreBoundary extends Component<Props, State> {
   }
 }
 
-function DefaultMinimalShell(): JSX.Element {
+function DefaultMinimalShell(): ReactElement {
   return (
     <div
       role="status"

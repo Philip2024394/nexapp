@@ -160,7 +160,7 @@ export function BurgerMenu({
 
   function onShare() {
     if (!shopUrl || typeof navigator === "undefined") return;
-    if ("share" in navigator) {
+    if (typeof navigator.share === "function") {
       navigator
         .share({ title: "Shop on NEX", url: shopUrl })
         .catch(() => {
