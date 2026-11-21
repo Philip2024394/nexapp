@@ -116,6 +116,25 @@ export default defineConfig({
       "src/components/nex-native/live-commerce/__tests__/live-mounts.test.tsx",
       "src/components/nex-native/live-commerce/__tests__/live-ui.test.tsx",
       "src/lib/nex-native/live-broadcast/__tests__/sealed-defaults-invariants.test.ts",
+      // 2026-11-21 · DEAD per sealed vault model 2026-11-06 (*"we dont
+      // need sign in for vault as it active when user is signed in
+      // but vault has finger press or 6 digit password"*). The vault
+      // uses PIN + fingerprint inline via _pin-entry-client.tsx · PIN
+      // reset lives at `vault/reset/`, not `vault/recover/`. This
+      // test asserts a `vault/recover/_recover-unlock-client.tsx` +
+      // `vault/recover/page.tsx` surface that was replaced by the
+      // reset/ pattern. Not a port gap · a model change.
+      "src/lib/nex-native/__tests__/vault-lock-and-leave-recover.test.ts",
+      // 2026-11-21 · DEAD per fork scope. SecurityAgent test depends
+      // on `src/app/nex-head-quarters/work-map/page.tsx` + `docs/
+      // nex-work-map.json` · the `nex-head-quarters/` path prefix
+      // never existed in nexapp (HQ lives at `src/app/nex-native/hq/`)
+      // and the work-map surface was not ported. The security-agent
+      // lib itself (`src/lib/nex/security-agent/*`) has ZERO inbound
+      // imports from anywhere in src/ · fully orphan code. Library
+      // cleanup is separate work · this exclude just stops the test
+      // from counting as failing engineering signal.
+      "src/lib/nex/security-agent/security-agent.test.ts",
     ],
   },
   resolve: {
