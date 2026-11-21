@@ -643,6 +643,24 @@ export function JokerKeypad({
           0%, 100% { opacity: 1; }
           50%      { opacity: 0; }
         }
+        /* Owner directive 2026-11-21 · "can the bottom left and right
+           of keypad fit the phone correct round that we dont see the
+           background of phone screen" · desktop phone frame has
+           border-radius:32px (nex-native.css:253). When the keypad
+           is mounted inside a modal that recomputes the containing
+           block (see the 2026-10-27 note on the sheet style), the
+           frame's overflow-clipping can't mask the sheet's square
+           bottom corners. Giving the sheet its own matching 32px
+           bottom radius makes it fit the phone's rounded bottom in
+           every containing-block scenario. Mobile (<500px) keeps the
+           sheet rectangular because the frame itself is full-bleed
+           rectangular there. */
+        @media (min-width: 500px) {
+          [data-nex-joker-keypad] {
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+          }
+        }
       `}</style>
 
       {/* Backdrop · tap to dismiss. Transparent so the chat behind
