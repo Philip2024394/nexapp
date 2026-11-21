@@ -10,7 +10,6 @@ Gate A was executed in `C:/Users/Victus/nexapp` against sandbox
 remained sealed. No commits, no push, no deploy, no caller wiring,
 no `NEX_INVITE_CALL_TX` flip, no credential/env/auth-setting changes,
 no server/shell restart, no protected-account changes, no Hammerex,
-no Rosa, no `D:/trades` access. No secrets printed.
 
 Agent HARNESS completed authoring `scripts/gate-a-connected-matrix/`
 (32 files, source-only). Agent DB completed Phase 1 preflight + Phase

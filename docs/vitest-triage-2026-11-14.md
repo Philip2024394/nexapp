@@ -35,7 +35,6 @@ changes. No assertion was weakened. No production code was changed.
 ### Cluster 1 · fork-residue in `src/lib/nex/*` · ~147 files
 
 **What it is:** Legacy shared-infra fork tree inherited from the
-`D:/trades` monorepo. Includes `brain/`, `comms-social/`, `programmer-*/`,
 `merchant-assistant/`, `agent-runtime/`, `jobs/`, `ab/`, `est/`, `ops/`,
 `pm/`, `security-agent/`, `hq/`, `knowledge-*/`, `marketing/`,
 `observability/`, `config/`, `db/`, `verification/`, `storage/`,

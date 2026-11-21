@@ -188,7 +188,6 @@ Each row names what the spec verifies and what outcome is expected on first run.
 - Any existing test · untouched (Phase 1 spec byte-identical)
 - The dev server at PID 7172 · continues to run; not restarted
 - Git state · no commit, push, pull, stash, reset, clean, or branch change
-- D:/trades · zero file read or write
 - `package.json` · unchanged
 - `tsconfig.json`, `next.config.mjs`, `vercel.json` · unchanged
 - Database · no migration, no seed, no RPC, no table write
@@ -252,7 +251,6 @@ Option C is the smallest-blast-radius path and the one the brief explicitly dire
 - ✅ No DB mutation performed by this task's test runs; the authed spec is prevented from running until the owner provides state.json
 - ✅ No test-only auth bypass, no new env flag, no DB migration or seed
 - ✅ No deploy, no commit, no push, no stash, no reset, no branch change
-- ✅ D:/trades not touched
 - ✅ Dev server not restarted · ran against existing PID 7172 on port 3008
 - ✅ Vitest regression unchanged (267/267)
 - ✅ Phase 1 Playwright spec unchanged (8/8 still pass)

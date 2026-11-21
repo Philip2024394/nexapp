@@ -125,7 +125,6 @@ Rollback scripts (`80_v_rollback_a.mjs`, `81_v_rollback_b.mjs`, `82_v_rollback_c
 - Pooler username regex `/^postgres\.kdstoyyeygcopkogqsyv$/` enforced at startup.
 - No script touches production ref `ijvqdvsvwtwxzcqmoqit`.
 - No script deletes `nex_account` or `auth.users` rows.
-- No script references `D:/trades`.
 - No Hammerex, Rosa, or protected accounts.
 
 ---

@@ -2,7 +2,6 @@
 
 Date: 2026-10-14
 Companion to: `docs/doctrine/nex-stage-1-1-safety-review-2026-10-14.md`
-Scope: fix the migration rollback ordering defect and add behavioural tests. No DB access, no deploy, no git ops, no secrets, no dependency install, no touch to D:/trades, Vault, Hammerex, migrations 191-196, or any other messaging stage.
 
 ---
 
@@ -250,7 +249,6 @@ If the owner decides on (b), (c), or (d), the change touches `_actions.ts` and t
 - ✅ No fingerprint signals added · no G2 work · five-signal fingerprint doctrine unchanged.
 - ✅ No change to rate thresholds, entitlement policy, message schema, account claiming, Vault, theme commerce, Hammerex, or any other messaging stage.
 - ✅ No `.env.local` read · no DB connection · no migration run · no deploy · no dependency install.
-- ✅ D:/trades untouched.
 - ✅ No git stage/commit/push performed.
 - ✅ No unrelated or pre-existing working-tree change touched.
 - ✅ Sealed `recordIfAllowed` not modified · sealed `NexCommunityRateLimitError` not modified · sealed action not modified.

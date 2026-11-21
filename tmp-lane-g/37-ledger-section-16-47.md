@@ -440,7 +440,6 @@ No defect is closed by preparation alone.
 >     - No commit or push of the apply scripts without a SEPARATE
 >       explicit approval under the sealed push rule
 >       (`feedback_nex_push_requires_separate_approval_2026_11_10.md`).
->     - No reference to `D:/trades`.
 >     - No destructive broadening (table resets, bulk DELETE, trigger
 >       disable, RLS alteration).
 >

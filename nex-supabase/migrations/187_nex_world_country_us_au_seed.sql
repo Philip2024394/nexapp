@@ -45,7 +45,6 @@
 --
 -- Non-goals of this migration:
 --   · Does NOT activate the harvester daemon · that runs from
---     D:/trades/scripts/nex-harvest-daemon.mjs on a Windows Scheduled
 --     Task · adding countries to world_country only tells the
 --     discovery programme that they exist and are opt-in.
 --   · Does NOT change source_registry flags · US+AU sources inherit
@@ -56,7 +55,6 @@
 --     territories.
 --   · Does NOT configure city rotation for US/AU cities · the
 --     daemon's cursor file (data/harvest-osm/cursor.json) sits in
---     D:/trades and needs its city list extended separately by the
 --     operator who runs the daemon.
 --
 -- Idempotent · ON CONFLICT guards every insert so re-running is safe.

@@ -3,7 +3,6 @@
 // 2026-11-21 · Recovered shim for `@/lib/nex/indonesia/commerce/retrieval`.
 //
 // Background: Not ported during the 2026-10-10 nexapp carve-out from
-// D:/trades. Sole live importer is brain/commerce-composer.ts, which
 // *already* explicitly handles the empty-corpus path:
 //
 //   commerce-composer.ts:101 ·

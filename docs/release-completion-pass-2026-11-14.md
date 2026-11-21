@@ -99,7 +99,6 @@ THE_APP.md` quarantine contradiction.
 Flagged, not fixed:
 
 - `_THIS_IS_NOT_THE_APP.md` (2026-10-09) says this folder is NOT the
-  NEX app and points at `D:/trades`.
 - `CLAUDE.md` (local, 2026-10-10) says "This IS the NEX app standalone
   repo".
 - All recent commits (Stages 1-10, both audits, this pass) happened

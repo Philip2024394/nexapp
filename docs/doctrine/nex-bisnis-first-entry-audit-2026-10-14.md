@@ -448,7 +448,6 @@ untouched.
 - [x] No migrations applied.
 - [x] No DB query / write / RPC.
 - [x] No env read.
-- [x] `D:/trades` not touched.
 - [x] Pre-existing worktree state preserved · 34 modified + 177
       untracked files unchanged by this audit.
 - [x] No commit · no push · no stash · no reset · no branch change.

@@ -36,7 +36,6 @@ all three completed.
 | H     | `a76aeec5bbb6b185c`  | W3 join      | 2 SQL (`CANDIDATE_nex_call_participant_join_rpc_v5_w3_PREVIEW{,_rollback}.sql`) · wrapper · test   |
 | I     | `a2d2ca90ed7ad1ed9`  | Review       | `tmp-lane-g/35-review-v5-combined.{md,json}` + concrete in-scope fixes authorisation (none used)  |
 
-Common envelope: no `D:/trades` reference · no `src/app/` touch ·
 no live-service touch · no env/commit/push/deploy/DB access ·
 default-off / fail-closed staging.
 
@@ -246,7 +245,6 @@ Unchanged (pin-confirmed post-batch):
 - No commit, push, or deploy.
 - No prod reference. Production `ijvqdvsvwtwxzcqmoqit` hard-refused.
 - No sandbox DB connection. No `kdstoyyeygcopkogqsyv` migration apply or probe.
-- No `D:/trades` reference (per nexapp canonical-repo rule).
 
 ### 16.46.13 · One precise next gate (owner-held, not executed)
 

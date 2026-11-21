@@ -1,6 +1,5 @@
 // NEX app · edge middleware
 //
-// Scope narrowed from the sealed D:/trades multi-product source:
 // legacy marketplace routing (thenetworkers.app host-router, subdomain-
 // per-trade rewrite, hammerex custom-domain DB lookup, /tc/* legacy
 // redirects, merchant-referral cookie) was intentionally dropped —

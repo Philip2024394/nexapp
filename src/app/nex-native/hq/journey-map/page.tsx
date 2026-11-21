@@ -1946,7 +1946,6 @@ const DIAGRAM = `
      sandbox kdstoyyeygcopkogqsyv · production ijvqdvsvwtwxzcqmoqit
      SEALED · no commit · no push · no deploy · no caller wiring ·
      no NEX_INVITE_CALL_TX flip · no credential/env/auth-setting
-     change · no protected-account change · no D:/trades access.
 
    MIGRATIONS APPLIED (sandbox only · exit-0 or recovery-recorded):
      357 · nex_invite_to_call_tx        CONNECTED SQL VERIFIED
@@ -2338,7 +2337,6 @@ const DIAGRAM = `
      or denylist hit; no production, migration, RLS, grant,
      SMTP, rate-limit, billing, or .env.local change; no
      commit, push, or deploy; no running services touched;
-     D:/trades untouched; Hammerex, Rosa, founder session
      untouched; SEO parked; no callers or activation flags
      changed.
 
@@ -2447,7 +2445,6 @@ const DIAGRAM = `
      unchanged, 90_cleanup provenance guard unchanged, no
      production/migration/RLS/grant/SMTP/rate-limit/billing/
      .env.local change, no commit/push/deploy, no running
-     services touched, D:/trades untouched, no caller or
      activation flag changes.
 
      Exact connected-run invocation (ONLY to be executed
@@ -2664,7 +2661,6 @@ const DIAGRAM = `
      (OFFLINE-TESTED) for Agents B/C and suite · Sandbox-
      attested for the one authorised probe call · no
      commit/push/deploy · no credential/.env edits by
-     Claude · no Hammerex/Rosa/privacy/D:/trades touched.
 
      WIRING MISMATCH CLOSED (§16.48.22 · 2026-11-20): owner
      chose "read probe path" over "write both" or
@@ -2817,7 +2813,6 @@ const DIAGRAM = `
      production ref ijvqdvsvwtwxzcqmoqit appears nowhere in
      output · no commit · no push · no deploy · no .env.
      local edit by Claude · no Hammerex / Rosa / privacy /
-     D:/trades touched · disposable passwords never emitted
      on stdout or persisted. Engineering ceiling remains
      Verified; SANDBOX-ATTESTED PASS established for
      00_preflight / 10_grants / 20_signup / 30_v_auth_null /
@@ -2945,7 +2940,6 @@ const DIAGRAM = `
      .env.local edit · no new auth.users signups (3 UUIDs
      reused) · no cleanup dispatched · passwords never
      printed or persisted · dev server not stopped · no
-     Hammerex/Rosa/privacy/D:/trades touched. Status after
      §16.48.24 (tiers kept distinct — no inflation): the ONLY
      entries proven at the CONNECTED-body level are 4 ·
      30_v_auth_null + 31_v_auth_unknown + 53_v_w2_auth (from

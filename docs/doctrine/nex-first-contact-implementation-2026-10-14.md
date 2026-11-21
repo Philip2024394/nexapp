@@ -390,7 +390,6 @@ coverage, that is a separate authorisation.
 - [x] No environment or dependency changes · no `.env.local` read.
 - [x] No server restart.
 - [x] No commit, push, stash, reset, or branch change.
-- [x] `D:/trades` not touched.
 - [x] Sealed services untouched (list in §3.3).
 - [x] Discoverability default unchanged · still `false`.
 - [x] NEX1 routing and welcome delivery unchanged.

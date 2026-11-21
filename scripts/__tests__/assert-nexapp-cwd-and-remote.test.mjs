@@ -1,13 +1,12 @@
 // scripts/__tests__/assert-nexapp-cwd-and-remote.test.mjs
 //
-// Unit tests for the Phase 3A nexapp-only dev guard · hardened pass
-// 2026-10-14.
+// Unit tests for the nexapp-only dev guard.
 //
 // Tests inject the git `exec` callable and the `log` sink so no real
 // git call is made and no real stderr is written. Real git configuration
 // on this machine is NEVER touched by these tests.
 //
-// Coverage goals (added in the hardening pass):
+// Coverage goals:
 //   · Strict absolute-path root comparison, not basename-only
 //   · Sibling directories named `nexapp` are REJECTED
 //   · Hostile remote URL variants are REJECTED by construction
@@ -98,8 +97,8 @@ describe("canonicalisePathForCompare", () => {
     );
   });
 
-  it("accepts the git-bash /d/... MINGW form for the trades path", () => {
-    expect(canonicalisePathForCompare("/d/trades")).toBe("d:/trades");
+  it("accepts the git-bash /d/... MINGW form for a non-nexapp path", () => {
+    expect(canonicalisePathForCompare("/d/elsewhere")).toBe("d:/elsewhere");
   });
 
   it("is case-insensitive (Windows filesystem semantics)", () => {
@@ -108,9 +107,9 @@ describe("canonicalisePathForCompare", () => {
     );
   });
 
-  it("preserves distinct paths · trades is NOT nexapp", () => {
-    expect(canonicalisePathForCompare("D:/trades")).toBe("d:/trades");
-    expect(canonicalisePathForCompare("D:/trades")).not.toBe(
+  it("preserves distinct paths · a different root is NOT nexapp", () => {
+    expect(canonicalisePathForCompare("D:/elsewhere")).toBe("d:/elsewhere");
+    expect(canonicalisePathForCompare("D:/elsewhere")).not.toBe(
       canonicalisePathForCompare("C:/Users/Victus/nexapp"),
     );
   });
@@ -279,16 +278,16 @@ describe("checkCwd · strict root comparison", () => {
 
   // Rejected · everything that doesn't resolve to the expected root.
 
-  it("REJECTS D:/trades (the legacy monorepo)", () => {
-    const r = checkCwd("D:/trades");
+  it("REJECTS D:/elsewhere (the legacy monorepo)", () => {
+    const r = checkCwd("D:/elsewhere");
     expect(r.ok).toBe(false);
     expect(r.reason).toBe("wrong-root");
-    expect(r.canonical).toBe("d:/trades");
+    expect(r.canonical).toBe("d:/elsewhere");
     expect(r.expected).toBe("c:/users/victus/nexapp");
   });
 
-  it("REJECTS the git-bash /d/trades form", () => {
-    expect(checkCwd("/d/trades").ok).toBe(false);
+  it("REJECTS the git-bash /d/elsewhere form", () => {
+    expect(checkCwd("/d/elsewhere").ok).toBe(false);
   });
 
   it("REJECTS a sibling named `nexapp` at a different parent (`C:/evil/nexapp`)", () => {
@@ -359,10 +358,10 @@ describe("checkRemote · structured reasons", () => {
   });
 
   it("REJECTS wrong repo with `wrong-repo` reason", () => {
-    const r = checkRemote("https://github.com/Philip2024394/trades.git");
+    const r = checkRemote("https://github.com/Philip2024394/other-repo.git");
     expect(r.ok).toBe(false);
     expect(r.reason).toBe("wrong-repo");
-    expect(r.actualRepoPath).toBe("philip2024394/trades");
+    expect(r.actualRepoPath).toBe("philip2024394/other-repo");
     expect(r.expectedRepoPath).toBe("philip2024394/nexapp");
   });
 
@@ -499,16 +498,16 @@ describe("runAssertion · green paths", () => {
 });
 
 describe("runAssertion · wrong-root failure modes", () => {
-  it("REJECTS: toplevel is D:/trades (legacy monorepo)", () => {
+  it("REJECTS: toplevel is D:/elsewhere (legacy monorepo)", () => {
     const r = runAssertion({
       exec: makeExec({
-        "rev-parse --show-toplevel": "D:/trades",
+        "rev-parse --show-toplevel": "D:/elsewhere",
       }),
       log: QUIET_LOG,
     });
     expect(r.exitCode).toBe(1);
     expect(r.failure).toBe("wrong-root");
-    expect(r.messages.some((m) => m.includes("D:/trades"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("D:/elsewhere"))).toBe(true);
     expect(
       r.messages.some((m) => m.includes("cd into C:/Users/Victus/nexapp")),
     ).toBe(true);
@@ -519,9 +518,9 @@ describe("runAssertion · wrong-root failure modes", () => {
     ).toBe(true);
   });
 
-  it("REJECTS: toplevel is /d/trades (git-bash form of the legacy monorepo)", () => {
+  it("REJECTS: toplevel is /d/elsewhere (git-bash form of the legacy monorepo)", () => {
     const r = runAssertion({
-      exec: makeExec({ "rev-parse --show-toplevel": "/d/trades" }),
+      exec: makeExec({ "rev-parse --show-toplevel": "/d/elsewhere" }),
       log: QUIET_LOG,
     });
     expect(r.exitCode).toBe(1);
@@ -621,19 +620,19 @@ describe("runAssertion · wrong-remote failure modes", () => {
     ).toBe(true);
   });
 
-  it("REJECTS: trades fetch remote", () => {
+  it("REJECTS: wrong-repo fetch remote", () => {
     const r = runAssertion({
       exec: makeExec({
         "rev-parse --show-toplevel": "C:/Users/Victus/nexapp",
         "remote get-url origin":
-          "https://github.com/Philip2024394/trades.git",
+          "https://github.com/Philip2024394/other-repo.git",
       }),
       log: QUIET_LOG,
     });
     expect(r.exitCode).toBe(1);
     expect(r.failure).toBe("wrong-remote-fetch");
     expect(r.messages.some((m) => m.includes("wrong-repo"))).toBe(true);
-    expect(r.messages.some((m) => m.includes("trades"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("other-repo"))).toBe(true);
   });
 
   it("REJECTS: evil host even with correct repo path", () => {
@@ -782,13 +781,13 @@ describe("runAssertion · wrong-remote failure modes", () => {
 });
 
 describe("runAssertion · fetch/push mismatch", () => {
-  it("REJECTS: fetch correct, push drifted to trades", () => {
+  it("REJECTS: fetch correct, push drifted to a different repo", () => {
     const r = runAssertion({
       exec: makeExec({
         "rev-parse --show-toplevel": "C:/Users/Victus/nexapp",
         "remote get-url origin": "https://github.com/Philip2024394/nexapp.git",
         "remote get-url --push origin":
-          "https://github.com/Philip2024394/trades.git",
+          "https://github.com/Philip2024394/other-repo.git",
       }),
       log: QUIET_LOG,
     });
@@ -851,8 +850,8 @@ describe("runAssertion · observability", () => {
       }),
     },
     {
-      name: "wrong-root (D:/trades)",
-      exec: makeExec({ "rev-parse --show-toplevel": "D:/trades" }),
+      name: "wrong-root (D:/elsewhere)",
+      exec: makeExec({ "rev-parse --show-toplevel": "D:/elsewhere" }),
     },
     {
       name: "wrong-root (sibling impostor)",
@@ -866,11 +865,11 @@ describe("runAssertion · observability", () => {
       }),
     },
     {
-      name: "wrong-remote-fetch (trades)",
+      name: "wrong-remote-fetch (other repo)",
       exec: makeExec({
         "rev-parse --show-toplevel": "C:/Users/Victus/nexapp",
         "remote get-url origin":
-          "https://github.com/Philip2024394/trades.git",
+          "https://github.com/Philip2024394/other-repo.git",
       }),
     },
     {

@@ -150,7 +150,6 @@ G3/G4/G7 remain coordinated-but-unwritten per the handoff packet.
 **Still NOT performed in Round-4:** apply migrations 350 · 351 · 352
 · commit · push · deploy · env mutation · live charge · external
 email send · `:3008` restart · touch `_actions.ts` · edit any file
-under `D:/trades` · author Stripe / PayPal / bank-transfer caller of
 `initiateWholesaleOrderAction` · edit chat code (Phase 2B finding
 makes this unnecessary this pass) · wire G3/G4/G7 (handoff packet
 only).
@@ -415,4 +414,3 @@ return 'optional follow-ups'". These are the indispensable items:
 - Supabase prod `ijvqdvsvwtwxzcqmoqit` untouched.
 - Supabase sandbox `kdstoyyeygcopkogqsyv` untouched (no connection
   opened).
-- `D:/trades` canonical NEX repo untouched.

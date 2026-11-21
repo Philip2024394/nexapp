@@ -336,7 +336,6 @@ This note does **not**:
 - Read-only review. Three artefacts produced in this session: this file (new), the earlier safety review (prior session), the earlier corrective-patch report (prior session). No code, test, migration, DB, deploy, secret, dependency, or git-state change in this session.
 - Migration 197 not applied. `.env.local` not read. No DB connection. No deploy. No dependency install.
 - `_actions.ts`, `_guest-chat-client.tsx`, `rate-limit.ts`, `types.ts`, and migration 197 all unchanged in this session.
-- D:/trades not touched. Vault not touched. Hammerex not touched. Migrations 191-196 not touched. Account claiming not touched. G2 fingerprint re-check not touched. Other messaging stages not touched.
 - All 29 unrelated working-tree modifications preserved verbatim; verified via `git status --porcelain=1` at start of review.
 - No git stage, commit, push, or any other git-state change.
 

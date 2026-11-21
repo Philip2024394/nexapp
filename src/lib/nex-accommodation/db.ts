@@ -2,7 +2,6 @@
 //
 // 2026-11-21 · Recovered shim for `@/lib/nex-accommodation/db`.
 //
-// Background: during the 2026-10-10 nexapp carve-out from D:/trades,
 // the `nex-accommodation` vertical DB adapter was NOT ported. The
 // accommodation-postgres adapter in
 // `src/lib/nex/brain/world-adapters/accommodation-postgres.ts`
@@ -21,7 +20,6 @@
 //
 // When the adapter is revived (wired into a NEX Chat route) OR
 // deleted per Scope Reduction, replace this file with the real pool
-// source (same shape as D:/trades `src/lib/nex-accommodation/db.ts`).
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -35,7 +33,6 @@ export function getAccommodationDbPool(): AccommodationDbPool {
       "module is a test-visibility shim introduced 2026-11-21 after " +
       "the nexapp carve-out. No live route should import a world- " +
       "adapter in the current fork. If you reached this error, either " +
-      "wire the real Postgres pool (D:/trades " +
       "src/lib/nex-accommodation/db.ts) or remove the caller.",
   );
 }

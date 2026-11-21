@@ -513,7 +513,6 @@ The G0 Implementation-Readiness Audit of 2026-10-22 identified ten verified conf
 
 ### X6 · Live Stripe keys in `.env.local`
 
-- **Verified fact:** `.env.local` contains live Stripe production credentials (`sk_live_*`, `pk_live_*`, `whsec_*`, 14 `STRIPE_PRICE_*` IDs) · zero code consumes them · they appear to be legacy residue from the `D:/trades` monorepo era · they are a security risk regardless of trial scope. No credential values are reproduced in this document.
 - **Resolution options:**
   - (a) Rotate immediately · regardless of trial authorisation
   - (b) Rotate when payment work begins
@@ -546,7 +545,6 @@ The G0 Implementation-Readiness Audit of 2026-10-22 identified ten verified conf
 
 ### X9 · `NexWorkspaceWallet.tsx` calls non-existent routes
 
-- **Verified fact:** `src/components/nexapp/NexWorkspaceWallet.tsx` fetches `/api/nex/provider/wallet/topup/initiate` and `/topup/status` · these routes do NOT exist in the repo · `src/app/api/` has only `nex-native/*` · this is pre-existing dead wiring from the `D:/trades` monorepo era.
 - **Resolution options:**
   - (a) Remove the component
   - (b) Build the routes it expects (expands scope significantly · unrelated to trial)

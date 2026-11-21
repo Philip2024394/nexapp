@@ -11,7 +11,6 @@
 //     · ResilientSignal · EventSource + HTTP endpoints at opts.signalBase
 //                         (/hello POST + /stream/{identity} SSE). Likely
 //                         consumer is scripts/nex-calling/signal.mjs
-//                         (sealed port from D:/trades).
 //
 //     · Live group/peer · Supabase Realtime via openNexChannel() +
 //                         openSignallingChannel() (`nex:signal:{...}`,

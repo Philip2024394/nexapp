@@ -1,7 +1,6 @@
 # NEX Bisnis · Track B.1 Implementation Report · 2026-10-14
 
 Status: implemented locally · NOT committed · NOT pushed · awaiting
-owner review. Pre-existing worktree preserved. `D:/trades` untouched.
 
 Authorisation: Track B.1 only · "Option B" from
 `docs/doctrine/nex-bisnis-track-b-acceptance-review-2026-10-14.md` ·
@@ -269,7 +268,6 @@ Dev server (PID 7172) running on 3008 · HMR picks up new files · owner can ref
 - [x] First-contact panel commit `b5bae9f` on `origin/main` · unchanged
 - [x] No commit · no push · no reset · no stash · no branch change
 - [x] No DB query / write / migration / `.env.local` read / dependency install / deployment / server restart
-- [x] `D:/trades` not touched
 - [x] No sealed redirect or contract modified (verified via source-shape pins in track-b1.test.ts)
 - [x] No new DB column, migration, cookie, or completion flag
 - [x] No duplicate selector / catalogue / persistence mechanism

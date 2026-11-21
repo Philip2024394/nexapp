@@ -108,7 +108,6 @@ export interface ResolvedDirectoryHero {
 - `business_image.business_ref` uses the `#SB-2026-*` format
 - The current Directory operates on `canonical_business_id` UUIDs (87,013 rows)
 - **0 of 660 image rows match any UUID in `business_canonical`** (verified via `JOIN ... ON bc.canonical_business_id::text = bi.business_ref`)
-- No bridge table exists in the current fork. The `#SB-2026-*` identity space is a parallel scheme from the pre-fork `D:/trades` monorepo (per `CLAUDE.md` nexapp §1 fork boundary).
 
 **Current code path**: The Directory card adapter does not query `business_image`. Tier 2 is UNREACHABLE from the current render path AND the identity-space mismatch would prevent a join even if the resolver were wired.
 

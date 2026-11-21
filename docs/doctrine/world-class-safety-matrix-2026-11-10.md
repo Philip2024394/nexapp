@@ -48,7 +48,6 @@
 | 20 | **Community · notice** | V | mig 266-271 applied · route:`/community` · rls:on on all community_* tables after Batch C | P depends on #15 |
 | 21 | **Emergency help** | V | mig 224 schema applied · route:`/emergency-help` · sealed personal-contacts-only (no fan-out) · rls:on all emergency_* tables | P depends on gates sealed 2026-11-09 (SMS/push provider OFF) |
 | 22 | **Vault** | W | route:`/vault/*` · svc:`vault-service.ts` · biometric/PIN layer | V BLOCKED by 9 vault-contacts + vault-persistence + vault-lock test failures (pre-existing structural) |
-| 23 | **Food / Fashion / Accommodation / Property verticals** | B | source_registry + canonical layer exists · walker-output tables schema'd in D:/trades monorepo per sealed canonical rule | W needs this-repo integration · V needs walker e2e |
 | 24 | **Creator surface** | B (de-scoped) | Scope-reduction 2026-11-06 removed Live + Music + feed · creator payments phase-u preserved at commit `c4fffed` | — (deliberate de-scope) |
 | 25 | **Wallet** | W | route:`/vault` subset · earnings-in-fiat held per 2026-11-08 Package Contract DRAFT | V needs decision on currency surface |
 | 26 | **Profiles · signup first-fill** | V | route:`/settings/profile/edit` · "C" path (chat name · country · phone · address · 2 interests · 5 socials) | P depends on auth prod |

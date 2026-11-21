@@ -312,7 +312,6 @@ Report contains **no real credentials** and no `.env.local` contents.
 | Do not install packages | ✅ · no `npm install` executed · validator uses only `node:url` and `node:child_process` (child_process NOT actually used in validate-env.mjs — only `node:url` is imported) |
 | Do not start or stop servers | ✅ · dev server at PID 7172 untouched |
 | Do not commit, push, pull, stash, reset, or check out branches | ✅ · no git state change |
-| Do not touch D:/trades | ✅ · zero D:/trades read or write |
 | Preserve all pre-existing worktree changes | ✅ · 29 pre-existing modifications + 108+ untracked docs/data intact · verified via `git status` |
 | Do not begin B2, Stage 1.1, migration 197, or any other workstream | ✅ · stopping after this report |
 

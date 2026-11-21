@@ -1,7 +1,6 @@
 # NEX Bisnis · Track B Implementation Report · 2026-10-14
 
 Status: implemented locally · NOT committed · NOT pushed · awaiting
-owner review. Pre-existing worktree preserved. `D:/trades` untouched.
 
 Authorisation: Track B only per owner's instruction (see
 `nex-bisnis-end-to-end-acceptance-gate-2026-10-14.md`). No Track C.
@@ -307,7 +306,6 @@ build a `/manage/property` surface. For Track B, honest minimal copy.
 - [x] First-contact panel commit `b5bae9f` on `origin/main` · unchanged
 - [x] No commit · no push · no reset · no stash · no branch change
 - [x] No DB query / write / migration / `.env.local` read / dependency install / deployment / server restart
-- [x] `D:/trades` not touched
 - [x] No sealed redirect or contract modified
 - [x] No new DB column, migration, cookie, or completion flag
 - [x] No duplicate selector / catalogue / persistence mechanism

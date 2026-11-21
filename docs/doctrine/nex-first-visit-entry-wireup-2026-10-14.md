@@ -85,7 +85,6 @@ export async function listPeerConversationsForAccount(
 }
 ```
 
-Phase 2 feature-preservation audit established this file is byte-identical to the sealed D:/trades version. The function **either resolves to a row array OR throws**. There is no "loading" return state in the service — the server-side `await` means the home RSC either gets the final value or the thrown error.
 
 ### 3.2 · How home consumes it
 
@@ -216,7 +215,6 @@ RUN  v4.1.11 C:/Users/Victus/nexapp
 ### 5.4 · What the tests do NOT (and should not) claim
 
 - Do NOT prove mobile viewport renders match any specific Figma. No Playwright run.
-- Do NOT prove the actual Supabase query behaviour against a live database. The service-level test lives in `peer-conversation-service.ts` which Phase 2 confirmed byte-identical to D:/trades.
 - Do NOT prove the invitation visually integrates with the exact home layout on every device. Source-shape assertions check overflow handling and minWidth; a Playwright viewport test is a Phase F B2 open item.
 
 ---
@@ -233,7 +231,6 @@ RUN  v4.1.11 C:/Users/Victus/nexapp
 | `tier-gate.ts` | ✅ untouched |
 | `product-service.ts` | ✅ untouched |
 | `account-service.ts` | ✅ untouched |
-| `peer-conversation-service.ts` (sealed, byte-identical to D:/trades) | ✅ untouched (consumed only via public export) |
 | `launch-flags.ts` | ✅ untouched |
 | Migrations 191-196, 197 | ✅ untouched |
 | Hammerex seed | ✅ untouched |
@@ -282,7 +279,6 @@ RUN  v4.1.11 C:/Users/Victus/nexapp
 | No database access, no production service call, no deploy | ✅ |
 | No dependency installed, no server start/stop | ✅ |
 | No commit, push, pull, reset, clean, stash, branch change | ✅ |
-| No D:/trades touch | ✅ |
 | No other launch-readiness workstream begun | ✅ |
 | First-visit three pages untouched | ✅ (verified by `git diff --stat src/app/nex-native/chat/first-visit/`) |
 | Zero automatic redirect introduced | ✅ (test enforces) |

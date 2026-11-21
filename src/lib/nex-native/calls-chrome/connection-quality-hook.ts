@@ -4,7 +4,6 @@
 // Owner-authorised Phase 2 wiring 2026-10-19.
 // -----------------------------------------------------------------------------
 // Reads real WebRTC statistics from the sealed `collectStats` module
-// (byte-identical from D:/trades) and classifies them into the sealed
 // Phase 1 `CallsConnectionQuality` type for the master `ConnectionFooter`.
 //
 // Owner-authorisation constraints honoured:

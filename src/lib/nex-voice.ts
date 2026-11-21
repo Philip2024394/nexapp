@@ -5,7 +5,6 @@
 // Background: `src/components/nexapp/NexVoiceOrb.tsx` and
 // `src/components/nexapp/NexHudFrame.tsx` import `type NexVoiceState`
 // from this path. The underlying module was lost during the NEX
-// nexapp carve-out from the D:/trades monorepo (per CLAUDE.md "Fork
 // hygiene"), leaving TS2307 "Cannot find module" errors on two files
 // that are reachable from the live `src/app/nex-native/_shell.tsx`
 // via NexHudFrame.

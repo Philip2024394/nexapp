@@ -2,7 +2,6 @@
 //
 // 2026-11-21 · Recovered shim for `@/lib/nex/indonesia/gaps/gap-registry`.
 //
-// Background: during the 2026-10-10 nexapp carve-out from the D:/trades
 // monorepo (per CLAUDE.md "Fork hygiene"), the Indonesia GapRegistry
 // infrastructure was NOT ported. One runtime file imports this class:
 //

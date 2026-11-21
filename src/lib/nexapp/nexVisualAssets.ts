@@ -39,7 +39,6 @@
 // ── Types ──────────────────────────────────────────────────
 
 // NOTE · 2026-10-27 · UID-B7 OPT1a port into nexapp fork.
-// In the D:/trades monorepo this type was imported from the much larger
 // `./foodKnowledge` module (knowledge-layer with per-item confidence).
 // That sibling module was intentionally dropped by the nexapp fork
 // extraction (2026-10-10, per CLAUDE.md nexapp §"Fork boundary"), so the

@@ -2,7 +2,6 @@
 
 Status: READ-ONLY. No source edits. No DB queries. No `.env.local`.
 No tests re-authored (only re-executed the documented 328-test
-suite). Pre-existing worktree preserved. `D:/trades` untouched.
 
 Scope: owner's 8-point consolidated review of Phase 1 + Phase 2 +
 Track B + Track B.1 + Track C against:
@@ -399,7 +398,6 @@ authorises based on the verification evidence from above.**
 
 - [x] Read-only review · no file modifications
 - [x] No DB queries · no `.env.local` reads · no server start/stop
-- [x] `D:/trades` not touched
 - [x] All pre-existing changes preserved · 37 modified + 178 untracked unchanged
 - [x] No commits · no pushes · no resets · no stashes · no branch changes
 - [x] 8 review items each labelled PASS / FAIL / NOT VERIFIED with file:line evidence

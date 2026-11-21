@@ -153,7 +153,6 @@ Recommendation: **Option C**. It is the smallest safe path and doesn't require s
 | No `.env.local` read | ✅ |
 | No DB mutation performed by the tests | ✅ · all 8 tests are read-only GETs (no form submission, no POST) · the signed-in sign-up flow was NOT exercised |
 | No deploy / no commit / no push / no stash / no reset / no branch change | ✅ |
-| D:/trades not touched | ✅ |
 | Dev server not restarted · ran against the existing PID on port 3008 | ✅ · no `webServer` config block; config `use.baseURL` points at the already-running instance |
 | No UI rewrite · no new frontend components for the sake of testability | ✅ · tests use only existing selectors and HTTP contract |
 | No schema change · no column added for test tracking | ✅ |

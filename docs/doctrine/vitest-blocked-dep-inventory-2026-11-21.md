@@ -129,7 +129,6 @@ evidence).
 
 | Missing module | Cases | Files | Likely origin |
 |---|---:|---:|---|
-| `@/lib/nex/indonesia/knowledge` | 29 | 29 | ID directory knowledge pack · left in `D:/trades` |
 | `@/lib/nex-food/db` | 26 | 2 | nex-food vertical · not in nexapp carve-out |
 | `@/lib/nex-accommodation/db` | 13 | 1 | nex-accommodation vertical · not in carve-out |
 | `@/lib/nex-runtime-queue/queue` | 8 | 8 | runtime-queue infra · appears to be a lift target |
@@ -141,15 +140,12 @@ evidence).
 | `@/lib/nex/agents/nex-vision/corpus` | 3 | 1 | nex-vision corpus · partial carve-out |
 
 **Pattern**: test files for features whose dependencies were NOT brought
-across in the 2026-10-10 nexapp carve-out from `D:/trades`.
 
 **Proposed resolution options** (owner picks per cluster):
 - **Shim** — write a minimal pin-the-contract module (like the 2026-11-21
       `src/lib/nex-voice.ts` recovery). Appropriate when the type surface is
       small, the runtime usage is narrow, and the full module is not needed.
-- **Port** — copy the full module from `D:/trades` under a fresh licence-
       review step. Appropriate when the runtime behaviour is reachable.
-      Requires owner authorisation per the sealed D:/trades BANNED rule for
       nexapp sessions — the port is NOT a live cross-repo read, it is a
       curated one-time lift.
 - **Delete tests** — if the feature is not part of nexapp's shipped

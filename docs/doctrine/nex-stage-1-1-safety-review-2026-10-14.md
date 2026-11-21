@@ -14,7 +14,6 @@ Artefacts inspected (file:line evidence throughout):
 - `src/app/nex-native/chat/guest/[ownerAccountId]/_guest-chat-client.tsx` (consumer · lines 153-186)
 - `src/lib/nex-native/community/__tests__/` directory listing (only `types.test.ts`)
 
-Hard boundaries honoured. Nothing in D:/trades, Vault, Hammerex seed, migrations 191-196, Stage 3, or the sealed Chat Master Layout was touched. No new public chat entry point. No DB connection, no Docker, no deps, no git ops.
 
 ---
 
@@ -333,7 +332,6 @@ Expected delta: migration 197 SQL body (comment-block statements reordered, 4 li
 - Read-only. Only one new file was written: this report.
 - No app code modified. No migration SQL modified.
 - No database connection, no deployment, no secret access, no dependency install, no git op.
-- D:/trades, Vault, Hammerex seed candidates, migrations 191-196, Stage 3 untouched.
 - No public chat entry point added.
 - Sealed NEX doctrine not softened: Bridge 99, Chat Master Layout, ONE NEX IDENTITY, Phase 1 category closed set, provisional-session anchor, launch gates all unchanged.
 

@@ -100,7 +100,6 @@ Stating only what is factually supported by the metadata:
 ## 4 · What these findings do NOT mean
 
 - The report does NOT conclude that the objects are not business photos. Content inspection would be required (Phase 2 · G14 · explicitly not approved).
-- The report does NOT conclude that the objects have no legitimate purpose. They may originate from a feature outside the current fork's scope (per `CLAUDE.md`, this `nexapp` repo was forked from a multi-product monorepo on 2026-10-10, and features present in `D:/trades` may have left artefacts here).
 - The report does NOT propose a disposition. No "leave / move / purge" recommendation is advanced.
 - The report does NOT recommend changing the bucket's `public=true` configuration. That is a separate owner question outside Phase 1 scope.
 
@@ -108,7 +107,6 @@ Stating only what is factually supported by the metadata:
 
 | # | Question | Why Phase 1 cannot answer |
 |---|---|---|
-| 1 | What application originally wrote to `imported/<9-char-id>/*` on 2026-09-01? | No code reference remains in this fork; the originating feature may live in `D:/trades` or an earlier commit history not inspected. |
 | 2 | What do the `<9-char-id>` strings represent? (Chat theme asset bundle IDs? Legacy user folder keys? Random slugs?) | Format inspection alone cannot distinguish; no cross-reference found. |
 | 3 | What is actually in the 913 files (business photos, AI art, user sketches, screenshots)? | Would require content inspection · G14 explicitly not approved. |
 | 4 | Should the bucket's `public=true` setting be re-evaluated? | Out of Phase 1 scope. Separate owner question. |

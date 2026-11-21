@@ -1,11 +1,9 @@
 // src/app/nex-native/layout.tsx
 //
-// Bridge 64 · NEX-native metadata override · sealed 2026-09-29.
+// NEX-native metadata override.
 // -------------------------------------------------------------
-// Root layout (/d/trades/src/app/layout.tsx) brands the site as
-// "Thenetworkers" · that's correct for the legacy Xrated / trades
-// surfaces but wrong for /nex-native. This segment layout re-writes
-// metadata so:
+// This segment layout writes metadata for every route under
+// /nex-native so:
 //
 //   · Browser tab title / OS window title reads "NEX"
 //   · Apple / Android add-to-home-screen installs a proper NEX PWA

@@ -933,7 +933,6 @@ labelled **NOT OBSERVED** rather than guessed.
 
 | Dimension | Value |
 |---|---|
-| Repo root | `C:/Users/Victus/nexapp` (nexapp standalone; not `D:/trades`) |
 | Branch | `release-audit-v1-2026-11-14` |
 | HEAD at authoring | `c45e51f38170e5bf9d6752610203ccd78b67d0eb` |
 | Working tree | 57 modified files from concurrent prompt-4 and ledger work |
@@ -1494,7 +1493,6 @@ Of the sequence in §16.13:
 | `evidence/master-flow/RECONCILIATION-LEDGER-2026-11-18.md` | **edit** · §16.16 appended (this section) |
 
 No DB mutations. No commits. No pushes. No production touches. No
-Vercel changes. No env changes. `:3008` left running. `D:/trades`
 untouched. Hammerex nex-99901 and Rosa nex-99903 accounts, sessions,
 and Vault data preserved.
 
@@ -1838,7 +1836,6 @@ Of §16.13 / §16.16.6:
 
 No code files changed this pass. No DB mutations. No commits. No
 pushes. No production touches. No Vercel changes. No env changes.
-`:3008` left running. `D:/trades` untouched. Hammerex nex-99901 and
 Rosa nex-99903 accounts, sessions, and Vault data preserved.
 
 ---
@@ -2049,7 +2046,6 @@ inference).
 
 No DB mutations. No migrations. No commits. No pushes. No
 production touches. No Vercel changes. No env changes. `:3008`
-not restarted. `D:/trades` untouched. Hammerex nex-99901 and
 Rosa nex-99903 accounts, sessions, Vault data all preserved.
 
 ### §16.18.7 · Disposable testing manifest (for future slices)
@@ -2366,7 +2362,6 @@ proof."*
 
 Nothing else changed. No DB. No migrations. No commits. No
 pushes. No production. No Vercel. No env. `:3008` not restarted.
-`D:/trades` untouched. Hammerex nex-99901 + Rosa nex-99903
 preserved.
 
 ### §16.19.11 · Three verdicts (owner-required)
@@ -2904,8 +2899,6 @@ Separate verdicts per the owner's handback contract:
 
 ### §16.21.8 · Preservation discipline
 
-- Dev-server :3008 not started · `D:/trades` not touched (nexapp-only
-  session per the owner-sealed `D:/trades` BAN memory 2026-11-19).
 - No echo of any secret or credential value in source, tests, or
   evidence files.
 - No change to protected accounts, Vault privacy semantics, chat
@@ -3163,7 +3156,6 @@ the OPERATOR must separately authorise and perform:
 ### §16.22.12 · Preservation discipline
 
 - Dev-server :3008 not started · no app page opened · no live
-  Supabase/DB call issued · `D:/trades` not touched (nexapp-only
   session per the owner-sealed 2026-11-19 BAN memory).
 - No secret or credential value echoed in source, tests, or evidence
   files. All env lookups remain by name only.
@@ -3188,7 +3180,6 @@ Owner-authorised round-4 message: *"This is a new, bounded HQ-map and
 ledger reconciliation instruction—not another auth engineering pass."*
 No repeat of §16.22 implementation. No backend contact. No commit,
 push, deploy, migration, credential change or provider change. DB
-pause remains in force. `D:/trades` untouched.
 
 ### §16.23.1 · Auth status recorded at its actual evidence tier
 
@@ -3344,7 +3335,6 @@ opened. :3008 not stopped/restarted/touched.
 - No change to right navigation, left notifications, separate left
   seller-products drawers, or the centred cart.
 - :3008 not started, stopped, or restarted. Supporting shells
-  untouched. `D:/trades` untouched.
 - Nothing committed · pushed · deployed · nothing touched the
   backend.
 
@@ -3378,7 +3368,6 @@ These are NOT permission for the engineering session to perform them.
 Bounded source-only follow-up to §16.23. Two independent deliverables.
 No lane status upgrade. No backend / database / provider contact.
 No environment or credential change. No app pages. No commits, pushes
-or deploys. `:3008`, its shells, and `D:/trades` untouched.
 
 ### §16.24.1 · Deliverable 1 · Proven Green Flow Registry added
 
@@ -3542,7 +3531,6 @@ session fully file-edit-local.
 - No change to allowlist, middleware, or routing.
 - No commit · no push · no deploy · no migration applied.
 - `:3008` not started, stopped, or restarted. Supporting shells
-  untouched. `D:/trades` untouched.
 - No change to `CLAUDE.md` or user-memory files.
 
 ### §16.24.7 · First operator action
@@ -3689,7 +3677,6 @@ anything under `nex-supabase/`.
   "running :3008 loaded target" bullet; it did not demonstrate any
   lane's acceptance criteria.
 - **Proven Green Flow Registry (§16.24)**: still 0 / 9 lanes.
-- **Vault, chat-privacy, founder/Hammerex/Rosa accounts, D:/trades**:
   untouched.
 
 ### §16.25.8 · Preservation
@@ -3705,7 +3692,6 @@ anything under `nex-supabase/`.
 - No change to encryption, Vault, chat privacy, or allowlist.
 - No commit · no push · no deploy · no migration applied.
 - No Vercel configuration touched.
-- `D:/trades` untouched.
 - Supporting shells and Claude session preserved.
 - Exactly ONE controlled restart of `:3008`, using the existing
   project launch command.
@@ -3924,7 +3910,6 @@ configuration, protected accounts.
 - No app-route probe, live-auth request, or Playwright lane
   executed by this session.
 - `:3008` preserved from round 6. No additional restart. No
-  supporting shell killed. `D:/trades` untouched.
 - No commit · no push · no deploy · no migration applied · no
   provider config change · no Vercel change.
 
@@ -4121,7 +4106,6 @@ Disposable buyer fixture + disposable seller fixture (each with its own nex_acco
 | 3 | `src/app/nex-native/hq/journey-map/page.tsx` | Lane C registry row rewritten to reflect the dispatcher flow with `/nex-native/manage/shop/setup` as the entry · Lane C proven-green rubric updated to match · Lane E registry row amended (idempotency fix landed · remaining gaps enumerated · OFFLINE_TEST added to evidence tier) · Lane E proven-green rubric amended (honesty note on plaintext JSONB snapshot · new idempotency assertion) · ASCII diagram amended to show order detail + corrected Lane C step labels. No unrelated lane verdict changed. Verdict stays UNVERIFIED for both lanes. | SOURCE_INSPECTED |
 | 4 | `evidence/master-flow/RECONCILIATION-LEDGER-2026-11-18.md` | Appended §16.27 (this section) · prior §16.25 and §16.26 preserved · no edits above the previous end marker. | SOURCE_INSPECTED |
 
-**Not changed this round:** `.env.local`, `.env.development.local`, any migration file, any Supabase client module, any auth route handler, `scripts/rotate-pg-password-sandbox.mjs`, `scripts/verify-pg-password-sandbox.mjs`, `middleware.ts`, allowlist, `package.json`, `CLAUDE.md`, user-memory files, Vercel configuration, protected accounts, D:/trades.
 
 ### §16.27.9 · Preservation
 
@@ -4382,7 +4366,6 @@ round 11.
 
 Owner-authorised prompt-7 round 12 bounded local implementation.
 SOURCE + OFFLINE_TEST tier. No DB, no browser, no restart, no commit,
-no push. Vault privacy untouched. :3008 unchanged. D:/trades untouched.
 
 ### §16.29.1 · Defect · direct admin insert bypassed two guards
 
@@ -5039,7 +5022,6 @@ five-step workflow, and the live inviteToCall four-write sequence.
 
 ### 8 · Operation receipt
 
-- Repository root · `C:/Users/Victus/nexapp` (nexapp · NOT D:/trades;
   matches canonical repo rule sealed 2026-11-19).
 - Edit tool invocations · YES (files above).
 - `npx vitest run` on isolated files · YES (no DB · no network).
@@ -5371,7 +5353,6 @@ BROWSER / PERSISTENCE / PROVIDER tier gates have been opened by
 - Vercel deploys this round: **none**
 - DB / auth connections this round: **none**
 - Migrations applied this round: **none**
-- `D:/trades` touched this round: **no**
 
 **Files touched (edit scope limited to local source):**
 - Modified · `src/app/nex-native/hq/journey-map/page.tsx` ·
@@ -5807,7 +5788,6 @@ approval):**
 - Migrations applied this round: **none**
 - Credentials / env changes this round: **none**
 - `:3008` dev server touched this round: **no**
-- `D:/trades` touched this round: **no**
 
 **Files touched (local source · no commit):**
 
@@ -6059,7 +6039,6 @@ anchor.
 - Patches applied this round: **none**
 - Credentials / env changes this round: **none**
 - `:3008` dev server touched this round: **no**
-- `D:/trades` touched this round: **no**
 
 **Files touched (local source · no commit · all quarantined):**
 
@@ -7145,7 +7124,6 @@ Unchanged:
 - No change to Hammerex nex-99901, Rosa nex-99903, or any
   neighbouring account row.
 - No Vault / chat / E2E privacy posture change.
-- No D:/trades touch (BANNED in nexapp sessions per 2026-11-19
   seal).
 - No global CLAUDE.md edit.
 - No production `ijvqdvsvwtwxzcqmoqit` operation of any kind.
@@ -7449,7 +7427,6 @@ authorisation word-trigger lands.
 - No change to Hammerex nex-99901, Rosa nex-99903, or any
   neighbouring account row.
 - No Vault / chat / E2E privacy posture change.
-- No D:/trades touch (BANNED in nexapp sessions per 2026-11-19
   seal).
 - No global CLAUDE.md edit.
 - No production `ijvqdvsvwtwxzcqmoqit` operation of any kind.
@@ -7775,7 +7752,6 @@ Unchanged:
   call-site change.
 - No commit, push, deploy, server restart. `:3008` undisturbed.
 - No prod `ijvqdvsvwtwxzcqmoqit` access of any kind.
-- No D:/trades touch (BANNED in nexapp sessions per 2026-11-19
   seal).
 - No global CLAUDE.md edit.
 - No founder-walkthrough claim. No public-launch readiness claim.
@@ -7980,7 +7956,6 @@ Four distinct verdicts · do not conflate:
   separately-scoped work · deferred until explicitly re-authorised.
 - No commit, push, deploy, server restart.  `:3008` undisturbed.
 - No prod `ijvqdvsvwtwxzcqmoqit` access of any kind.
-- No D:/trades touch.
 - No global CLAUDE.md edit.
 - No founder-walkthrough claim.  No public-launch claim.  G-B
   remains OPEN.
@@ -8052,7 +8027,6 @@ to sandbox `kdstoyyeygcopkogqsyv`, provision 2 fresh disposable
 fixtures, run the 7-case negative-auth battery (A–G), clean up by
 captured IDs with neighbour invariants, and update HQ + ledger with
 coordinated evidence.  Hard constraints unchanged: no commits,
-pushes, deployments, restarts; no `D:/trades`; no production access;
 no TypeScript wrapper signature change; no browser/provider/device
 activity; GB-4CAP stays OPEN.
 
@@ -8243,7 +8217,6 @@ GUARD both OPEN.  Launch posture unchanged.
 
 - Did not commit any file, create any branch, push anything, open
   any PR, or deploy anything.
-- Did not touch `D:/trades`, any trades remote, or any prod Supabase
   project.
 - Did not change the TypeScript wrapper
   (`invite-service.transactional-candidate.ts`) or re-wire the
@@ -8626,7 +8599,6 @@ allow. Separate 4-verdict reporting (offline / connected-RPC /
 founder-walkthrough / public-launch).
 
 Hard constraints enforced throughout:
-- Repo scope: `C:/Users/Victus/nexapp` only · never `D:/trades`.
 - No DB connections · no `supabase`/`psql`/`pg` client calls · no
   network · no auth · no providers.
 - No commits · no pushes · no stages · no deploys · no `git add`.
@@ -8883,7 +8855,6 @@ connected checks. Preserve the two source previews as traceable
 inputs.
 
 Hard constraints enforced throughout:
-- Repo scope: `C:/Users/Victus/nexapp` only · never `D:/trades`.
 - No DB connections · no `supabase`/`psql`/`pg` client calls · no
   `nex_migration_history` queries · no even-read-only SELECTs · no
   network · no auth · no providers · no browser · no device.
@@ -9676,7 +9647,6 @@ No other file in the repository was modified.
 - No `NEX_INVITE_CALL_TX` flag introduced or flipped.
 - No TypeScript wrapper or signature change.
 - No `.env` / credentials / dependency change.
-- No reference to or inspection of `D:/trades` (nexapp-session
   rule 2026-11-19 banning that path in nexapp work is honoured).
 - No whole-lane completion · no deployed correction · no proven
   live exploitation · no launch-ready claim.
@@ -9742,7 +9712,6 @@ all three completed.
 | H     | `a76aeec5bbb6b185c`  | W3 join      | 2 SQL (`CANDIDATE_nex_call_participant_join_rpc_v5_w3_PREVIEW{,_rollback}.sql`) · wrapper · test   |
 | I     | `a2d2ca90ed7ad1ed9`  | Review       | `tmp-lane-g/35-review-v5-combined.{md,json}` + concrete in-scope fixes authorisation (none used)  |
 
-Common envelope: no `D:/trades` reference · no `src/app/` touch ·
 no live-service touch · no env/commit/push/deploy/DB access ·
 default-off / fail-closed staging.
 
@@ -9952,7 +9921,6 @@ Unchanged (pin-confirmed post-batch):
 - No commit, push, or deploy.
 - No prod reference. Production `ijvqdvsvwtwxzcqmoqit` hard-refused.
 - No sandbox DB connection. No `kdstoyyeygcopkogqsyv` migration apply or probe.
-- No `D:/trades` reference (per nexapp canonical-repo rule).
 
 ### 16.46.13 · One precise next gate (owner-held, not executed)
 
@@ -10418,7 +10386,6 @@ No defect is closed by preparation alone.
 >     - No commit or push of the apply scripts without a SEPARATE
 >       explicit approval under the sealed push rule
 >       (`feedback_nex_push_requires_separate_approval_2026_11_10.md`).
->     - No reference to `D:/trades`.
 >     - No destructive broadening (table resets, bulk DELETE, trigger
 >       disable, RLS alteration).
 >
@@ -10449,7 +10416,6 @@ Gate A was executed in `C:/Users/Victus/nexapp` against sandbox
 remained sealed. No commits, no push, no deploy, no caller wiring,
 no `NEX_INVITE_CALL_TX` flip, no credential/env/auth-setting changes,
 no server/shell restart, no protected-account changes, no Hammerex,
-no Rosa, no `D:/trades` access. No secrets printed.
 
 Agent HARNESS completed authoring `scripts/gate-a-connected-matrix/`
 (32 files, source-only). Agent DB completed Phase 1 preflight + Phase
@@ -11821,7 +11787,6 @@ here for owner decision; none were fixed in this entry (per owner's
 - `.env.local` not inspected, not edited.
 - No migration, RLS, grant, SMTP, rate-limit, or billing change.
 - No commit, no push, no deploy. No running services touched.
-- `D:/trades` not touched. Hammerex / Rosa / founder session not
   touched. SEO parked. No callers or activation flags changed.
 
 ---
@@ -12034,7 +11999,6 @@ Owner-authorised OFFLINE pass before any connected A/B/C sandbox probe.
 Three parallel agents each owned a non-overlapping slice; Claude
 performed static orchestration + integration. All work is sandbox-pinned
 or test-fixture-only · no Supabase/pg/SMTP/dev-server/Hammerex/Rosa/
-production/migration/RLS/grant/billing/.env.local/D:/trades touch · no
 commit/push/deploy · secrets never read or printed.
 
 **Agent 1 — `GATE_A_DRY_RUN` selector + `dry-run.spec.mjs`**
@@ -13308,7 +13272,6 @@ OFFLINE-TESTED (vitest green) and not SANDBOX-ATTESTED.
   dispatch. Production ref `ijvqdvsvwtwxzcqmoqit` appears nowhere
   in output.
 - No commit · no push · no deploy · no `.env.local` edit by Claude ·
-  no Hammerex / Rosa / privacy / `D:/trades` touched.
 - Disposable passwords never emitted on stdout or persisted to disk.
 
 ### Current Gate A status after §16.48.23
@@ -13522,7 +13485,6 @@ This is design guidance only. It needs its own owner-authorised migration round 
 - No commit, no push, no deploy, no `.env.local` edit.
 - No new `auth.users` rows created in this round (the three UUIDs from §16.48.23 are reused by UUID; the admin credential reset modifies the same rows in place).
 - No cleanup dispatched; `90_cleanup.mjs` never invoked by this orchestrator.
-- No Hammerex / Rosa / privacy / `D:/trades` touched.
 - Passwords never emitted on stdout or persisted.
 - Dev server + shells not stopped.
 
@@ -13688,7 +13650,6 @@ Without either (a) fresh owner-provided passwords in env or (b) a separate autho
 - No cleanup execution.
 - No new signups.
 - No password resets.
-- No writes to Hammerex / Rosa / privacy / `D:/trades`.
 - Dev server + shells not stopped.
 
 ### Current Gate A status after §16.48.25

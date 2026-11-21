@@ -748,7 +748,6 @@ Stripe-wired):** NOT READY.
 - Protected accounts untouched.
 - Founder sessions untouched.
 - Dev server on `:3008` not restarted.
-- `D:/trades` canonical repo not touched; all work scoped to
   `C:/Users/Victus/nexapp`.
 - Concurrent delivery-worker files explicitly untouched.
 - Working tree additions limited to this appendix on
@@ -882,7 +881,6 @@ envelope attestation) remain as recorded in §10.7.
 - One file edited in `C:/Users/Victus/nexapp/src/app/nex-native/[businessSlug]/wholesale/page.tsx`. No other code change.
 - No commit. No push. No deploy. No migration applied. No prod env var changed. No Stripe call. No Resend call. No restart of :3008.
 - Supabase prod `ijvqdvsvwtwxzcqmoqit` untouched. Supabase sandbox `kdstoyyeygcopkogqsyv` untouched.
-- `D:/trades` (canonical NEX repo per user global) untouched; work confined to `C:/Users/Victus/nexapp`.
 
 ---
 
@@ -1174,5 +1172,4 @@ concurrent-work envelope on that file still forbids it.
 
 No migration applied · no commit · no push · no deploy · no env
 mutation · no Stripe or PayPal or email call · no `:3008` restart
-· no `_actions.ts` edit · no chat code edit · no `D:/trades` edit
 · Supabase prod and sandbox untouched.

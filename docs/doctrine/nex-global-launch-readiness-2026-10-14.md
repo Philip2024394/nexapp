@@ -4,7 +4,6 @@ Date: 2026-10-14
 Scope: strictly read-only first-pass audit identifying launch blockers across Phases A-F.
 Companion to earlier reports: Phase 1 identity audit, Phase 2 feature preservation, Phase 3A dev guard + hardening + acceptance, Stage 1.1 chain, single-source-of-truth verification.
 
-Written as one file. Nothing in the repo was modified during this audit except this report. No code edited, no migration applied, no dependency installed, no DB queried, no server started/stopped, no secrets read, no git mutation, no `.env.local` opened. D:/trades not touched. Hammerex seed, migrations 191-197, Stage 1.1 code, Vault, Bridge 99 and Chat Master Layout all untouched.
 
 ---
 
@@ -17,8 +16,6 @@ Measured against the Phase 1 doctrine:
 | Release gate | State | Headline |
 |---|---|---|
 | 1 · Repository + build integrity | **PARTIAL** | nexapp is the single source (Phase 1-3A verified). `next build` succeeds because TS errors are suppressed via `ignoreBuildErrors: true`, but **1614 TypeScript errors** remain, 34 of them in nex-native app code (WebAuthn API change, Vault SignInEventType, slug-availability type union). |
-| 2 · Account creation, claim, identity continuity | **PARTIAL** | Bridge 99 provisional-session foundation is byte-identical to D:/trades (Phase 2). B1 Phase C "claim action" is designed but not implemented (per the Stage 1.1 roadmap). WebAuthn sign-in surface has broken TS imports (library API change). |
-| 3 · Core messaging + persistence | **VERIFIED (fail-open rate-limit outstanding)** | Vault + peer-conversation + peer-message surfaces byte-identical to D:/trades. Guest-chat follow-up rate limit wired at code level · Stage 1.1 Option C fail-closed-with-retry policy approved in principle but **not implemented**. Migration 197 unapplied. |
 | 4 · Mobile usability | **BLOCKED** | **No Playwright config exists**. No e2e harness. 795 vitest files but zero mobile-viewport automation. All of Phase B's mobile claims would be unverifiable until a harness exists. |
 | 5 · Package + entitlement correctness | **BLOCKED** | `/nex-native/packages/page.tsx` exists but **zero Stripe payment code is implemented** across the codebase. Stripe is in deps (`stripe@^17.7.0`), but no `stripe.checkout`, no webhook route, no payment API. Entitlement enforcement scaffolding present (tiers · `gratis`/`bisnis`) but revenue path absent. |
 | 6 · Market configuration + payments | **BLOCKED** | 10 currencies defined in code (`src/lib/nex-native/currencies.ts`). i18n foundation exists with id + en packs only. **No per-market payment provider mapping, no tax config, no regional availability flag.** Current `nex_account.locale CHECK (locale IN ('id','en'))` restricts the DB to two languages. |
@@ -53,7 +50,6 @@ unsubscribe  vault  welcome
 | Category | Routes | Status |
 |---|---|---|
 | **Auth** (webauthn, sessions, credentials) | 9 | **PARTIAL** · WebAuthn routes have broken imports (library API change) |
-| **Chat core** (messages, conversations, visitor, nex-reply, first-message) | 8 | **VERIFIED** (byte-identical to D:/trades per Phase 2) |
 | **Peer messaging** (encrypted, delivered, since) | 3 | **VERIFIED** |
 | **Vault** (setup, unlock, rotate, device, envelope, migration, recovery, chat/attachment) | ~30 | **VERIFIED** (sealed B.1-B.6A chain, Phase 2 byte-identical) · but TS event-type mismatches on 12 routes |
 | **Community** (notices, lost-found, zones, membership) | 11 | **VERIFIED** (migrations 146-152 present) |
@@ -75,10 +71,8 @@ Both default to disabled per Phase 1 doctrine. The query-string bypasses are an 
 
 | Area | Status | Evidence |
 |---|---|---|
-| Chat (identity header + composer pill master layout) | **VERIFIED** | Phase 2 · 56-file chat subtree byte-identical to D:/trades; sealed Chat Master Layout primitives at `src/lib/nex-native/chat-chrome/` are nexapp-only post-fork |
 | Themes catalogue + viewer | **VERIFIED** | Chat-themes-library files unchanged this session; theme-viewer tests pass |
 | Vault B.1-B.6A | **VERIFIED** | Phase 2 · all 17 lib files + 51 app route files byte-identical; sealed deterministic + Playwright `vault-master-pass.spec.ts` 1/1 PASS (from prior session chain) |
-| Bridge 99 provisional-session + 5-signal fingerprint | **VERIFIED** | 28/30 byte-identical to D:/trades; 2 differences are the deliberate 2026-10-14 Hammerex guest-handoff fixes |
 | Family Safety + SafeChat | **VERIFIED** | Phase 2 · 87/87 files byte-identical |
 | Guest chat follow-up rate limit | **PARTIAL** | Code wired (Stage 1.1 pass 1), migration 197 unapplied, fail-open bypass still live |
 | Commerce (cart, orders, products, business shops) | **DISABLED** (gated off per Phase 1 doctrine) · implementation present but hidden |
@@ -100,7 +94,6 @@ Three surface roots name themselves prototypes: `prototypes/`, `home-prototypes/
 - **No `playwright.config.*` at repo root** · `Glob playwright.config.*` returned zero files.
 - **No `tests/e2e/` directory** · zero `.spec.ts` files anywhere.
 - `@playwright/test` is in `devDependencies` (`"^1.62.1"`) but no configuration or test files use it.
-- Prior session chain mentions Playwright specs (e.g. `vault-master-pass.spec.ts`, `nex-socials-chooser.spec.ts`, `vault-contacts.test.ts`) that passed · those are in D:/trades's history and are **not present in nexapp**.
 
 **Verdict: mobile QA is unverifiable in nexapp today.** This is a Phase B hard blocker because every claim about mobile viewport behaviour (touch targets, keyboard, safe area, chat bubbles, navigation, product sheets, settings) would be unsupported.
 
@@ -260,14 +253,11 @@ No backup/restore procedure documented in `docs/doctrine/*`. Supabase project is
 ### Vault B.1-B.6A sealed
 
 Phase 2 confirmed:
-- 17/17 Vault lib files byte-identical to D:/trades (sealed B-chain)
 - 51/51 Vault app route files byte-identical
-- `vault-master-pass.spec.ts` (Playwright) was 1/1 PASS from the earlier session chain (in D:/trades · regression not re-run in nexapp)
 
 ### Bridge 99 + 5-signal fingerprint
 
 - `provisional-fingerprint.ts` sealed · 5-signal contract (`device_id, ua_class, ip_24_bucket, tz_offset_minutes, accept_language_primary`) defined at 4 places inside one file (comment, type, const array, runtime validators)
-- 28/30 first-conversation files byte-identical to D:/trades
 - G2 fingerprint re-check on guest-chat follow-up remains deferred
 
 ### Rate limit (guest-chat follow-up)
@@ -395,7 +385,6 @@ Even after all Phase 1 blockers are fixed, **Phase 2 commerce launch (payments, 
 - No `.env.local` opened. No secrets read or printed.
 - No DB queried. No deploy. No port change. No process stopped (dev server at PID 7172 untouched).
 - No git state change. No commit, push, pull, stash, checkout, reset.
-- No `D:/trades` read or write.
 - No change to Stage 1.1 code (`_actions.ts`, `_guest-chat-client.tsx`, Stage 1.1 test file), migration 197, migrations 191-196, Hammerex seed, Vault, Bridge 99, Chat Master Layout, or any sealed surface.
 - `package.json`, `scripts/assert-nexapp-cwd-and-remote.mjs`, Phase 3A guard tests — all read-only.
 - Working-tree preservation: 29 pre-existing modified files intact; 108+ pre-existing untracked docs/data intact.

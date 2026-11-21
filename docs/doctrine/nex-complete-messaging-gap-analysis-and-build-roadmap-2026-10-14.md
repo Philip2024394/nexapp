@@ -426,7 +426,6 @@ Every step above is a separate authorisation gate. No step may proceed without f
 - **Only one file created**: `docs/doctrine/nex-complete-messaging-gap-analysis-and-build-roadmap-2026-10-14.md`.
 - No application code · no test · no migration · no existing design/audit document modified.
 - No `.env.local` read · no DB access · no seed executed · no dependency installed.
-- `D:/trades`, Vault files, Hammerex seed candidate, migrations 191–196, Stage 3 work — all untouched.
 - No `git` operations · no branch changes · no deploys.
 - No implementation of account claiming, rate limits, retention, or any messaging feature.
 - No welcome-page tile added · no new guest-chat entry point exposed.

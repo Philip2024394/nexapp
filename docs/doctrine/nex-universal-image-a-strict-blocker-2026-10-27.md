@@ -41,10 +41,7 @@ The resolver cannot be imported. The sealed test has 0 tests passing in the curr
 
 ### 2.4 · Root cause (per `CLAUDE.md` nexapp fork boundary)
 
-The current fork (2026-10-10 from `D:/trades`) explicitly left behind sibling products: *"Products that lived alongside NEX in the source monorepo (trade-off, hammerex, xrated-trades, thenetworkers, van-wrap, apprenticeships, homeowners, trade-center) were intentionally left behind."*
 
-`src/lib/nexapp/nexVisualAssets.ts` (the 41-asset Philip-curated catalogue referenced in `categoryFallbackLibrary.ts:14-18`) was co-located with those sibling products in `D:/trades/src/lib/nexapp/` and was dropped by the fork extraction. The library header mentions it:
-> `project_nex_universal_directory_image_doctrine_2026_08_22` (sealed · Philip-curated · *in D:/trades*)
 
 The images themselves (the 41 transparent PNGs) do not exist in this repo's `public/` tree either.
 
@@ -60,7 +57,6 @@ A-strict depends on calling the sealed library. In the current fork:
 ## 4 · What I will NOT do
 
 - Create a stub `nexVisualAssets.ts` with invented image URLs. That would be fabrication (invents the Philip-curated catalogue), violating the sealed trust rule.
-- Copy the catalogue from `D:/trades` without owner authorisation (crosses the fork boundary).
 - Substitute DB-library URLs for the missing TS catalogue (A-wide, explicitly held).
 - Call `categoryFallbackFor` with a hard-coded dummy URL (fabrication).
 - Lower the trust rule to accept "any URL that renders" as the TS library's output.
@@ -96,7 +92,6 @@ The sealed Universal Image Doctrine (per Philip 2026-08-22 doctrine anchor) pres
 
 Options for the owner (none performed automatically):
 
-- **UID-B7-OPT1** · **Port the file + its public/ assets from `D:/trades`.** Preserves the sealed doctrine 1:1. Requires owner confirmation that the catalogue lives at `D:/trades/src/lib/nexapp/nexVisualAssets.ts` + `/public/nex-visual-assets/*.png` (paths unverified from the current fork · owner-only check).
 - **UID-B7-OPT2** · **Author a NEX-native replacement catalogue** · owner curates ~5 PNG assets covering just the food family for A-strict (`nva-011` grain bowl, `nva-019` grilled steak, `nva-002` cappuccino, `nva-016` ice cream, `nva-020` cheeseburger) plus a NEX-branded universal fallback. Satisfies the sealed scope without crossing the fork boundary.
 - **UID-B7-OPT3** · **Hold A-strict indefinitely** · keep the letter-monogram placeholder on every Directory card. No image improvement until a different implementation path is authorised.
 

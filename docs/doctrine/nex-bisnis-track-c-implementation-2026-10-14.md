@@ -1,7 +1,6 @@
 # NEX Bisnis · Track C Implementation Report · 2026-10-14
 
 Status: implemented locally · NOT committed · NOT pushed · awaiting
-owner review. Pre-existing worktree preserved. `D:/trades` untouched.
 
 Authorisation: owner's "continue until working flow for 3 options
 start to finish with proven world standard" · Option A (build
@@ -318,7 +317,6 @@ Dev server running · HMR will pick up the new files · owner can navigate to th
 - [x] First-contact panel commit `b5bae9f` on origin/main · unchanged
 - [x] No commit · no push · no reset · no stash · no branch change
 - [x] No DB query / write / migration / `.env.local` read / dependency install / deployment / server restart
-- [x] `D:/trades` not touched
 - [x] No sealed redirect or contract modified (pinned via tests)
 - [x] No new DB column, migration, cookie, or completion flag
 - [x] No duplicate selector / catalogue / persistence mechanism

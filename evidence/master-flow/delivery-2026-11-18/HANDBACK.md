@@ -175,7 +175,6 @@ Public launch is not supported by this pass. Minimum additional work:
 - Working tree shows 222 pre-existing modifications + the five new files listed in §2 (two libraries, two test files, one doctrine note under `docs/doctrine/`).
 - Zero commits, zero pushes, zero deploys, zero migrations applied.
 - Canonical `nexapp` constitution §2-§6 honoured · no git operation beyond `git status`.
-- Canonical NEX-repo seal honoured · no edits anywhere under `D:/trades`.
 - Supabase prod `ijvqdvsvwtwxzcqmoqit` sealed · untouched.
 - Supabase sandbox `kdstoyyeygcopkogqsyv` · untouched.
 

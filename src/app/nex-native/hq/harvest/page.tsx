@@ -212,7 +212,6 @@ export default async function HarvestDashboardPage() {
           mutating{" "}
           <code style={{ color: NEX.cyan }}>source_registry</code> flags,
           or starting a cycle requires explicit authorisation from the
-          sealed D:/trades operator.
         </p>
       </main>
     </div>

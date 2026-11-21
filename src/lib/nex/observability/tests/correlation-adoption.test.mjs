@@ -58,14 +58,12 @@ function rel(p)  { return relative(REPO, p).replace(/\\/g, "/"); }
 //
 // FORK-CONTRACT · 2026-11-20
 // -----------------------------------------------------------------
-// This file was authored for the D:/trades monorepo, where the Wave 11
 // Layer-1 canary set lived under `src/app/api/nex/**`. The nexapp fork
 // (CLAUDE.md §"Fork boundary", 2026-10-10 seal) carries ONLY
 // `src/app/api/nex-native/**` and `src/app/api/dev-test/**` · the
 // legacy `src/app/api/nex/**` tree is NOT part of this fork.
 //
 // Per CLAUDE.md fork-hygiene rule ("clean up incrementally, not in one
-// pass"), the historical D:/trades allowlist is preserved below as
 // LEGACY_CANARY_SET for reference, but is NOT asserted against (those
 // routes do not exist here). The IN-FORK allowlist (LAYER1_ADOPTED)
 // names only routes that actually exist AND adopt runFromRequest in
@@ -77,7 +75,6 @@ function rel(p)  { return relative(REPO, p).replace(/\\/g, "/"); }
 // `src/lib/nex/**` and `src/middleware.ts`, which ARE part of this
 // fork. CADP1 is now scoped to the in-fork set.
 //
-// Historical allowlist (D:/trades) · retained for traceability only:
 //   src/app/api/nex/knowledge-inbox/{upload,urls,dump,process}/route.ts
 //   src/app/api/nex/storage/gates/route.ts
 //   src/app/api/nex/brain/{supervisor-sweep,cron-tick,records,jobs,timeline,feedback}/route.ts

@@ -3,7 +3,6 @@
 // NEX Settings Header · Account-Gate probe (fork path).
 // -----------------------------------------------------------------------
 // Mirrors the sealed `/api/nex/account-gate/exists` route from the
-// canonical multi-product repo (D:/trades) but lives under the fork's
 // canonical API boundary (`/api/nex-native/*`), and adds an `isAdmin`
 // flag so dev-admins see the unlocked gear even when their nex_account
 // row is not fully resolved for the current viewer.

@@ -54,10 +54,8 @@ export default defineConfig({
       // just stops counting them as a failing engineering signal.
       //
       // Reversal: delete these two lines. No test file edited to earn
-      // the skip. This mirrors the 2026-11-19 D:/trades BANNED rule's
-      // spirit (keep separate product lineages honest) · nex-agent /
-      // nex-agent-runtime are historical NEX-Native runtime experiments
-      // that did not make the nexapp carve-out.
+      // the skip. nex-agent / nex-agent-runtime are dormant runtime
+      // experiments not wired to any nexapp surface.
       "src/lib/nex-agent-runtime/**",
       "src/lib/nex-agent/**",
       // 2026-11-21 · DEAD subtree per Scope Reduction 2026-11-06.

@@ -3,7 +3,6 @@
 // 2026-11-21 · Recovered shim for `@/lib/nex/indonesia/commerce/storage`.
 //
 // Background: Not ported during the 2026-10-10 nexapp carve-out from
-// D:/trades. Sole importer is commerce-composer.test.ts, which uses
 // the test-only `_seedCommerceForTests` + `_resetCommerceCacheForTests`
 // helpers to seed/clear an in-memory commerce cache.
 //

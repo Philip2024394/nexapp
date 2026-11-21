@@ -15,7 +15,6 @@ Companion to:
 - Phase 3A dev guard exit=0 (`node scripts/assert-nexapp-cwd-and-remote.mjs`) · canonical `C:/Users/Victus/nexapp` + `Philip2024394/nexapp.git`.
 - Pre-task `git status --short` line count: 154 lines (29 pre-existing tracked modifications + ~125 untracked docs/data/scripts entries).
 - No destructive git operations performed (no `checkout`, `reset`, `stash`, `clean`, `pull`, `pull --rebase`, `rebase`, `cherry-pick`).
-- D:/trades not read or written.
 
 ---
 
@@ -317,7 +316,6 @@ No evidence in this audit of such a reliance, but flagged for operator awareness
 | Repository root + remote verified via existing guard | ✅ · exit=0 |
 | Pre-existing worktree inventory recorded + preserved | ✅ · 154 lines pre-task · all preserved post-task |
 | No destructive git ops | ✅ · no checkout/reset/stash/clean/pull/rebase |
-| No D:/trades read or write | ✅ |
 | Threat model established BEFORE edits | ✅ · §Section 2 above |
 | Only confirmed minimal fix implemented | ✅ · 3 layouts + 1 function edit · dev/* explicitly left unchanged |
 | Server-side validation (not client-only hiding) | ✅ · layouts call `notFound()` in RSC; `launch-flags.ts` runs server-side where callers consume it |

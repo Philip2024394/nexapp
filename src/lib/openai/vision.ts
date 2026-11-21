@@ -2,7 +2,6 @@
 //
 // 2026-11-21 · Recovered shim for `@/lib/openai/vision`.
 //
-// Background: during the 2026-10-10 nexapp carve-out from D:/trades,
 // the sibling-product OpenAI vision wrapper was NOT ported. Flagged
 // as "sibling product" in `docs/doctrine/nex-typescript-triage-
 // 2026-10-27.md` row 5. Five modules under `src/lib/nex/cv/` import
@@ -25,7 +24,6 @@
 // runtime. Tests mock this module via `vi.mock` so they pass.
 // Production never reaches the throw because no live code path
 // imports a cv module. When OpenAI vision is wired into nexapp,
-// replace this file with the real wrapper (D:/trades
 // `src/lib/openai/vision.ts`).
 
 export interface VisionReviewInput {
@@ -49,7 +47,6 @@ export async function reviewImage<T = unknown>(
       "carve-out. No live route should import a `src/lib/nex/cv/*` " +
       "module in the current fork (flagged 'sibling product' in the " +
       "2026-10-27 typescript triage doc). If you reached this error, " +
-      "either wire the real OpenAI wrapper (D:/trades " +
       "src/lib/openai/vision.ts) or remove the caller.",
   );
 }

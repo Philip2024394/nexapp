@@ -1,7 +1,6 @@
 # NEX · proven package feature tree · entitlement map · evidence report
 
 Date: 2026-10-14
-Scope: strictly read-only audit. One file created (this report). No code modified, no migration run, no DB touched, no deploy, no deps installed, no secrets read, no server stop/start, no git mutation. D:/trades not touched. Stage 1.1, migration 197, migrations 191-196, Hammerex seed, Vault, Bridge 99 all isolated and untouched.
 
 Companion to:
 - `docs/doctrine/nex-env-vars-inventory-2026-10-14.md` (B1 inventory)
@@ -147,7 +146,6 @@ graph TD
 
 | Feature | Gratis | Bisnis | Pro (reserved) | Buy (one-shot) | Ringan | Custom |
 |---|---|---|---|---|---|---|
-| **Chat & messaging** (sealed by Phase 2 byte-identity to D:/trades) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Business profile · 1 per Gratis / 5 per Bisnis** | ✓ | ✓ | ? | ✓ | ✓ | ✓ |
 | **Product upload · cap enforced** | ✓ (cap 10) | ○ (uncapped · but no test) | ? | ○ | ○ | ○ |
 | **Product management · edit/delete/publish** | ○ | ○ | ? | ○ | ○ | ○ |
@@ -189,7 +187,6 @@ graph TD
 | Analytics window · 7-day | `tier-gate.ts:236-245` | No test |
 | Thumbnail entitlement | `src/lib/nex-native/directory/thumbnail-entitlement.ts` (whole file) | ✓ `src/lib/nex-native/directory/__tests__/thumbnail-entitlement.test.ts` |
 | Theme selection (no tier gate) | `src/lib/nex-native/account-service.ts:125-171` | Indirect via tests that call `updateChatTheme` |
-| Vault setup (no tier gate) | `src/app/api/nex-native/vault/setup/route.ts:31-32` (explicit "zero commercial code" seal) | Phase 2 confirmed Vault B.1-B.6A byte-identical to D:/trades |
 | Payment NOT WIRED | `nex-supabase/migrations/193_nex_theme_purchase.sql:11-15` (explicit header) + Phase F confirmed grep for `new Stripe(` finds zero consumers | N/A |
 
 ---
@@ -272,7 +269,6 @@ If the owner's intent is one of:
 
 | Candidate interpretation | Where it would live | Current status |
 |---|---|---|
-| Chat/business cover page (first-impression shell) | `src/app/nex-native/cover/*` + `CoverThemeSkin` | ✓ PROVEN LIVE · byte-identical to D:/trades per Phase 2 |
 | Profile avatar (round portrait) | `ChatIdentityHeader avatarUrl` + `nex_account` avatar fields | ○ implementation present · tier gate not evaluated |
 | Image overlay / mask on avatar | — | **NOT IMPLEMENTED** |
 | Facial recognition / biometric | — | **NOT IMPLEMENTED** (and the sealed Family Safety ID verification flow does not do this) |
@@ -364,7 +360,6 @@ The selected theme id is read on the server (`cover-content-loader.ts`) and pass
 
 ### 7.2 · What a user actually gets
 
-| Vault sub-feature | Status | Evidence (Phase 2 established byte-identity to D:/trades for all sealed B-chain files) |
 |---|---|---|
 | B.1 · Vault conversation envelope | ✓ PROVEN LIVE | `nex_vault_conversation_envelope.sql` + tests in `src/lib/nex-native/__tests__/vault-conversation-envelope-{b1,live-b2,routes-b2}.test.ts` |
 | B.2 · Live-DB envelope operations | ✓ PROVEN LIVE | Same test chain |
@@ -393,18 +388,15 @@ Per `vault-move-and-preserve-b5.test.ts` + the sealed B.5 service at `src/lib/ne
 ### 7.4 · Leakage controls
 
 - **Message content:** B.6A regression test (`vault-b6a.test.ts`) proves no plaintext or encrypted body leaks into any normal-chat surface after move; no `nex_peer_message` reads from the Vault contacts page.
-- **Notifications / previews / search / contact lists:** Phase 2 confirmed byte-identity to D:/trades's sealed B.6A chain which includes BroadcastChannel lock sweep + opaque friend-id list in call UI.
 - **Encryption:** VMK/K_c/K_f/AES-GCM key hierarchy is implemented and tested (`vault-key-hierarchy.test.ts`). Phase 2 confirmed `encrypted=true` + ciphertext not null + body="(encrypted)" live-DB check.
 
 ### 7.5 · Downgrade / cancellation / revocation
 
 - **No downgrade affects Vault today** because there is no commercial coupling.
-- Device-revoke flow: `vault-device-portability.test.ts` + `/api/nex-native/vault/device/revoke/route.ts` (byte-identical to D:/trades per Phase 2).
 - Recovery: `vault-recovery-rotation.test.ts` + `/api/nex-native/vault/recovery/*`.
 
 ### 7.6 · Verdict
 
-**Vault's core privacy properties are the single most-tested feature in this codebase.** 13 test files on the Vault chain, all byte-identical to D:/trades. The only question in the brief that answers NEGATIVE is **"Is Vault Business genuinely protected by server-side entitlements?"** · the answer is "there is no Vault Business entitlement in this codebase" (sealed design, not an oversight).
 
 ---
 
@@ -762,7 +754,6 @@ $ git status --short | grep "nex-package-feature"
 - ✅ No `.env.local` read; no secrets accessed
 - ✅ No database query; no production API call
 - ✅ No server start/stop
-- ✅ No D:/trades read or write
 - ✅ All pre-existing modifications preserved
 - ✅ Stage 1.1 code, migration 197, migrations 191-196 all isolated and untouched
 - ✅ No feature labelled PROVEN LIVE without evidence

@@ -2,7 +2,6 @@
 //
 // Built-in theme-emoji + theme-sticker catalogs · sealed 2026-10-11.
 // -----------------------------------------------------------------
-// The sealed D:/trades Supabase project seeded 23 Joker emoji
 // (`joker-03..joker-25`) via migration 116 + upload-joker-emoji.mjs
 // and 9 Joker stickers (`joker-sticker-01..09`) via migration 118 +
 // upload-joker-stickers.mjs. The nexapp fork inherited the SCHEMAS

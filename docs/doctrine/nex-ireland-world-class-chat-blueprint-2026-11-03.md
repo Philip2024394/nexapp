@@ -91,7 +91,6 @@ A traceable implementation blueprint for making NEX Ireland a complete, producti
 
 ### 2.2 · Unresolved
 
-- **Bridge 1** · not found in this repository. Memory (global CLAUDE.md) references `Bridge 1 · 874e4d7d · product-context chat destination` as a sealed commit in `D:/trades` (preservation repo), not nexapp. **Treatment**: Bridge 1 lives in the historical preservation repo and is not a Bridge in the nexapp sense. **Owner should confirm** whether this blueprint should also respect `D:/trades` Bridge 1 identifiers, or whether nexapp's Bridge sequence is independent. **This is an unresolved blocker on documentation terminology**, not implementation.
 
 ### 2.3 · Other sealed holds (not Bridges but doctrine-sealed)
 
@@ -659,7 +658,6 @@ Prioritised for **foundational reliability and security**, not cosmetic features
 | D-OBSERVABILITY | Observability tooling chosen (Pino / APM / alert routing) | Owner |
 | D-GROUPS-SCHEMA | Groups data model approved | Owner |
 | D-RECOVERY | Lost-device recovery model chosen (D4) | Owner |
-| D-BRIDGE-1 | Bridge 1 terminology clarified (nexapp sequence vs D:/trades sequence) | Owner |
 | D-COUNT | 6-vs-8 BLOCKER count reconciliation | Owner |
 
 ---

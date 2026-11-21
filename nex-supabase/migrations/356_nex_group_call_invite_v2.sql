@@ -97,7 +97,6 @@
 --     OF SCOPE here.  Browser activation + feature flag flip are also
 --     separate authorisations.
 --   · Does NOT touch production · sandbox only.
---   · Does NOT touch D:/trades · nexapp session boundary.
 --
 -- Rollback (see sibling `_rollback_PREVIEW.sql`)
 --   Rollback DROPs the new function only.  It does NOT restore the

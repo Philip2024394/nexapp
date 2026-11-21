@@ -3,7 +3,6 @@
 // 2026-11-21 · Recovered shim for `@/lib/nex/indonesia/commerce/types`.
 //
 // Background: Not ported during the 2026-10-10 nexapp carve-out from
-// D:/trades. Type-only module · no runtime behavior. Shape pinned by
 // field accesses in:
 //
 //   · brain/commerce-composer.ts:91       — OfferWithRefs.offer.id,

@@ -3,7 +3,6 @@
 Status: READ-ONLY. No source edits. No DB queries. No `.env.local`
 reads. No tests re-run beyond the ones already green (259/259 last
 session · did not need re-run for a pure review). Pre-existing
-worktree preserved. `D:/trades` untouched.
 
 Scope: owner's seven-point acceptance review of Track B against
 `docs/doctrine/nex-bisnis-track-b-implementation-2026-10-14.md`.
@@ -302,7 +301,6 @@ Each category's secondary "Make NEX yours in 2 steps" + tertiary "View public pa
 
 - [x] Read-only review · no files modified
 - [x] No DB queries · no `.env.local` reads · no server start/stop
-- [x] `D:/trades` not touched
 - [x] All pre-existing changes preserved · Phase 1 + Phase 2 + themes-tour follow-up + support-background + 34 pre-session modified + 177 pre-session untracked
 - [x] Phase 2 commit `b5bae9f` on origin/main unchanged
 - [x] Tests not re-run (previous session's 259/259 result is current for this worktree state · no code touched)

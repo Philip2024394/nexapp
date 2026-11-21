@@ -2,7 +2,6 @@
 //
 // 2026-11-21 · Recovered shim for `@/lib/nexapp/tokens`.
 //
-// Background: during the 2026-10-10 nexapp carve-out from D:/trades,
 // the `nexapp` design-tokens module was NOT ported. 30 files under
 // `src/components/nexapp/*` depend on it (import { NEX }). Reachability
 // audit:

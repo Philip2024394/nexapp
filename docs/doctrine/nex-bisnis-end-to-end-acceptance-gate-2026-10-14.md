@@ -3,7 +3,6 @@
 Status: READ-ONLY AUDIT. No source edits. No DB queries. No `.env.local`
 reads. Pre-existing worktree preserved (34 modified · 177 untracked ·
 Phase 1 + Phase 2 + support-background + themes-tour follow-up all
-intact · uncommitted). `D:/trades` not touched. No commit · no push.
 
 Scope: owner's acceptance gate — "I must be able to start from the
 first NEX URL, follow the intended journey as a new user, and finish
@@ -403,7 +402,6 @@ and preserves sealed services.
 - [x] No DB queries / writes / RPCs
 - [x] No `.env.local` reads
 - [x] No dependency installs · no deployment · no server restart
-- [x] `D:/trades` not touched
 - [x] Pre-existing worktree preserved · Phase 1 + Phase 2 + support-background + themes-tour follow-up all intact · uncommitted
 - [x] No commit · no push · no reset · no stash · no branch change
 - [x] All claims cited with file:line evidence

@@ -906,10 +906,8 @@ Nothing in this document pre-authorises any of the above.
 | Surface | Location | What it holds | Status |
 |---|---|---|---|
 | **Standalone NEX Supabase** · `ijvqdvsvwtwxzcqmoqit` | migrations live at `nex-supabase/migrations/` (232 files, highest number 236) | `nex_account` · `nex_business` · `nex_product` · chat · music · live · social-adjacent primitives (`nex_friend_edge`, `nex_friend_request`) · themes · ledger | Sole DB of record for consumer tables per sealed CLAUDE.md §8 (2026-10-12) |
-| **Historical NEX Postgres (D:/trades monorepo)** | `D:/trades/deploy/postgres/init/` (205 files · outside the standalone repo) | Legacy comms/social/brain/business tables from the pre-fork era | **Not part of the standalone nexapp repo.** CLAUDE.md fork-boundary (2026-10-10): *"Only these trees exist here: … nex-supabase/migrations/"*. New work does NOT go to D:/trades. |
 | **Local nex_dev Postgres** · `localhost:5433` | Referenced by `src/lib/nex/db/` + `NEX_POSTGRES_URL` env var | Directory canonical layer (`nex.business_canonical` etc.) · brain/memory tables · business-trial service | Dev/local only. CLAUDE.md explicitly flags that this is "DEVELOPMENT ONLY · must never be assumed to replicate automatically". |
 
-The owner's A/B distinction ("`deploy/postgres/init/` canonical NEX Postgres vs `nex-supabase/migrations/` Supabase identity layer") refers to the **sealed monorepo** architecture at `D:/trades/`. **That architecture is not inherited by the standalone nexapp repo.** The standalone repo was deliberately scoped to a single migration track (Supabase), per CLAUDE.md fork-boundary rule.
 
 **Evidence of the standalone-repo scoping:**
 - `C:/Users/Victus/nexapp/deploy/` directory **does not exist** (verified · `[ -d deploy ] && echo exists || echo absent` → absent).

@@ -53,7 +53,6 @@ Companions:
 ### 3.1 · Card 1 · "Chat Themes" · **PROVEN LIVE**
 
 - **Href:** `/nex-native/chat-themes-library`
-- **Behaviour:** opens the existing live theme catalogue (byte-identical to D:/trades per Phase 2 feature-preservation audit). The catalogue is RSC, reads `nex_chat_theme` + the `isLiveWorldId()` registry, lets the user pick, and persists via `updateChatTheme(accountId, theme)` writing `nex_account.chat_theme`.
 - **Status chip rendered:** `Live · Available now` (green).
 - **Entitlement check:** none (confirms the package-feature audit: theme selection is NOT tier-gated).
 - **Server-side effects on this card tap:** none. Clicking is navigation only; selection happens inside the library.
@@ -134,7 +133,6 @@ A returning user who signed up weeks ago and never saw this first-visit page wil
 
 **Unchanged by this task.** All three cards defer theme operations to existing live code paths:
 
-- Card 1 (Chat Themes) → `/nex-native/chat-themes-library` → sealed selection UI → sealed `updateChatTheme(accountId, theme)` → writes `nex_account.chat_theme`. Phase 2 confirmed byte-identical to D:/trades.
 - Card 2 (Shop) → `/first-visit/shop` → reads the catalogue only, writes nothing. The shop page's grid is `<li>` tiles with no interactive handlers that mutate state.
 - Card 3 (Personalize) → `/first-visit/personalize` → reads the catalogue only, writes nothing.
 
@@ -167,7 +165,6 @@ Because the shop page is purely read-only (no server actions, no API calls, no c
 |---|---|---|
 | First-visit page renders at `/nex-native/chat/first-visit` | **IMPLEMENTED** · requires signed-in NEX session; guests redirect to `/welcome` | `src/app/nex-native/chat/first-visit/page.tsx` lines 69-82 |
 | Three destination cards | **IMPLEMENTED** · `DESTINATIONS` array of 3 entries, rendered by `.map()` | lines 95-124 |
-| Card 1 (Chat Themes) link to live library | **PROVEN LIVE** · library pre-existing + byte-identical to D:/trades | href `"/nex-native/chat-themes-library"` |
 | Card 2 (Shop) browse-only preview | **IMPLEMENTED, HONEST** · reads live catalogue, renders no price/buy | `shop/page.tsx` |
 | Card 3 (Personalize) preview | **IMPLEMENTED, HONEST** · explains what's coming, renders no upload | `personalize/page.tsx` |
 | ChatIdentityHeader primitive mounted on all three pages | **IMPLEMENTED** · sealed primitive respected | test enforces import + usage |
@@ -189,7 +186,6 @@ The brief says: *"Every new NEX user must arrive at the free NEX Chat experience
 
 ### Why the auto-redirect is NOT in this task
 
-- Modifying `/nex-native/chat/page.tsx` to redirect zero-conversation accounts is a sealed-surface change (byte-identical to D:/trades per Phase 2). Needs a separate authorised PR.
 - Modifying `/nex-native/post-signup-apply/page.tsx` to always redirect to first-visit after signup would also route RETURNING users through the first-visit page (post-signup-apply fires on every sign-in). Needs a distinguishing signal (e.g., `nex_account.first_visit_at IS NULL`).
 - Introducing a new "first-visit-seen" column on `nex_account` would be a schema change (migration) · out of scope.
 - Using a cookie-only signal would violate the brief's rule: *"do not rely exclusively on local storage for an account-level decision."*
@@ -296,7 +292,6 @@ RUN  v4.1.11 C:/Users/Victus/nexapp
 - ✅ No `.env.local` read, no secrets accessed, no DB query, no network call, no deploy, no deps installed
 - ✅ No server start/stop, no port change
 - ✅ No commit, push, pull, reset, clean, stash, branch change
-- ✅ D:/trades not touched
 - ✅ Pre-existing 29 tracked modifications + ~130 untracked docs/data/scripts preserved verbatim
 - ✅ Face-cover not invented (feature undefined; package-feature report §Section 5 flagged as blocker; this task honours that honestly)
 - ✅ Chat Master Layout rule respected · ChatIdentityHeader primitive imported and mounted on all three pages

@@ -2,7 +2,6 @@
 //
 // 2026-11-21 · Recovered shim for `@/lib/nex/indonesia/knowledge`.
 //
-// Background: during the 2026-10-10 nexapp carve-out from the D:/trades
 // monorepo (per CLAUDE.md "Fork hygiene"), the Indonesia editorial
 // knowledge corpus and its loader were NOT ported. Two runtime files
 // transitively imported this module:

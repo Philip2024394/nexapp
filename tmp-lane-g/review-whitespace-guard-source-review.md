@@ -2,7 +2,6 @@
 
 **Role**: Agent B · OFFLINE Lane G parallel batch
 **Target**: Agent A's forward-correction candidate
-**Repo scope**: `C:/Users/Victus/nexapp` only (no `D:/trades`, no DB, no network)
 **Evidence tier**: OFFLINE_TESTED (30/30 safe-check PASS, exit 0)
 **Date**: 2026-11-19
 

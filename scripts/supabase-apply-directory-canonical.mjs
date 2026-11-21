@@ -2,7 +2,6 @@
 // scripts/supabase-apply-directory-canonical.mjs
 //
 // Applies the directory canonical layer migrations (166-183, ported
-// from D:/trades/deploy/postgres/init/) to the sealed NEX Supabase
 // project.
 //
 // Safety:

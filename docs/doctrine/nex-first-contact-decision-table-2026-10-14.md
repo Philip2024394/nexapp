@@ -261,7 +261,6 @@ Files intentionally NOT touched:
 - [x] No environment or dependency changes.
 - [x] No deployment or push.
 - [x] `.env.local` was not read.
-- [x] `D:/trades` was not touched.
 - [x] Discoverability defaults not changed.
 - [x] NEX1 routing not changed.
 - [x] Welcome-delivery not changed.

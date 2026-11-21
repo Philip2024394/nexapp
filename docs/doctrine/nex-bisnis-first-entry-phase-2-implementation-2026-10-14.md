@@ -1,7 +1,6 @@
 # NEX Bisnis First-Entry · Phase 2 Implementation Report · 2026-10-14
 
 Status: implemented locally · NOT committed · NOT pushed · awaiting
-owner review. Pre-existing worktree preserved. `D:/trades` untouched.
 
 Authorisation: owner-approved **1B + 2C**.
 
@@ -262,7 +261,6 @@ Playwright pins will be straightforward.
 - [x] First-contact panel commit `b5bae9f` on `origin/main` · unchanged.
 - [x] No commit · no push · no reset · no stash · no branch change.
 - [x] No DB query / write / migration / `.env.local` read / dependency install / deployment / server restart.
-- [x] `D:/trades` not touched.
 - [x] No sealed route or contract modified.
 - [x] No new DB column, migration, cookie, or completion flag.
 - [x] No duplicate theme catalogue · no duplicate cover-id list · no duplicate persistence service.

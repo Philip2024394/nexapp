@@ -1,7 +1,6 @@
 # NEX · B1 · production environment-variable inventory
 
 Date: 2026-10-14
-Scope: strictly read-only inventory. One file created (this report). No `.env.local` value opened, read, or printed. No `.env.example` edit. No code change. No DB touch. No deploy. No dep installed. No git mutation. No server start/stop. No D:/trades touch. All existing working-tree changes preserved.
 
 Companion to:
 - `docs/doctrine/nex-global-launch-readiness-2026-10-14.md` (Phase F named this B1 as the single highest-priority blocker)
@@ -423,7 +422,6 @@ Estimated effort: ~30 minutes of focused work after authorisation. One file edit
 - No `.env.harvest.local`, `.env.tools.local`, or any other `*.local*` file read.
 - `.env.example` NOT edited.
 - No application code modified. No migration. No DB. No deploy. No dep install. No commit, push, pull, stash, checkout, reset.
-- D:/trades not touched. Stage 1.1 code, migration 197, migrations 191-196, Hammerex seed, Vault, Bridge 99, Chat Master Layout all untouched.
 - 29 pre-existing nexapp working-tree modifications preserved verbatim.
 - Running dev server (PID 7172 on port 3008) untouched.
 

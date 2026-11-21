@@ -1,7 +1,6 @@
 # Seller Alerts Checkpoint · Result
 
 **Checkpoint**: HANDOVER §8 · real-time seller alerts
-**Repo**: `C:/Users/Victus/nexapp` (NOT D:/trades)
 **Date**: 2026-11-16
 **HEAD**: `132bc24daaaec90881ee9dbcdd7d2dbaa83c6f0b`
 **Dirty**: yes · untracked `scripts/_tmp/seller-alerts-probe.mjs`, `scripts/_tmp/cp4-fix-*.mjs`, `evidence/master-flow/`; modified `src/app/nex-native/manage/page.tsx` + many pre-existing evidence PNGs/JSONL (not from this run)

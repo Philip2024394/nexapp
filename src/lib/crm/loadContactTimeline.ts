@@ -2,10 +2,9 @@
 //
 // 2026-11-21 · Recovered shim for `@/lib/crm/loadContactTimeline`.
 //
-// Background: during the 2026-10-10 nexapp carve-out from the D:/trades
-// monorepo (per CLAUDE.md "Fork hygiene"), the trades CRM 360°-view
-// loader was NOT ported. The NEX `nex/cx/*` subtree imports the type
-// + loader transitively from this module:
+// The upstream CRM 360°-view loader was never ported into nexapp.
+// The NEX `nex/cx/*` subtree imports the type + loader transitively
+// from this module:
 //
 //   · nex/cx/resolver.ts          · loadContactSummary + ContactSummary
 //   · nex/cx/types.ts             · ContactSummary (re-exports)

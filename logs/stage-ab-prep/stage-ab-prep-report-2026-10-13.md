@@ -27,7 +27,6 @@
 | reflog of `origin/main` | last 5 pushes land on this remote · right repo |
 | working-tree untracked | only `logs/`, `data/`, `src/app/nex-generated/`, 4 read-only audit scripts · nothing in `src/app/` or `src/lib/` beyond phase-3 |
 
-**This is the correct NEX nexapp repository. Not `Philip2024394/trades`. Not a mislabelled local clone.**
 
 ---
 

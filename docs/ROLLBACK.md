@@ -30,7 +30,6 @@ decide and set `NEX_APP_PUBLIC_URL`. No deployment has been performed.
 
 **UNKNOWN · quarantine-note contradiction.** The repo root contains
 `_THIS_IS_NOT_THE_APP.md` (dated 2026-10-09) which points at
-`D:/trades` as the real app. The local `CLAUDE.md` (dated 2026-10-10)
 supersedes that notice for ongoing work. All recent commits (Stages
 1-10, both audits) happened in this repo. Flagged so the next operator
 doesn't follow the stale quarantine note.

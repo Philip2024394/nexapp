@@ -201,7 +201,6 @@ Any anonymous caller who possesses one of the 913 exact object URLs can download
 
 ## 8 · Open questions for the owner
 
-- **S-Q1** Is the owner aware of a pre-fork product (or an upstream repository such as `D:/trades`) that used the `imported/<9-char-id>/*` path convention on 2026-09-01? If yes, this contextualises the uploads.
 - **S-Q2** Does the owner have historical knowledge of the 3 directory IDs `5vv5pw26q`, `9mrgsv2rp`, `nepgaxllc`? (These are the only three distinct prefixes.)
 - **S-Q3** Does the owner authorise a separate scoped security review covering the 5 "no-RLS-policy" public buckets, with the above priority order?
 - **S-Q4** `nex-peer-chat-attachments` (26 objects) is the HIGHEST-sensitivity concern of the group. Does the owner want this specifically flagged for an immediate scoped review ahead of `nex-media`?

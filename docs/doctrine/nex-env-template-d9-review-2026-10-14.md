@@ -211,7 +211,6 @@ This template changes documentation accuracy, not application capability. Every 
 | Do not read `.env.local` values | ✅ · `.env.local` not opened this session. Only the `awk -F=` key extraction performed in B1 was used (names only, no values); even that extraction was not repeated in D9 |
 | Do not query databases / apply migrations / deploy / install deps / commit / push | ✅ · none performed |
 | Do not start or stop servers or change ports | ✅ · dev server at PID 7172 on port 3008 untouched |
-| Do not touch D:\trades | ✅ · zero D:/trades file read or write |
 | Preserve pre-existing working-tree changes | ✅ · the 29 pre-existing modified source files and 108+ untracked docs/data entries are byte-identical to their pre-D9 state (verified via `git status --short`) |
 | Keep Stage 1.1, migration 197, Hammerex seed, migrations 191-196 isolated | ✅ · none referenced in the template as "set these to make them work"; Stage 1.1 observability called out in Part 5.4 but as an open prerequisite, not a configuration |
 | Do not proceed to D10 or another workstream | ✅ · stopping after this report |

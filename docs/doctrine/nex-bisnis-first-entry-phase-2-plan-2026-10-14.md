@@ -294,7 +294,6 @@ mocks of sealed services · no live Supabase).
 - [x] Preserve `is_discoverable: false` default · no profile-field writes
 - [x] Preserve `shouldShowFirstVisitInvitation` + `shouldShowFirstContact` predicates · untouched
 - [x] Preserve pre-existing worktree changes (first-contact / support-background / themes-tour follow-up / Phase 1)
-- [x] No commit · no push · no DB write · no migration · no env read · no server restart · no `D:/trades` touch
 - [x] Known limitation explicitly surfaced: product-submit path bypasses two-step (sealed `createFirstProductAction` redirect preserved)
 - [x] Known limitation explicitly surfaced: Step 1 failure redirects to chat-themes-library (sealed `updateChatThemeAction` behaviour) · pre-filter mitigates
 

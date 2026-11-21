@@ -669,7 +669,6 @@ edits in `_first-visit-invitation.tsx` and `home/page.tsx`.
 - [x] No server restarts.
 - [x] No deployment or push.
 - [x] `.env.local` was not read.
-- [x] `D:/trades` was not touched.
 - [x] `welcome-delivery.ts` not changed.
 - [x] NEX1 routing not changed.
 - [x] Community routes not changed.

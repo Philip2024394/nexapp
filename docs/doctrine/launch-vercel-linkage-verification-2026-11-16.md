@@ -47,7 +47,6 @@ This checklist confirms the production Vercel project is pointed at
 2. Settings → Git.
 3. Find "Connected Git Repository".
 4. **Expected value:** `Philip2024394/nexapp`
-5. **Not expected:** `Philip2024394/trades`, `Philip2024394/trades-harvest-deploy`,
    or any other.
 
 If the value is wrong, STOP. Do not proceed. Report to the

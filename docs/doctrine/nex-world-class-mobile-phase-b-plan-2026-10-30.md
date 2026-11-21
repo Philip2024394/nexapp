@@ -13,7 +13,6 @@
 - Agent findings have been **re-classified by severity on synthesis** — some agent-labelled "P0" items turned out to be lower-impact on independent re-read (noted inline below).
 - Some surfaces (Live, Vault, Family Safety) were only sampled, not exhaustively walked.
 - No typecheck or test run as part of this audit.
-- `C:/Users/Victus/nexapp/CLAUDE.md` + project memory confirm this is the correct active NEX repo (not `D:/trades`).
 
 ---
 

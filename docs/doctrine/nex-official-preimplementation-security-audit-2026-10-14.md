@@ -285,7 +285,6 @@ Bridge 3 RLS is non-functional by founder-sealed decision (§1.5). The isolation
 - **Only one file created this turn**: this audit report (`docs/doctrine/nex-official-preimplementation-security-audit-2026-10-14.md`).
 - No application code modified · no test modified · no migration created · no existing design contract modified.
 - No `.env.local` read · no DB queried · no seed executed · no dependency installed.
-- `D:/trades`, Vault files, Hammerex seed candidate, migrations 191–196, Stage 3 work — all untouched.
 - No `git add` / `git commit` / `git push` / branch change / deploy.
 - No implementation of NEX-Official chat, rate limits, retention, Phase C claim, or any welcome-tile change.
 - No welcome-page tile added · no new guest-chat entry point exposed.

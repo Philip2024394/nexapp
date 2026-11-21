@@ -1,33 +1,23 @@
 // scripts/assert-nexapp-cwd-and-remote.mjs
 //
-// Phase 3A pre-development guard · hardened 2026-10-14.
+// Pre-dev guard · nexapp identity enforcement.
 //
 // Refuses to start Next.js if the current git repository root is not
 // the intended nexapp root OR if the configured `origin` fetch/push
 // URL is not one of the three approved canonical forms pointing at
 // Philip2024394/nexapp on github.com.
 //
-// Why: both nexapp and D:/trades declare `"dev": "next dev -p 3008"`.
-// A shell session with the wrong cwd would bind port 3008 against the
-// legacy repository and serve the pre-fork monorepo at the URL where
-// nexapp is expected. See:
-//   · docs/doctrine/nex-repository-identity-audit-2026-10-14.md
-//   · docs/doctrine/nex-repository-phase-2-feature-preservation-2026-10-14.md
-//   · docs/doctrine/nex-repository-phase-3a-dev-guard-2026-10-14.md
-//   · docs/doctrine/nex-repository-phase-3a-dev-guard-review-2026-10-14.md
-//   · docs/doctrine/nex-repository-phase-3a-dev-guard-hardening-2026-10-14.md
-//
 // Wiring: invoked via npm's `predev` lifecycle hook declared in
 // `package.json`. Exits 1 (and prints a corrective diagnostic) on any
 // mismatch; exits 0 silently when every check passes so `next dev`
 // starts normally.
 //
-// Hardening pass changes (vs the first Phase 3A implementation):
-//   · Repository root check now compares the git toplevel's canonical
+// Policy summary:
+//   · Repository root check compares the git toplevel's canonical
 //     absolute path against the hardcoded `EXPECTED_REPO_ROOT`.
-//     Basename-only matching is gone · a directory named `nexapp` at
-//     any other path (`C:/evil/nexapp`, `C:/Users/Victus/nexapp-backup/
-//     nexapp`, etc.) is now REJECTED.
+//     Basename-only matching is rejected. A directory named `nexapp`
+//     at any other path (`C:/evil/nexapp`,
+//     `C:/Users/Victus/nexapp-backup/nexapp`, etc.) is REJECTED.
 //   · Remote URL policy restricted to three canonical approved forms:
 //     https, SSH shorthand (`git@github.com:owner/repo`), SSH long
 //     (`ssh://git@github.com/owner/repo`). Any `http://`, `git://`,
@@ -38,7 +28,7 @@
 //     fields, so host-prefix/host-suffix/IP-substitute/homoglyph
 //     attacks are rejected by construction.
 //
-// Known limitations (unchanged):
+// Known limitations:
 //   · The hook fires only when the dev server is launched through
 //     `npm run dev`. Direct invocation of `next dev` bypasses the
 //     guard. This is a lifecycle-hook limitation, not an audit gap.
@@ -57,8 +47,7 @@ import path from "node:path";
 // ─── Policy constants ─────────────────────────────────────────────
 
 /** Strict absolute path the git toplevel must equal (modulo
- *  path.win32 canonicalisation and lowercase). Hardcoded per the
- *  Phase 3A hardening authorisation 2026-10-14. If nexapp is cloned
+ *  path.win32 canonicalisation and lowercase). If nexapp is cloned
  *  to a different path, this constant AND the test fixtures must
  *  both be updated · deliberately NOT configurable via env var so
  *  the policy cannot be weakened at runtime. */
@@ -303,7 +292,6 @@ export function runAssertion({ exec, log } = {}) {
     }
     emit(`[nexapp-guard]   expected     = ${canonicalisePathForCompare(EXPECTED_REPO_ROOT)}`);
     emit("[nexapp-guard] Fix · cd into C:/Users/Victus/nexapp and run `npm run dev` again.");
-    emit("[nexapp-guard]   If the actual path above is D:/trades or similar you are inside the legacy monorepo · see docs/doctrine/nex-repository-identity-audit-2026-10-14.md");
     return { exitCode: 1, failure: "wrong-root", messages };
   }
 
@@ -329,8 +317,7 @@ export function runAssertion({ exec, log } = {}) {
     emit(`[nexapp-guard]   expected       = https://github.com/${EXPECTED_REPO_PATH}.git (or canonical SSH form)`);
     emit("[nexapp-guard]   approved forms: https · git@host:owner/repo · ssh://git@host/owner/repo");
     emit("[nexapp-guard]   rejected: http:// · git:// · userinfo · explicit port · non-DNS host chars");
-    emit("[nexapp-guard] Fix · see docs/doctrine/nex-repository-phase-3a-dev-guard-hardening-2026-10-14.md for the full approved-URL policy.");
-    emit("[nexapp-guard]   If this prints `.../trades.git` you are inside the legacy monorepo · cd into C:/Users/Victus/nexapp and retry.");
+    emit("[nexapp-guard] Fix · set `origin` to one of the approved forms pointing at Philip2024394/nexapp.");
     return { exitCode: 1, failure: "wrong-remote-fetch", messages };
   }
 
