@@ -167,19 +167,32 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             <CallCentreClient />
           </div>
 
-          <p
+          {/* Owner directive 2026-11-21 (iter 3) · move the usage
+              blurb into a proper semantic <footer> pinned at the
+              bottom of the phone frame, separated from the tile block
+              by a hairline. mt:auto keeps it sitting on the floor
+              regardless of how tall the tile region grows. */}
+          <footer
             style={{
-              margin: "12px auto 0",
-              maxWidth: 420,
-              fontSize: 10,
-              color: "rgba(26, 26, 26, 0.72)",
+              marginTop: "auto",
+              paddingTop: 12,
+              borderTop: "1px solid rgba(26, 26, 26, 0.08)",
               textAlign: "center",
-              lineHeight: 1.45,
             }}
           >
-            Voice and video calls use your phone's camera and microphone.
-            Up to 3 friends on the same call.
-          </p>
+            <p
+              style={{
+                margin: "0 auto",
+                maxWidth: 420,
+                fontSize: 10,
+                color: "rgba(26, 26, 26, 0.72)",
+                lineHeight: 1.45,
+              }}
+            >
+              Voice and video calls use your phone's camera and microphone.
+              Up to 3 friends on the same call.
+            </p>
+          </footer>
         </div>
       </main>
     </>
