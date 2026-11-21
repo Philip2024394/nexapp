@@ -27,9 +27,11 @@ vi.mock("server-only", () => ({}));
 const {
   resolveSessionMock,
   countTotalUnreadMock,
+  countSellerUnreadOrdersMock,
 } = vi.hoisted(() => ({
   resolveSessionMock: vi.fn(),
   countTotalUnreadMock: vi.fn(),
+  countSellerUnreadOrdersMock: vi.fn(),
 }));
 
 vi.mock("@/lib/nex-native/app/session", () => ({
@@ -38,10 +40,16 @@ vi.mock("@/lib/nex-native/app/session", () => ({
 vi.mock("@/lib/nex-native/peer-message-service", () => ({
   countTotalUnreadPeerMessages: countTotalUnreadMock,
 }));
+vi.mock("@/lib/nex-native/manage-orders/order-unread-service", () => ({
+  countSellerUnreadOrders: countSellerUnreadOrdersMock,
+}));
 
 import { GET } from "../route";
 
-const VIEWER = "acct-viewer-00000000";
+// Valid UUIDv4 shape; previous `acct-viewer-00000000` tripped the real
+// pg call when order-unread-service wasn't mocked (route added orders
+// channel in Stream B 2026-11-16).
+const VIEWER = "00000000-0000-4000-8000-000000000001";
 
 function signedInSession() {
   return { account: { id: VIEWER, display_name: "Viewer" } };
@@ -50,41 +58,50 @@ function signedInSession() {
 beforeEach(() => {
   resolveSessionMock.mockReset();
   countTotalUnreadMock.mockReset();
+  countSellerUnreadOrdersMock.mockReset();
+  // Default orders to 0 so legacy chat-only assertions still see
+  // total = chat; individual tests override when they need a non-zero
+  // orders count.
+  countSellerUnreadOrdersMock.mockResolvedValue(0);
 });
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe("GET /api/nex-native/unread-count · success paths", () => {
-  it("anonymous viewer returns 200 { count: 0 } · correct zero · no leak", async () => {
+  it("anonymous viewer returns 200 { count: 0, chat: 0, orders: 0 } · correct zero · no leak", async () => {
     resolveSessionMock.mockResolvedValue(null);
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ count: 0 });
+    expect(await res.json()).toEqual({ count: 0, chat: 0, orders: 0 });
     expect(res.headers.get("cache-control")).toBe("no-store");
-    // The service MUST NOT be called when there is no signed-in viewer.
+    // The services MUST NOT be called when there is no signed-in viewer.
     expect(countTotalUnreadMock).not.toHaveBeenCalled();
+    expect(countSellerUnreadOrdersMock).not.toHaveBeenCalled();
   });
 
-  it("signed-in viewer returns 200 { count: N } · N from the service", async () => {
+  it("signed-in viewer returns 200 with chat+orders breakdown · N from the services", async () => {
     resolveSessionMock.mockResolvedValue(signedInSession());
     countTotalUnreadMock.mockResolvedValue(7);
+    countSellerUnreadOrdersMock.mockResolvedValue(0);
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ count: 7 });
+    expect(await res.json()).toEqual({ count: 7, chat: 7, orders: 0 });
     expect(res.headers.get("cache-control")).toBe("no-store");
     // The service is called with the signed-in viewer's account id ·
     // never a fabricated / spoofed id.
     expect(countTotalUnreadMock).toHaveBeenCalledTimes(1);
     expect(countTotalUnreadMock).toHaveBeenCalledWith(VIEWER);
+    expect(countSellerUnreadOrdersMock).toHaveBeenCalledWith(VIEWER);
   });
 
-  it("signed-in viewer with zero unread returns 200 { count: 0 } · genuine zero", async () => {
+  it("signed-in viewer with zero unread returns 200 with zero breakdown · genuine zero", async () => {
     resolveSessionMock.mockResolvedValue(signedInSession());
     countTotalUnreadMock.mockResolvedValue(0);
+    countSellerUnreadOrdersMock.mockResolvedValue(0);
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ count: 0 });
+    expect(await res.json()).toEqual({ count: 0, chat: 0, orders: 0 });
   });
 });
 
@@ -125,15 +142,17 @@ describe("GET /api/nex-native/unread-count · corrective pass A · error paths",
 });
 
 describe("GET /api/nex-native/unread-count · anonymous isolation", () => {
-  it("anonymous never calls the service · never exposes another user's count", async () => {
+  it("anonymous never calls either service · never exposes another user's count", async () => {
     resolveSessionMock.mockResolvedValue(null);
-    // Even if the service would hypothetically succeed, it must not be
+    // Even if the services would hypothetically succeed, they must not be
     // called when there's no session · guarantees we can't accidentally
     // leak another account's count via a stale resolver bug.
     countTotalUnreadMock.mockResolvedValue(999);
+    countSellerUnreadOrdersMock.mockResolvedValue(999);
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ count: 0 });
+    expect(await res.json()).toEqual({ count: 0, chat: 0, orders: 0 });
     expect(countTotalUnreadMock).not.toHaveBeenCalled();
+    expect(countSellerUnreadOrdersMock).not.toHaveBeenCalled();
   });
 });

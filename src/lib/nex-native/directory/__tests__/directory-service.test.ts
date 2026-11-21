@@ -1031,9 +1031,12 @@ describe("getCanonicalBusinessById · row present", () => {
     // Pass-10: a vertical-enrichment lookup against nex.food_business
     // runs AFTER the canonical+evidence pair · the strict-order
     // invariant for canonical→evidence is still enforced here; the
-    // enrichment query appends as queryLog[2] when the canonical row
-    // exists. Total query count is therefore 3 for the found path.
-    expect(queryLog.length).toBe(3);
+    // food enrichment query appends as queryLog[2] when the canonical
+    // row exists. 2026-11-21: additional parallel enrichment queries
+    // (owner claims, OSM attribution, media) now also run — the
+    // ordering invariant checked by this test is just canonical→
+    // evidence→food; assert the first three slots and allow more.
+    expect(queryLog.length).toBeGreaterThanOrEqual(3);
     expect(queryLog[0].sql).toContain("FROM nex.business_directory_v");
     expect(queryLog[0].sql).toContain("WHERE canonical_business_id = $1");
     expect(queryLog[0].params[0]).toBe(SAMPLE_UUID);

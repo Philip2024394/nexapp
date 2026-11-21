@@ -37,8 +37,12 @@ function stripComments(src: string): string {
   // Strip line comments FIRST (so a `/*` appearing inside a `//` line —
   // e.g. the token `scripts/nex-canonical/*` in prose — does not get
   // mistaken for the start of a block comment), then strip block
-  // comments.
-  const noLine = src
+  // comments. Normalise CRLF → LF first so `.*` (which does not match
+  // \r in JS regex) can consume the whole comment body on Windows
+  // checkouts (2026-11-21 · prior CRLF repro broke stripComments and
+  // let the `/*` token in prose survive into the block-comment phase).
+  const srcLf = src.replace(/\r\n/g, "\n");
+  const noLine = srcLf
     .split("\n")
     .map((l) => l.replace(/\/\/.*$/, ""))
     .join("\n");

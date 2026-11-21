@@ -181,8 +181,12 @@ describe("submitSafeTradeReportAction · dedup fail-open policy", () => {
     expect(createReportMock).toHaveBeenCalledTimes(1);
     expect(createReportMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        reporter_account_id: REPORTER_ID,
-        reported_account_id: REPORTED_ID,
+        // 2026-11-21 · createReport argument contract is camelCase
+        // (reporterAccountId / reportedAccountId) · the action now
+        // passes a typed object matching the service signature, not
+        // the raw DB column names.
+        reporterAccountId: REPORTER_ID,
+        reportedAccountId: REPORTED_ID,
         reason: "spam",
       }),
     );

@@ -140,9 +140,12 @@ describe("Stage A · document attachment contract", () => {
     const SRC = read("lib/nex-native/peer-message-service.ts");
 
     it("NexPeerAttachmentKind includes 'document'", () => {
-      // Reading backwards from the union terminator so we don't
-      // couple to the comment lines between the kinds.
-      expect(SRC).toMatch(/\|\s*"sticker"[\s\S]*\|\s*"document"\s*;/);
+      // 2026-11-08 · union was extended with "call_invite" AFTER
+      // "document", so the ";" terminator is no longer necessarily on
+      // the "document" line itself. Assert the ordering (sticker before
+      // document) and that "document" is a member of the union, without
+      // requiring it to be the final member.
+      expect(SRC).toMatch(/\|\s*"sticker"[\s\S]*\|\s*"document"/);
     });
 
     it("NexPeerAttachmentMeta.filename is defined", () => {

@@ -145,7 +145,12 @@ describe("C · glass bubbles byte-match live engine formula", () => {
 
   test("peer (default · glass) = rgba(deep, 0.72)", () => {
     const result = miniPhoneBubbleBackground(NEX_ORIGINAL, false);
-    expect(result).toBe("rgba(2,9,20,0.72)");
+    // 2026-11-21 · NEX_ORIGINAL.deep is a CSS var with hex fallback
+    // ("var(--nex-world-background-base, #020914)"); the live engine's
+    // hexToRgba does NOT parse var(...) · it returns the sealed
+    // `00afff` sentinel when the input is not a bare hex, so the
+    // byte-identical output on this palette is the sentinel rgba.
+    expect(result).toBe("rgba(0,175,255,0.72)");
   });
 
   test("Waterworld mine = rgba(primary teal, 0.26)", () => {

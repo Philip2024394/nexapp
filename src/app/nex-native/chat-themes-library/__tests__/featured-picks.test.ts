@@ -169,7 +169,11 @@ describe("pickFeatured · popular row", () => {
       themes: FULL_COLLECTION,
       businessCategory: "food", // featured = food (Step 1G) · drop it from popular
     });
-    const expected = POPULAR_THEME_IDS.filter((id) => id !== "food");
+    // 2026-11-21 · POPULAR_THEME_IDS was expanded (theme-o1..theme-o97);
+    // the test's FULL_COLLECTION still carries only the hand-written
+    // fixtures, so filter the expected list to ids actually present.
+    const present = new Set(FULL_COLLECTION.map((r) => r.id));
+    const expected = POPULAR_THEME_IDS.filter((id) => id !== "food" && present.has(id));
     expect(popular.map((r) => r.id)).toEqual(expected);
   });
 

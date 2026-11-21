@@ -101,10 +101,12 @@ describe("SHOP_CHOOSER_CATALOG · availability honesty", () => {
     expect(svc.href).toBeNull();
   });
 
-  test("T5.9 · Accommodation is COMING SOON · href is null · no synthetic flow", () => {
+  test("T5.9 · Accommodation is LIVE with the sealed onboarding route (2026-10-20)", () => {
     const acc = cardById("accommodation");
-    expect(acc.available).toBe(false);
-    expect(acc.href).toBeNull();
+    expect(acc.available).toBe(true);
+    expect(acc.href).toBe(
+      "/nex-native/onboarding?type=accommodation&commerce=1",
+    );
   });
 
   test("T5.10 · invariant · available === !!href for every card", () => {
