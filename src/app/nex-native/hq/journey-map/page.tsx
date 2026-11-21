@@ -3491,6 +3491,210 @@ export default function HqJourneyMapPage(): React.ReactElement {
         </div>
       </section>
 
+      {/* ─── Phase 2 Audit Layer · sealed 2026-11-09 priorities ───────── */}
+      {/* Added 2026-11-21 · reflects P2-01..P2-10 audits landed on       */}
+      {/* release-audit-v1-2026-11-14. Audits identify remediation scope · */}
+      {/* code fixes have NOT shipped yet. Launch gate remains OPEN.      */}
+      <section
+        aria-label="Phase 2 audit layer"
+        style={{
+          padding: 14,
+          background: SURFACE,
+          border: `1px solid ${BORDER_HI}`,
+          borderRadius: 10,
+          fontSize: 12,
+          color: INK_DIM,
+          lineHeight: 1.55,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            margin: "0 0 8px",
+            color: INK,
+            letterSpacing: "0.02em",
+            textTransform: "uppercase",
+          }}
+        >
+          Phase 2 audit layer (2026-11-21)
+        </h2>
+        <p style={{ margin: "0 0 10px" }}>
+          Sealed 2026-11-09 priority order. Each row below is{" "}
+          <strong>AUDITED</strong> (doctrine doc shipped) ·{" "}
+          <strong>NOT YET FIXED</strong> (no code remediation has landed).
+          Launch cannot ship on these audits alone; they define what the
+          remediation phase must solve.
+        </p>
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          <li>
+            <code>ab01ac40</code> · P2-01 Chat privacy P0 ·{" "}
+            <Link
+              href="/docs/doctrine/chat-privacy-p0-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              chat-privacy-p0-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>c19fc8e0</code> · P2-02 Billing-table RLS ·{" "}
+            <Link
+              href="/docs/doctrine/billing-rls-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              billing-rls-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>d1a19dda</code> · P2-03 Buyer checkout price validation ·{" "}
+            <Link
+              href="/docs/doctrine/buyer-checkout-price-validation-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              buyer-checkout-price-validation-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>ab6b774b</code> · P2-04 Peer-message RLS (mig 218) ·{" "}
+            <Link
+              href="/docs/doctrine/peer-message-rls-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              peer-message-rls-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>d2b7356f</code> · P2-05 Rate-limit infra (mig 290-293, 313) ·{" "}
+            <Link
+              href="/docs/doctrine/rate-limit-infra-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              rate-limit-infra-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>6e29f9a6</code> · P2-06 Theme + buyer UI DB wiring ·{" "}
+            <Link
+              href="/docs/doctrine/theme-buyer-ui-db-wiring-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              theme-buyer-ui-db-wiring-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>bd5d7de7</code> · P2-07 Path A order separation readiness ·{" "}
+            <Link
+              href="/docs/doctrine/path-a-order-separation-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              path-a-order-separation-audit-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>40c3871f</code> · P2-08 HTTP route test coverage spec ·{" "}
+            <Link
+              href="/docs/doctrine/http-route-test-coverage-spec-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              http-route-test-coverage-spec-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>3c4a43c2</code> · P2-09 Playwright 10-journey launch gate ·{" "}
+            <Link
+              href="/docs/doctrine/playwright-journey-coverage-spec-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              playwright-journey-coverage-spec-2026-11-21.md
+            </Link>
+          </li>
+          <li>
+            <code>2fb40071</code> · P2-10 Performance + mobile + a11y audit ·{" "}
+            <Link
+              href="/docs/doctrine/performance-mobile-a11y-audit-2026-11-21.md"
+              style={{ color: ACCENT, textDecoration: "underline" }}
+            >
+              performance-mobile-a11y-audit-2026-11-21.md
+            </Link>
+          </li>
+        </ul>
+      </section>
+
+      {/* ─── Sealed Stack 2026-11-21 · Supabase + GitHub + Brevo + CF ─── */}
+      {/* Added 2026-11-21 · supersedes Vercel-hosting + nodemailer-SMTP   */}
+      {/* lines. Stack is DECLARED, not yet live-cutover.                 */}
+      <section
+        aria-label="Sealed stack 2026-11-21"
+        style={{
+          padding: 14,
+          background: SURFACE,
+          border: `1px solid ${BORDER_HI}`,
+          borderRadius: 10,
+          fontSize: 12,
+          color: INK_DIM,
+          lineHeight: 1.55,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            margin: "0 0 8px",
+            color: INK,
+            letterSpacing: "0.02em",
+            textTransform: "uppercase",
+          }}
+        >
+          Sealed stack 2026-11-21
+        </h2>
+        <p style={{ margin: "0 0 10px" }}>
+          Owner declaration 2026-11-21:{" "}
+          <em>&quot;superbase and github and brevo and cloudflare yes&quot;</em>.
+          Closes the 2026-11-20 Cloudflare preparation phase and adds Brevo
+          as the sealed email provider. Supersedes the Vercel-hosting line
+          and the nodemailer-SMTP line where they conflict.
+        </p>
+        <ul style={{ margin: "0 0 10px", paddingLeft: 20 }}>
+          <li>
+            <strong>Supabase</strong> · prod{" "}
+            <code>ijvqdvsvwtwxzcqmoqit</code> · sandbox{" "}
+            <code>kdstoyyeygcopkogqsyv</code> · unchanged.
+          </li>
+          <li>
+            <strong>GitHub</strong> · <code>Philip2024394/nexapp.git</code>{" "}
+            · unchanged.
+          </li>
+          <li>
+            <strong>Brevo</strong> · HTTPS API only (Workers-compatible) ·
+            adapter wired 2026-11-21 commit <code>310f6553</code>.
+          </li>
+          <li>
+            <strong>Cloudflare</strong> · hosting + DNS + CDN + WAF ·
+            default product proposed: Pages · zone{" "}
+            <code>nexcorner.com</code> status <strong>active</strong>{" "}
+            2026-11-21 (NSs: <code>lady</code> + <code>lamar</code>).
+          </li>
+        </ul>
+        <p style={{ margin: "0 0 6px" }}>
+          <strong>Related commits</strong>:{" "}
+          <code>650bc7ea</code> (migration scope doc) ·{" "}
+          <code>310f6553</code> (Phase 6.1 Brevo adapter) ·{" "}
+          <code>5105fad7</code> (founder live-launch walkthrough).
+        </p>
+        <p style={{ margin: 0 }}>
+          <strong>Status</strong>: declared, not cutover. Vercel still
+          serves production; no Cloudflare Pages/Workers project exists
+          yet. 9 word-triggers outstanding — see{" "}
+          <Link
+            href="/docs/doctrine/founder-live-launch-walkthrough-2026-11-21.md#6--word-triggers-you-still-need-to-give"
+            style={{ color: ACCENT, textDecoration: "underline" }}
+          >
+            walkthrough §6
+          </Link>
+          .
+        </p>
+      </section>
+
       <section
         id={GREEN_FLOW_REGISTRY_ID}
         aria-label="Proven Green Flow Registry"
