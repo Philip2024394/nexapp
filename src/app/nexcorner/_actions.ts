@@ -25,10 +25,16 @@
 "use server";
 
 import { createHash } from "node:crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { normaliseEmailForLaunchSignup } from "@/lib/nex-native/prelaunch/email-normalise";
-import { isPrelaunchModeOn } from "@/lib/nex-native/prelaunch/feature-flag";
+import {
+  FOUNDER_BYPASS_COOKIE_NAME,
+  getFounderBypassCookieToken,
+  isFounderBypassEmail,
+  isPrelaunchModeOn,
+} from "@/lib/nex-native/prelaunch/feature-flag";
 import { sendLaunchInterestNotification } from "@/lib/nex-native/prelaunch/launch-interest-notifier";
 import {
   recordPrelaunchSignup,
@@ -84,6 +90,27 @@ export async function notifyAtLaunchAction(
   const normalise = normaliseEmailForLaunchSignup(raw);
   if (!normalise.ok) {
     return { ok: false, reason: "invalid_email" };
+  }
+
+  // Founder-email bypass · owner-sealed Option B 2026-11-21.
+  // DELIBERATELY WEAKER than the UID founder gate · anyone who learns
+  // the founder email can walk in. Runs BEFORE rate-limit so a founder
+  // retrying quickly is never shut out. Uses an opaque token cookie so
+  // a stranger cannot simply forge the cookie value to bypass.
+  // `redirect()` from next/navigation throws · the action never returns
+  // from this branch and the DB is never written.
+  if (isFounderBypassEmail(normalise.normalised)) {
+    const jar = await cookies();
+    jar.set({
+      name: FOUNDER_BYPASS_COOKIE_NAME,
+      value: getFounderBypassCookieToken(),
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 24h · re-enter the email to extend
+      secure: process.env.NODE_ENV === "production",
+    });
+    redirect("/nex-native/home");
   }
 
   // Rate-limit by caller signal. x-forwarded-for first; UA as last

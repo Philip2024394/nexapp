@@ -39,8 +39,10 @@ import {
   isPrelaunchPublicPath,
 } from "@/lib/nex-native/prelaunch/allowlist";
 import {
+  FOUNDER_BYPASS_COOKIE_NAME,
   isFounderUid,
   isPrelaunchModeOn,
+  isValidFounderBypassCookie,
 } from "@/lib/nex-native/prelaunch/feature-flag";
 
 // ── CID injection ──────────────────────────────────────────────────
@@ -195,7 +197,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     const apiAllowed = isPrelaunchPublicApi(pathname);
     if (!pathAllowed && !apiAllowed) {
       const uid = await readAuthedNexUidOrNull(req);
-      if (!isFounderUid(uid)) {
+      // Option B founder-email bypass · owner-sealed 2026-11-21.
+      // When a visitor submits the founder email in the Nexcorner
+      // notify form, the server action sets an opaque-token cookie;
+      // middleware honours that cookie here as a UID-equivalent pass.
+      // DELIBERATELY WEAKER than UID-based gate · owner acknowledged.
+      const bypassCookie =
+        req.cookies.get(FOUNDER_BYPASS_COOKIE_NAME)?.value ?? null;
+      const bypassViaEmailCookie = isValidFounderBypassCookie(bypassCookie);
+      if (!isFounderUid(uid) && !bypassViaEmailCookie) {
         const isApi = pathname.startsWith("/api/");
         // RSC server actions arrive as POST to the containing page
         // path with a `next-action` request header. Those paths are
