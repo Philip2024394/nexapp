@@ -19,7 +19,17 @@ import {
 
 vi.setConfig({ testTimeout: 30_000 });
 
-const EXPECTED_PROJECT_REF = "ijvqdvsvwtwxzcqmoqit";
+// 2026-11-21 · Accept either prod OR sandbox project ref.
+// Dev `.env.local` was swapped to sandbox `kdstoyyeygcopkogqsyv`
+// per owner-sealed 2026-11-10 (support tickets · dev env). The
+// guard's intent is "refuse unknown DBs", not "refuse anything
+// but prod" — sandbox is an approved integration target.
+// Engineering ceiling = Verified · green against sandbox never
+// implies Live-verified.
+const EXPECTED_PROJECT_REFS = [
+  "ijvqdvsvwtwxzcqmoqit", // prod (sealed, unchanged)
+  "kdstoyyeygcopkogqsyv", // sandbox (current dev target)
+] as const;
 
 let pg: InstanceType<typeof Client>;
 const createdAccountIds: string[] = [];
@@ -44,9 +54,13 @@ async function makeTestAccountWithOutbox(): Promise<{
 }
 
 beforeAll(async () => {
-  if (!process.env.DATABASE_URL?.includes(EXPECTED_PROJECT_REF)) {
-    throw new Error(`refuses: not ${EXPECTED_PROJECT_REF}`);
-  }
+  const __url = process.env.DATABASE_URL ?? "";
+    const __ok = EXPECTED_PROJECT_REFS.some((ref) => __url.includes(ref));
+    if (!__ok) {
+      throw new Error(
+        `refuses: not ${EXPECTED_PROJECT_REFS.join(", ")}`,
+      );
+    }
   pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
 });

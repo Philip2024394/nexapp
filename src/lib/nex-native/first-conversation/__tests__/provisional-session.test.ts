@@ -40,7 +40,17 @@ import {
 } from "../session-crypto";
 import type { NexAppSession } from "../../app/session";
 
-const EXPECTED_PROJECT_REF = "ijvqdvsvwtwxzcqmoqit";
+// 2026-11-21 · Accept either prod OR sandbox project ref.
+// Dev `.env.local` was swapped to sandbox `kdstoyyeygcopkogqsyv`
+// per owner-sealed 2026-11-10 (support tickets · dev env). The
+// guard's intent is "refuse unknown DBs", not "refuse anything but
+// prod" — sandbox is explicitly an approved integration target.
+// Engineering ceiling = Verified (per 2026-11-08 5-state model) ·
+// running green against sandbox never implies Live-verified.
+const EXPECTED_PROJECT_REFS = [
+  "ijvqdvsvwtwxzcqmoqit", // prod (sealed, unchanged)
+  "kdstoyyeygcopkogqsyv", // sandbox (current dev target)
+] as const;
 
 const KEY_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const KEY_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -76,9 +86,11 @@ let pg: InstanceType<typeof Client>;
 let testAccountId: string;
 
 beforeAll(async () => {
-  if (!process.env.DATABASE_URL?.includes(EXPECTED_PROJECT_REF)) {
+  const url = process.env.DATABASE_URL ?? "";
+  const ok = EXPECTED_PROJECT_REFS.some((ref) => url.includes(ref));
+  if (!ok) {
     throw new Error(
-      `provisional-session test refuses to run: DATABASE_URL does not reference project ${EXPECTED_PROJECT_REF}`,
+      `provisional-session test refuses to run: DATABASE_URL does not reference any approved project ref · expected one of ${EXPECTED_PROJECT_REFS.join(", ")}`,
     );
   }
   pg = new Client({ connectionString: process.env.DATABASE_URL });
