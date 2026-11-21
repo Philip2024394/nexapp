@@ -55,7 +55,11 @@ export interface FreeChatTheme {
 
 export const FREE_CHAT_THEMES: readonly FreeChatTheme[] = [
   // Universal default · shown on every identity.
-  { id: "nex-default", label: "NEX", wallpaperUrl: null, placeholderLabel: null, isDefault: true, accentHex: "#00AFFF" },
+  // Owner directive 2026-11-21 · "for nex plain cream theme we use
+  // orange" · the sealed default NEX chat theme (label "NEX") carries
+  // #FF7200 so its idle keypad keys render orange on the new black
+  // backdrop (see _joker-keypad.tsx:62-77 for the companion repaint).
+  { id: "nex-default", label: "NEX", wallpaperUrl: null, placeholderLabel: null, isDefault: true, accentHex: "#FF7200" },
 
   // ── Worldwide / Indonesia tiles · owner-sealed 2026-10-23 ────────
   // Owner directive 2026-10-23 · swap accentHex between the top-row

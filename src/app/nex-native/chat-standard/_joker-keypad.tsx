@@ -57,12 +57,20 @@ import {
 // fallbacks preserve the sealed Joker palette on Worldwide / Indonesia
 // / any deployment that doesn't override. Ireland deployment sets
 // `--nex-keypad-bg-top` / `-bg-bottom` via _world-stylesheet.tsx so
-// the keypad reads as Irish forest-green on Ireland; Worldwide stays
-// byte-identical to the previous dark navy backdrop.
-const DEEP_1 = "var(--nex-keypad-bg-top, #030308)";
-const DEEP_2 = "var(--nex-keypad-bg-bottom, #0A0F1A)";
+// the keypad reads as Irish forest-green on Ireland.
+// Owner directive 2026-11-21 · "main keypad is black color and the
+// buttons cream will follow theme · but for nex plain cream theme we
+// use orange" · Worldwide + Indonesia backdrop fallbacks flipped to
+// pure black; Ireland world stylesheet override preserved. Idle key
+// background now reads the accent-border CSS var so each theme tints
+// its own idle keys · fallback keeps the original cream tint for any
+// caller that doesn't pass accentColor. The "NEX plain" theme
+// (nex-default) carries orange via src/app/nex-native/free-chat/
+// _types.ts:58 so its idle keys read orange on this new backdrop.
+const DEEP_1 = "var(--nex-keypad-bg-top, #000000)";
+const DEEP_2 = "var(--nex-keypad-bg-bottom, #000000)";
 const KEY_TEXT = "#F4F7FC";
-const KEY_BG_IDLE = "rgba(255,255,255,0.06)";
+const KEY_BG_IDLE = "var(--nex-kp-accent-border, rgba(255,255,255,0.06))";
 /* Owner directive 2026-10-20 · "red line button over the blue return
  * button change to solid dark red colour" · bumped from faint tint to
  * a solid NEX dark red fill + matching darker border so the backspace
