@@ -88,17 +88,26 @@ export function NexAuthGateBanner({
           position: "absolute",
           top: "50%",
           left: "50%",
-          width: "calc(100% - 32px)",
-          maxWidth: 360,
+          // Owner directive 2026-11-21 (iter 13) · banner too wide ·
+          // narrowed from 360 → 300 so the card reads as a focused
+          // notification, not a page panel. Width still respects the
+          // phone-frame side gutters via calc(100% - 48px).
+          width: "calc(100% - 48px)",
+          maxWidth: 300,
           transform: mounted
             ? "translate(-50%, -50%)"
             : "translate(-50%, calc(-50% - 60vh))",
           opacity: mounted ? 1 : 0,
           transition:
             "transform 420ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 240ms ease-out",
-          background: "#EAE6DD",
+          // Owner directive 2026-11-21 (iter 13) · banner card uses
+          // the sealed app cream (--nex-world-cream · #FAF8F4), not
+          // the tile-only #EAE6DD. Keeps the signed-out banner
+          // visually consistent with every other cream NEX surface
+          // (shop setup · cart · orders · [businessSlug] · tier).
+          background: "var(--nex-world-cream, #FAF8F4)",
           borderRadius: 20,
-          padding: "20px 20px 18px",
+          padding: "18px 18px 16px",
           boxShadow:
             "0 30px 80px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.28)",
           border: "1px solid rgba(26, 26, 26, 0.08)",
@@ -205,8 +214,9 @@ export function NexAuthGateBanner({
             data-nex-auth-gate-primary
             style={{
               flex: 1,
+              minWidth: 0,
               minHeight: 44,
-              padding: "10px 14px",
+              padding: "10px 12px",
               borderRadius: 12,
               background: "var(--nex-kp-accent, #FF7200)",
               color: "#FFFFFF",
@@ -214,6 +224,7 @@ export function NexAuthGateBanner({
               fontWeight: 700,
               textAlign: "center",
               textDecoration: "none",
+              whiteSpace: "nowrap",
               boxShadow:
                 "0 4px 14px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 35%, transparent)",
               display: "inline-flex",
@@ -224,19 +235,26 @@ export function NexAuthGateBanner({
           >
             Sign in
           </Link>
+          {/* Owner directive 2026-11-21 (iter 13) · Close was getting
+              clipped on the narrower container because flex:1 on Sign
+              in squeezed it. flexShrink:0 + whiteSpace:nowrap pins
+              Close at its intrinsic width so the label always reads
+              in full. */}
           <button
             type="button"
             onClick={onClose}
             data-nex-auth-gate-close
             style={{
+              flexShrink: 0,
               minHeight: 44,
-              padding: "10px 16px",
+              padding: "10px 14px",
               borderRadius: 12,
               background: "transparent",
               border: "1.5px solid rgba(26, 26, 26, 0.18)",
               color: "#1A1A1A",
               fontSize: 14,
               fontWeight: 600,
+              whiteSpace: "nowrap",
               cursor: "pointer",
             }}
           >
