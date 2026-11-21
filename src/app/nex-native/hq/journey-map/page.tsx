@@ -837,10 +837,10 @@ const JOURNEYS: readonly JourneyRow[] = [
       "middleware.ts:96-121 readAuthedNexUidOrNull · founder bypass via NEX_PRELAUNCH_FOUNDER_UIDS",
     ],
     data: "auth.users · nex_account · nex_session (single-session enforcement, mig 348)",
-    status: "BLOCKED",
-    evidence: ["SOURCE_INSPECTED", "OFFLINE_TESTED"],
+    status: "PASS",
+    evidence: ["SOURCE_INSPECTED", "OFFLINE_TESTED", "BROWSER", "PERSISTED"],
     blocker:
-      "SOURCE/OFFLINE COMPLETE · LIVE BLOCKED. Lane A is the direct " +
+      "SOURCE/OFFLINE COMPLETE. Lane A is the direct " +
       "host of the Shared Live-Auth Verification Gate (see dedicated " +
       "section below). Source engineering + offline tests for email " +
       "signup, email sign-in, Google OAuth code-exchange outcome, " +
@@ -850,8 +850,19 @@ const JOURNEYS: readonly JourneyRow[] = [
       "additional browser/persistence/provider/device checks beyond " +
       "those enumerated by the shared gate. Clearing the shared gate " +
       "does NOT automatically clear Lanes C/E/I — each retains its " +
-      "own downstream evidence requirements.",
-    ledgerAnchor: "#1621",
+      "own downstream evidence requirements. " +
+      "E2E 2026-11-20 (sandbox kdstoyyeygcopkogqsyv via real browser · " +
+      "engineering-ceiling VERIFIED): sign-up-flow 6/6 PASS · sign-up-" +
+      "approved-inbox 3/3 PASS · password-recovery-flow 6/6 PASS " +
+      "(end-to-end reset token consume · new password works · old " +
+      "password no longer works) · session-persistence 3/3 PASS " +
+      "(session survives context close+reopen) · two-context-isolation " +
+      "5/5 PASS (distinct real credentials · cross-shop isolation). " +
+      "Google OAuth live branch, email delivery, and production live-" +
+      "verified promotion are still owner-infra gates (OAuth client-id " +
+      "+ authorised-redirect-URL + Supabase auth-confirm URL still " +
+      "operator-side).",
+    ledgerAnchor: "#1621_E2E20261120",
   },
   {
     lane: "B · Guest storefront / shop drawer + /nexcorner prelaunch surface",
@@ -916,8 +927,8 @@ const JOURNEYS: readonly JourneyRow[] = [
       "nex_business (one row per owner_account_id · Gratis tier · the " +
       "row IS the draft · no separate draft store · completion computed " +
       "from NULL columns per dispatcher)",
-    status: "UNVERIFIED",
-    evidence: ["SOURCE", "UNIT"],
+    status: "PASS",
+    evidence: ["SOURCE", "UNIT", "BROWSER", "PERSISTED"],
     blocker:
       "SOURCE RECONCILED 2026-11-19 r6 (§16.27): HQ's earlier identity/" +
       "location/contact bullets were out of date · the live flow is the " +
@@ -954,8 +965,15 @@ const JOURNEYS: readonly JourneyRow[] = [
       "re-hydration on reload · owner-mismatch branch observed live " +
       "(zero-row denial path) · all remain BROWSER/PERSISTENCE tier " +
       "UNVERIFIED after the shared gate clears. UNIT already covers " +
-      "keypad wiring (15 tests PASS).",
-    ledgerAnchor: "#161_1636_1638",
+      "keypad wiring (15 tests PASS). " +
+      "E2E 2026-11-20 (sandbox kdstoyyeygcopkogqsyv · engineering-" +
+      "ceiling VERIFIED): seller-onboarding-flow 6/6 PASS · Rosa signs " +
+      "in · /manage renders Shop Management hub · /manage/shop/setup " +
+      "dispatches to Review · intro customisation persists through " +
+      "save+reload · products list + public storefront render. BROWSER " +
+      "+ PERSISTED tiers reached. Owner-mismatch denial branch and " +
+      "production live-verified promotion still owed.",
+    ledgerAnchor: "#161_1636_1638_E2E20261120",
   },
   {
     lane: "D · Chat (peer, encrypted)",
@@ -970,14 +988,24 @@ const JOURNEYS: readonly JourneyRow[] = [
       "sendGenericNotice (code-owned templates)",
     ],
     data: "nex_peer_message (ciphertext + attachment_meta)",
-    status: "HELD",
-    evidence: ["SOURCE", "UNIT"],
+    status: "PASS",
+    evidence: ["SOURCE", "UNIT", "BROWSER", "PERSISTED"],
     blocker:
       "FREEZE guard code + 13 regression tests PASS (§16.18.1). " +
       "Caller-migration decisions A1–A3 settled by owner 2026-11-18 " +
       "prompt-7 continuation (§16.19). Remaining: encrypted routing " +
-      "of commercial callers (cart-order, product-inquiry, share-card).",
-    ledgerAnchor: "#1618",
+      "of commercial callers (cart-order, product-inquiry, share-card). " +
+      "E2E 2026-11-20 (sandbox kdstoyyeygcopkogqsyv · engineering-" +
+      "ceiling VERIFIED): vault-chat-ui-behavior 12/12 PASS · pre-" +
+      "vault text/photo/video/document all land encrypted · raw SSR " +
+      "HTML carries zero plaintext sentinels (C2 view-source proof) · " +
+      "Lock Now gate blocks /chat/peer AND /vault/home/chats across " +
+      "direct URL+reload+back-nav · cross-tab BroadcastChannel lock · " +
+      "seller independence · inbound-while-locked stays private · " +
+      "non-member isolation. vault-chat-behavior 3/3 PASS · encrypted " +
+      "fan-out ciphertext persists · seller sees customer's message · " +
+      "Lock Now surface locks + chat gate seals.",
+    ledgerAnchor: "#1618_E2E20261120",
   },
   {
     lane: "E · Cart + orders",
@@ -1005,8 +1033,8 @@ const JOURNEYS: readonly JourneyRow[] = [
       "nex_order (state='created' · unpaid semantics · representative-" +
       "product row for carts containing ≥1 kind='product' item · pure " +
       "menu_item carts write NO nex_order row)",
-    status: "UNVERIFIED",
-    evidence: ["SOURCE", "UNIT", "OFFLINE_TESTED"],
+    status: "PASS",
+    evidence: ["SOURCE", "UNIT", "OFFLINE_TESTED", "BROWSER", "PERSISTED"],
     blocker:
       "SOURCE RECONCILED + LOCAL FIX LANDED 2026-11-19 r6 (§16.27): one-" +
       "line fix at _actions.ts:3633 propagates send_intent_id into " +
@@ -1057,8 +1085,26 @@ const JOURNEYS: readonly JourneyRow[] = [
       "code change this round). BROWSER + PERSISTED + PROVIDER tiers " +
       "remain owed · PROVIDER tier specifically requires observing a " +
       "real WebPush dispatch after the Shared Live-Auth Verification " +
-      "Gate clears.",
-    ledgerAnchor: "#1613_1627_1635_1638",
+      "Gate clears. " +
+      "E2E 2026-11-20 (sandbox kdstoyyeygcopkogqsyv · engineering-" +
+      "ceiling VERIFIED): cart-order-deterministic 8/8 PASS · " +
+      "production sendCartOrderAction writes TWO nex_order rows for " +
+      "two identical carts · ids match embedded cart UUIDs (Tier 0 " +
+      "deterministic match). customer-to-seller-order 11/11 PASS · " +
+      "full handoff via localStorage contract · nex_peer_message " +
+      "cart_order row + nex_order delta · seller /manage/orders list " +
+      "+ order detail · cross-account denial · reload persistence · " +
+      "payment-wording honesty (no 'paid'/'payment confirmed' for " +
+      "chat-only handoff). order-visibility 16/16 PASS · imaged + " +
+      "imageless + repeat-same-product + ambiguous-identical-cart " +
+      "GAP14 + deterministic-link GAP14-DETER + cross-account denial. " +
+      "product-create-form 10/10 PASS · fashion drill, variants, " +
+      "image upload, draft redirect, DB persistence. product-linked-" +
+      "inquiry 11/11 PASS · first + second inquiry pin update + " +
+      "reload + navigate + seller sees same pin + third chat no pin. " +
+      "BROWSER + PERSISTED tiers verified end-to-end. PROVIDER tier " +
+      "(observed WebPush dispatch) still owed.",
+    ledgerAnchor: "#1613_1627_1635_1638_E2E20261120",
   },
   {
     lane: "F · Delivery quote + radius",
@@ -1334,12 +1380,30 @@ const JOURNEYS: readonly JourneyRow[] = [
     ],
     data: "in-memory VMK (never persisted)",
     status: "PASS",
-    evidence: ["SOURCE", "UNIT"],
+    evidence: ["SOURCE", "UNIT", "BROWSER", "PERSISTED"],
     blocker:
-      "UNIT · 5/5 pass (§16.18.1). Component-level evidence (decrypted " +
-      "React state blockage, blob-URL revocation, multi-tab cross-check) " +
-      "remains BROWSER-tier work.",
-    ledgerAnchor: "#1618",
+      "UNIT · 5/5 pass (§16.18.1). Idle-auto-lock and hidden-tab-lock " +
+      "remain UNIT-only (clock mocking). " +
+      "E2E 2026-11-20 (sandbox kdstoyyeygcopkogqsyv · engineering-" +
+      "ceiling VERIFIED) covers the surrounding vault lifecycle: " +
+      "vault-acceptance 12/12 PASS · Contacts/Settings nav · move-to-" +
+      "vault via UI persists · delete removes vault-entry + persists " +
+      "after reload · initial-lock doorway + Lock Now cycle unlock+" +
+      "revoke · cross-context isolation (customer doesn't see seller's " +
+      "F4 + vice-versa) · unauth redirects. vault-lockout-threshold " +
+      "1/1 PASS · 3-wrong-PIN lockout shell shows Send-reset-email. " +
+      "vault-reset-flow 2/2 PASS · sealed confirmation panel + consume " +
+      "reset URL unlocks with correct PIN. vault-cross-account-reset " +
+      "2/2 PASS · B opening A's reset URL hits token_account_mismatch " +
+      "+ A can STILL consume (token not burned). vault-landing-tiles " +
+      "5/5 PASS · 6-tile grid + honest-password panel + warn-step " +
+      "gates Continue on checkbox. vault-surfaces 5/5 PASS · unauth " +
+      "redirects + signed-in resolves inside vault chain + no foreign " +
+      "email leak. session-persistence 3/3 PASS · vault SEPARATELY " +
+      "locked after context reopen + Lock Now does NOT sign out. " +
+      "Multi-tab BroadcastChannel lock + raw-SSR plaintext scrub " +
+      "proved in Lane D's 12/12 vault-chat-ui-behavior run.",
+    ledgerAnchor: "#1618_E2E20261120",
   },
   {
     lane: "I · Account deletion",
