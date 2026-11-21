@@ -1,0 +1,23 @@
+session-persistence.spec.ts · 3/3 PASS · 1.9m
+vault-landing-tiles.spec.ts · 5/5 PASS · 3.2m
+vault-surfaces.spec.ts · 5/5 PASS · 2.2m
+password-recovery-flow.spec.ts · 6/6 PASS · 43s
+two-context-isolation.spec.ts · 5/5 PASS · 32s
+vault-chat-behavior.spec.ts · 3/3 PASS · 4.9m (after state reset)
+vault-acceptance.spec.ts · 12/12 PASS · 4.6m (after re-provision)
+vault-reset-flow.spec.ts · 2/2 PASS · 2.2m
+vault-lockout-threshold.spec.ts · 1/1 PASS · 1.8m (1 retry · navigation race)
+vault-cross-account-reset.spec.ts · 2/2 PASS · 2.5m
+missing-ui-journeys.spec.ts · 4/4 PASS · 29s
+seller-onboarding-flow.spec.ts · 6/6 PASS · 57s
+product-create-form.spec.ts · 10/10 PASS · 37s
+product-linked-inquiry.spec.ts · 11/11 PASS · 1.2m
+cart-order-deterministic.spec.ts · 8/8 PASS · 1.0m
+customer-to-seller-order.spec.ts · 11/11 PASS · 1.7m
+order-visibility.spec.ts · 16/16 PASS · 2.6m
+stripe-subscription-activation.spec.ts · 0/4 (4 skipped · operator-gated · Stripe keys missing) · BLOCKED
+stripe-subscription-handoff.spec.ts · 3/3 PASS · 11s
+---- totals ----
+22 specs total (incl. earlier sign-up-flow + sign-up-approved-inbox + vault-chat-ui-behavior)
+21 green (131+ tests PASS)
+1 BLOCKED (stripe-subscription-activation · 4 skipped · operator-gated Stripe webhook secret)

@@ -1,5 +1,0 @@
-{
-  "confirmation_url": "https://kdstoyyeygcopkogqsyv.supabase.co/auth/v1/verify?token=pkce_e7c1fe166f145195b0da6a14b149d21e792c4b236bf5ce628259a17f&type=signup&redirect_to=http://localhost:3000",
-  "source_message_id": "1a1ecbf89c67d106",
-  "injected_at": 1794973400000
-}
