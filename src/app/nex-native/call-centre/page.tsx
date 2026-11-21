@@ -59,7 +59,12 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
           width: "100%",
           height: "100dvh",
           overflow: "hidden",
-          background: "var(--nex-world-drawer-bg, #123D2B)",
+          // Owner directive 2026-11-21 · Call Centre black-and-orange ·
+          // page background is now flat black (previously Ireland
+          // emerald via --nex-world-drawer-bg). Tile icons stay orange
+          // via --nex-kp-accent (sealed keypad accent) so the whole
+          // surface reads as black containers with orange call icon.
+          background: "#000000",
           color: "#F2F5F8",
           padding:
             "calc(env(safe-area-inset-top,0) + 16px) 20px calc(env(safe-area-inset-bottom,0) + 20px)",
@@ -107,18 +112,34 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
           </div>
 
           <header style={{ margin: "14px 0 18px", textAlign: "center" }}>
+            {/* Owner directive 2026-11-21 · replaced the shamrock ☘
+                (Ireland world mark) with a phone-handset glyph in the
+                sealed keypad accent (orange). The surface is now a
+                focused call-choice decision page, not an Ireland
+                identity hub. */}
             <div
               aria-hidden
               style={{
-                fontSize: 48,
-                lineHeight: 1,
-                marginBottom: 8,
-                color: "var(--nex-world-secondary, #C6A15B)",
-                filter:
-                  "drop-shadow(0 6px 20px var(--nex-world-secondary-glow, rgba(198,161,91,0.35)))",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 72,
+                height: 72,
+                marginBottom: 10,
+                borderRadius: "50%",
+                background:
+                  "linear-gradient(140deg, var(--nex-kp-accent, #FF7200), color-mix(in srgb, var(--nex-kp-accent, #FF7200) 65%, #000))",
+                color: "#FFFFFF",
+                boxShadow:
+                  "0 8px 24px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 45%, transparent)",
               }}
             >
-              ☘
+              <svg width="38" height="38" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4.5 3.5a2 2 0 0 1 2-2h2.4a1 1 0 0 1 .97.76l1.18 4.72a1 1 0 0 1-.5 1.13l-1.9 1.03a13 13 0 0 0 5.72 5.72l1.03-1.9a1 1 0 0 1 1.13-.5l4.72 1.18a1 1 0 0 1 .76.97V18a2 2 0 0 1-2 2A17.5 17.5 0 0 1 4.5 3.5z"
+                  fill="currentColor"
+                />
+              </svg>
             </div>
             <h1
               style={{

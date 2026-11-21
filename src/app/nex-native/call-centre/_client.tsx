@@ -48,7 +48,7 @@ function CameraIcon(): React.ReactElement {
         d="M9 3.5 7.7 5.5H4.5A2.5 2.5 0 0 0 2 8v10a2.5 2.5 0 0 0 2.5 2.5h15A2.5 2.5 0 0 0 22 18V8a2.5 2.5 0 0 0-2.5-2.5h-3.2L15 3.5H9z"
         fill="currentColor"
       />
-      <circle cx="12" cy="13" r="4" fill="var(--nex-world-drawer-bg, #123D2B)" />
+      <circle cx="12" cy="13" r="4" fill="#000000" />
     </svg>
   );
 }
@@ -67,7 +67,7 @@ const TILES: ReadonlyArray<Tile> = [
     subtitle: "Start a 1:1 or group voice call",
     href: "/nex-native/free-chat/call",
     icon: <PhoneIcon />,
-    accent: "var(--nex-world-secondary, #FF7200)",
+    accent: "var(--nex-kp-accent, #FF7200)",
   },
   {
     key: "video",
@@ -75,7 +75,7 @@ const TILES: ReadonlyArray<Tile> = [
     subtitle: "Face-to-face · HD when connection allows",
     href: "/nex-native/call/preview",
     icon: <VideoIcon />,
-    accent: "var(--nex-world-secondary, #FF7200)",
+    accent: "var(--nex-kp-accent, #FF7200)",
   },
   {
     key: "camera",
@@ -83,7 +83,7 @@ const TILES: ReadonlyArray<Tile> = [
     subtitle: "Take a photo or short video for your status",
     href: "/nex-native/status/create",
     icon: <CameraIcon />,
-    accent: "var(--nex-world-secondary, #FF7200)",
+    accent: "var(--nex-kp-accent, #FF7200)",
   },
 ];
 
@@ -97,17 +97,18 @@ export function CallCentreClient(): React.JSX.Element {
         }
         [data-nex-call-centre-tile]:hover {
           transform: translateY(-2px);
-          border-color: rgba(255, 114, 0, 0.55);
-          box-shadow: 0 10px 28px rgba(255, 114, 0, 0.22),
-                      0 2px 6px rgba(0, 0, 0, 0.35);
+          border-color: rgba(255, 114, 0, 0.85);
+          background: #0A0A0A;
+          box-shadow: 0 10px 28px rgba(255, 114, 0, 0.3),
+                      0 2px 6px rgba(0, 0, 0, 0.6);
         }
         [data-nex-call-centre-tile]:active {
           transform: translateY(0);
-          box-shadow: 0 4px 14px rgba(255, 114, 0, 0.3),
-                      0 1px 3px rgba(0, 0, 0, 0.35);
+          box-shadow: 0 4px 14px rgba(255, 114, 0, 0.35),
+                      0 1px 3px rgba(0, 0, 0, 0.6);
         }
         [data-nex-call-centre-tile]:focus-visible {
-          outline: 2px solid var(--nex-world-secondary, #FF7200);
+          outline: 2px solid var(--nex-kp-accent, #FF7200);
           outline-offset: 3px;
         }
         [data-nex-call-centre-tile-icon] {
@@ -150,12 +151,16 @@ export function CallCentreClient(): React.JSX.Element {
               gap: 16,
               padding: "18px 20px",
               borderRadius: 18,
-              background: "rgba(27, 81, 56, 0.55)",
-              border: "1.5px solid rgba(198, 161, 91, 0.3)",
+              // Owner directive 2026-11-21 · Call Centre tiles are now
+              // flat black containers with an orange accent border +
+              // orange icon pod (sealed keypad accent). Replaces the
+              // Ireland emerald `rgba(27,81,56,0.55)` tile.
+              background: "#000000",
+              border: "1.5px solid var(--nex-kp-accent, #FF7200)",
               color: "#F2F5F8",
               textDecoration: "none",
               minHeight: 88,
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)",
             }}
           >
             <span
@@ -169,10 +174,10 @@ export function CallCentreClient(): React.JSX.Element {
                 borderRadius: "50%",
                 flexShrink: 0,
                 background:
-                  "linear-gradient(140deg, var(--nex-world-secondary, #FF7200), color-mix(in srgb, var(--nex-world-secondary, #FF7200) 65%, #000))",
+                  "linear-gradient(140deg, var(--nex-kp-accent, #FF7200), color-mix(in srgb, var(--nex-kp-accent, #FF7200) 65%, #000))",
                 color: "#FFFFFF",
                 boxShadow:
-                  "0 6px 16px color-mix(in srgb, var(--nex-world-secondary, #FF7200) 40%, transparent)",
+                  "0 6px 16px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 45%, transparent)",
               }}
             >
               {tile.icon}
@@ -210,11 +215,11 @@ export function CallCentreClient(): React.JSX.Element {
             <span
               aria-hidden
               style={{
-                color: "var(--nex-world-secondary, #C6A15B)",
+                color: "var(--nex-kp-accent, #FF7200)",
                 fontSize: 22,
-                fontWeight: 400,
+                fontWeight: 700,
                 flexShrink: 0,
-                opacity: 0.8,
+                opacity: 0.95,
               }}
             >
               →
