@@ -33,6 +33,13 @@ import { CallCentreClient } from "./_client";
 // resolveSessionWithDevOverride so the drawer identity bar matches
 // every other NEX Native surface.
 import { NexPageHeader } from "../_page-header";
+// Owner directive 2026-11-21 (iter 11) · page-level auth gate · the
+// sealed signed-out standard. Signed-out viewers see ONLY the slide-
+// down "Sign in required" banner on a shaded+blurred phone-frame base
+// (option (i)) · the 3 call tiles never mount for guests. The Sign in
+// CTA routes to /nex-native/sign-in?next=/nex-native/call-centre so
+// the viewer lands back on this surface after auth.
+import { NexAuthGate } from "@/components/nex-native/auth-gate/nex-auth-gate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,7 +66,11 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
         }
       `}</style>
 
-      <main
+      <NexAuthGate
+        featureName="Call Centre"
+        returnTo="/nex-native/call-centre"
+      >
+        <main
         data-nex-call-centre
         style={{
           position: "relative",
@@ -184,7 +195,8 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             </p>
           </footer>
         </div>
-      </main>
+        </main>
+      </NexAuthGate>
     </>
   );
 }
