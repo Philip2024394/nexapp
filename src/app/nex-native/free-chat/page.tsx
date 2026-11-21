@@ -647,6 +647,11 @@ export default async function FreeChatPage({
             <NotificationsDrawer
               inline
               initialNotifications={freeChatNotifications}
+              // Owner directive 2026-11-21 (iter 14) · guest viewers
+              // see the GuestCreateAccountContainer instead of the
+              // filter+list body · signed-in viewers keep the current
+              // behaviour unchanged.
+              viewerKind={signedInSession ? "signed-in" : "guest"}
             />
           }
         />

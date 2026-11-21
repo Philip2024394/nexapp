@@ -81,6 +81,14 @@ export interface NotificationsDrawerProps {
    *  bell. The event listener is installed unconditionally, so any
    *  mount of this component (triggerless or not) answers the event. */
   readonly hideTrigger?: boolean;
+  /** Owner directive 2026-11-21 (iter 14) · when `"guest"`, the drawer
+   *  body is REPLACED by the GuestCreateAccountContainer · mirrors the
+   *  sealed shop-drawer guest-create pattern (see
+   *  shop-drawer-client.tsx:940). The filter nav is hidden too (there
+   *  is nothing to filter · no notifications can accrue without an
+   *  account). Default `"signed-in"` so every existing call-site keeps
+   *  its current behaviour unchanged. */
+  readonly viewerKind?: "guest" | "signed-in";
 }
 
 type FilterKey = "all" | "unread" | NotificationSectionKey;
@@ -89,7 +97,9 @@ export function NotificationsDrawer({
   initialNotifications,
   inline = false,
   hideTrigger = false,
+  viewerKind = "signed-in",
 }: NotificationsDrawerProps = {}): React.JSX.Element {
+  const isGuest = viewerKind === "guest";
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
   const [visible, setVisible] = React.useState(false);
@@ -403,6 +413,28 @@ export function NotificationsDrawer({
           </button>
         </header>
 
+        {/* Owner directive 2026-11-21 (iter 14) · guest-viewer branch ·
+            when the viewer has no NEX account, replace the entire
+            filter+body with the GuestCreateAccountContainer. Mirrors
+            the sealed shop-drawer pattern · tells the user WHY the
+            drawer is empty + routes them to the one-URL signup flow at
+            /nex-native/sign-in?mode=signup (sealed 2026-11-02). */}
+        {isGuest ? (
+          <div
+            data-nex-notifications-scroll
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "18px 18px 24px 18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <GuestCreateAccountContainer onClose={closeDrawer} />
+          </div>
+        ) : (
+          <>
         {/* Filter dropdown · owner-authorised 2026-11-10 · replaces the
             horizontal chip row with a single native select for a cleaner
             drawer header and native-picker UX on mobile. */}
@@ -594,6 +626,8 @@ export function NotificationsDrawer({
             Mark all as read
           </button>
         </footer>
+          </>
+        )}
       </aside>
     </>
   );
@@ -1022,6 +1056,100 @@ function BellGlyph({
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
+  );
+}
+
+// Owner directive 2026-11-21 (iter 14) · Guest create-account container
+// for the LEFT notifications drawer. Mirrors the sealed shop-drawer
+// guest container at shop-drawer-client.tsx:940 · same vertical rhythm
+// (glyph · title · body · pill CTA) · same orange accent chip · same
+// uppercase-tracked CTA. Copy comes verbatim from the owner directive:
+//   "Notifications will display here for new contacts and messages
+//    and shop orders and messages · all notifications right at your
+//    finger tips"
+// CTA targets /nex-native/sign-in?mode=signup · the one-URL signup
+// surface sealed 2026-11-02 (sign-in/page.tsx:41-43).
+function GuestCreateAccountContainer({
+  onClose,
+}: {
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-notifications-drawer-guest
+      style={{
+        width: "100%",
+        maxWidth: 280,
+        padding: "4px 2px 0",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          background: "rgba(255, 114, 0, 0.14)",
+          border: `1px solid ${PANEL_BORDER}`,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#FF7200",
+          alignSelf: "center",
+        }}
+      >
+        <BellGlyph accent="#FF7200" size={26} />
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          fontWeight: 700,
+          lineHeight: 1.3,
+          color: TEXT,
+          textAlign: "center",
+        }}
+      >
+        Notifications will display here for new contacts and messages
+        and shop orders and messages.
+      </p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          lineHeight: 1.45,
+          color: MUTED,
+          textAlign: "center",
+        }}
+      >
+        All notifications right at your fingertips · create a NEX account
+        and come straight back here.
+      </p>
+      <a
+        href="/nex-native/sign-in?mode=signup"
+        onClick={() => onClose()}
+        data-nex-notifications-drawer-guest-cta
+        style={{
+          marginTop: 2,
+          padding: "12px 18px",
+          borderRadius: 999,
+          background: "#FF7200",
+          color: "#FFFFFF",
+          fontWeight: 900,
+          fontSize: 13,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+          textAlign: "center",
+          boxShadow: "0 4px 14px rgba(255, 114, 0, 0.4)",
+        }}
+      >
+        Create NEX account
+      </a>
+    </div>
   );
 }
 
