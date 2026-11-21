@@ -243,13 +243,17 @@ describe("C · code-registered packages reference only registered categories", (
     expect(pkg.identity.categoryId).toBe("waterworld");
   });
 
+  // 2026-11-21 · "pizza" removed · LIVE_WORLD_PACKAGES does not register a
+  // pizza world (see src/app/nex-native/chat-standard/_live-worlds.ts ·
+  // 12 worlds registered, none pizza). Stale test case from a never-
+  // shipped world; invariant "every food world → categoryId='food'"
+  // remains tested against the five real food packages.
   const FOOD_WORLDS = [
     "coffee",
     "botanical-cafe",
     "midnight-cafe",
     "french-cafe",
     "food",
-    "pizza",
   ] as const;
   for (const id of FOOD_WORLDS) {
     test(`${id} package → identity.categoryId = 'food'`, () => {
