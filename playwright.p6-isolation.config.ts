@@ -261,5 +261,21 @@ export default defineConfig({
       testMatch: /nexcorner-prelaunch-flow\.spec\.ts/,
       timeout: 120_000,
     },
+    {
+      // 2026-11-21 · Lane I · /settings/security/delete-account real-UI
+      // end-to-end. Seeds a disposable e2e-delete-* auth user + matching
+      // nex_account row, drives the destructive workflow through the
+      // real browser, asserts DB soft-delete + auth user removal +
+      // re-sign-in refusal. Hard-refuses touching Hammerex/Rosa/CK5.
+      name: "account-deletion-flow-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /account-deletion-flow\.spec\.ts/,
+      timeout: 180_000,
+    },
   ],
 });

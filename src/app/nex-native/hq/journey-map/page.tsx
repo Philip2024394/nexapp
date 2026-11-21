@@ -1431,33 +1431,37 @@ const JOURNEYS: readonly JourneyRow[] = [
     data:
       "nex_account_mark_deleted RPC · nex_security_audit_erase_actor · " +
       "auth.admin.deleteUser",
-    status: "PARTIAL",
-    evidence: ["SOURCE", "OFFLINE_TESTED"],
+    status: "PASS",
+    evidence: ["SOURCE", "OFFLINE_TESTED", "BROWSER", "PERSISTED"],
     blocker:
-      "Anchors landed 2026-11-19 (§16.31) + banner-mapping coverage " +
-      "added 2026-11-19 (§16.32) · I-RETRY · I-REALITY · I-OWNER plus " +
-      "14 new UI banner-mapping tests all PASS at offline tier. Retry " +
-      "after partial soft-delete failure completes end-to-end with " +
-      "exactly one .completed audit · auth-delete 'user not found' on " +
-      "retry treated as idempotent success · soft-delete failure " +
-      "returns ok:false + NEVER calls Auth deleteUser + NEVER emits " +
-      ".completed · auth-delete real failure returns ok:false " +
-      "auth_delete_failed (partial state visible to caller · not silent " +
-      "200) · route-level session-scoping IGNORES body-smuggled " +
-      "account_id / ownerAccountId / supabase_user_id · UI friendlyError " +
-      "maps every documented error code to a user-visible banner string " +
-      "(wrong-password · rate-limited · audit-unavailable · " +
-      "audit-completion-failed · soft-delete-failed · auth-delete-" +
-      "failed · invalid-JSON · unknown-500 · network-error) + " +
-      "no-fetch-on-mount + double-submit-after-success is a no-op. " +
-      "TEST-ONLY HARDENING · no product code changed in Lane I this " +
-      "round. LANE-SPECIFIC outstanding at BROWSER/PERSISTENCE/PROVIDER " +
-      "tier after DB/auth pause lifts: live nex_account_mark_deleted " +
-      "RPC side-effects · live nex_security_audit_erase_actor write · " +
-      "live auth.admin.deleteUser irreversibility · live " +
-      "session_revoke_all 3/hour quota. MUST NEVER be tested on " +
-      "Hammerex nex-99901 or Rosa nex-99903.",
-    ledgerAnchor: "#1632",
+      "E2E 2026-11-21 · account-deletion-flow.spec.ts 4/4 PASS in 36.6s " +
+      "against localhost:3008 with NEX_PRELAUNCH_MODE=false · fresh " +
+      "disposable e2e-delete-* user seeded via admin.createUser + " +
+      "matching nex_account row · UI-driven delete at /settings/" +
+      "security/delete-account proves (1) form renders with " +
+      "data-nex-delete-form + current-password + confirm-phrase + " +
+      "submit + explain-section 'cannot be undone' · (2) wrong " +
+      "password renders data-nex-banner=error with 'password not " +
+      "correct' and nex_account.deleted_at stays NULL · (3) correct " +
+      "password + 'DELETE' phrase renders data-nex-banner=ok " +
+      "'account deleted' and client redirects to /sign-in?reason=" +
+      "account_deleted; DB post-state shows nex_account row GONE " +
+      "(soft-delete sets deleted_at first, then auth.admin.deleteUser " +
+      "cascades via supabase_user_id FK ON DELETE CASCADE from " +
+      "mig 001); admin.getUserById returns error (auth user " +
+      "deleted) · (4) re-sign-in with same credentials FAILS · the " +
+      "functional proof the login is actually gone. Hard-refuses " +
+      "any match against Hammerex / Rosa / CK5 disposables via " +
+      "PROTECTED_RE guard. LIMITS honestly declared: does NOT " +
+      "exercise audit_unavailable / auth_delete_failed / rate-" +
+      "limited branches (would require tearing down services or " +
+      "burning 3 disposables inside 60min · out of scope for the " +
+      "happy-path + wrong-password proof). LANE-SPECIFIC " +
+      "outstanding after PROVIDER tier remains: live " +
+      "nex_security_audit_erase_actor write-through assertion " +
+      "against the audit table (unit-covered but not browser-" +
+      "verified).",
+    ledgerAnchor: "#1632_E2E20261121",
   },
 ];
 
