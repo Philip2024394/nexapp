@@ -74,7 +74,11 @@ export function NexAuthGateBanner({
         }}
       />
 
-      {/* Banner slides down from the top of the frame. */}
+      {/* Owner directive 2026-11-21 (iter 12) · banner centered on the
+          phone-frame (vertical + horizontal). Still slides DOWN from
+          above the viewport on mount · ends at the centre. Only the
+          transform animates · top/left stay fixed so the browser GPU-
+          accelerates the slide. */}
       <div
         role="alertdialog"
         aria-modal="true"
@@ -82,28 +86,53 @@ export function NexAuthGateBanner({
         aria-describedby="nex-auth-gate-body"
         style={{
           position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0px) + 20px)",
-          left: 16,
-          right: 16,
-          maxWidth: 420,
-          margin: "0 auto",
-          transform: mounted ? "translateY(0)" : "translateY(-120%)",
+          top: "50%",
+          left: "50%",
+          width: "calc(100% - 32px)",
+          maxWidth: 360,
+          transform: mounted
+            ? "translate(-50%, -50%)"
+            : "translate(-50%, calc(-50% - 60vh))",
           opacity: mounted ? 1 : 0,
           transition:
-            "transform 320ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 240ms ease-out",
+            "transform 420ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 240ms ease-out",
           background: "#EAE6DD",
           borderRadius: 20,
-          padding: "18px 18px 16px",
+          padding: "20px 20px 18px",
           boxShadow:
-            "0 24px 60px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25)",
+            "0 30px 80px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.28)",
           border: "1px solid rgba(26, 26, 26, 0.08)",
         }}
       >
         <style>{`
+          /* Owner directive 2026-11-21 (iter 12) · heartbeat glow on
+             the Sign in CTA · 2.4s human-tempo cycle · pulses the halo
+             only so button text stays 100% readable. */
+          @keyframes nex-auth-gate-pulse {
+            0%, 100% {
+              box-shadow:
+                0 4px 14px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 30%, transparent),
+                0 0 0 0 color-mix(in srgb, var(--nex-kp-accent, #FF7200) 0%, transparent);
+            }
+            50% {
+              box-shadow:
+                0 6px 18px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 50%, transparent),
+                0 0 26px 6px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 42%, transparent);
+            }
+          }
+          [data-nex-auth-gate-primary] {
+            animation: nex-auth-gate-pulse 2.4s ease-in-out infinite;
+          }
           @media (prefers-reduced-motion: reduce) {
             [data-nex-auth-gate] > [role="alertdialog"] {
               transition: opacity 180ms ease-out !important;
-              transform: translateY(0) !important;
+              transform: translate(-50%, -50%) !important;
+            }
+            [data-nex-auth-gate-primary] {
+              animation: none !important;
+              box-shadow:
+                0 6px 18px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 45%, transparent),
+                0 0 24px 4px color-mix(in srgb, var(--nex-kp-accent, #FF7200) 35%, transparent) !important;
             }
           }
         `}</style>

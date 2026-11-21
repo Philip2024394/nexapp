@@ -1524,6 +1524,59 @@ const JOURNEYS: readonly JourneyRow[] = [
       "verified).",
     ledgerAnchor: "#1632_E2E20261121",
   },
+  {
+    lane: "N · NexAuthGate page-level sign-in standard (first wired: Call Centre)",
+    role: "guest",
+    summary:
+      "Sealed 2026-11-21 standard for any nexapp feature that must not " +
+      "render for signed-out users. Page-level server-component gate · " +
+      "guests see ONLY a slide-down 'Sign in required' banner centered " +
+      "on the sealed phone-frame with a shade+blur backdrop · the gated " +
+      "UI never mounts for them. Option (i) locked · nothing visible " +
+      "behind the shaded layer beyond the drawer-bg base.",
+    entry:
+      "any nex-native route that wraps its content in <NexAuthGate> · first " +
+      "wired on /nex-native/call-centre (iter 11 · d0a3bcf1)",
+    connected: [
+      "src/components/nex-native/auth-gate/nex-auth-gate.tsx (server · resolves " +
+        "session via resolveSessionWithDevOverride · returns children | banner)",
+      "src/components/nex-native/auth-gate/_nex-auth-gate-banner-client.tsx " +
+        "(client · fixed inset:0 · drawer-bg base · rgba(0,0,0,0.45) + " +
+        "backdrop-filter blur(8px) · banner slides down to screen centre · " +
+        "heartbeat-pulse keyframe on orange primary CTA · 44px tap targets · " +
+        "aria-modal alertdialog)",
+      "src/components/nex-native/auth-gate/__tests__/nex-auth-gate.test.tsx " +
+        "(7 tests · dispatch both branches · ARIA wiring · keyframe hook · " +
+        "reduced-motion gate · renderToStaticMarkup pattern per account-gate " +
+        "convention)",
+      "src/app/nex-native/call-centre/page.tsx (wraps <main> in <NexAuthGate " +
+        'featureName="Call Centre" returnTo="/nex-native/call-centre">)',
+      "src/lib/nex-native/app/dev-impersonation.ts:158 resolveSessionWithDevOverride " +
+        "(real cookie session wins over env-gated persona · 2026-11-15 seal)",
+      "sign-in next param consumed at src/app/nex-native/sign-in/page.tsx:131 " +
+        "via safeNext()",
+    ],
+    data: "none · gate is read-only against the existing session cookie",
+    status: "PASS",
+    evidence: ["SOURCE_INSPECTED", "UNIT", "OFFLINE_TESTED"],
+    blocker:
+      "SOURCE/OFFLINE COMPLETE · 7/7 vitest pass on fresh run (dispatch × 2 " +
+      "branches · featureName interpolation · sign-in next param URL-encode " +
+      "· same-container primary+close CTAs · ARIA alertdialog · heartbeat " +
+      "keyframe + reduced-motion gate). BROWSER / PERSISTENCE tier UNVERIFIED " +
+      "· not yet confirmed in a live browser that: (a) signed-out visit to " +
+      "/nex-native/call-centre renders the banner only (no leaked tiles in " +
+      "view-source / network tab) · (b) Sign in CTA preserves " +
+      "?next=%2Fnex-native%2Fcall-centre through the sign-in flow and lands " +
+      "back on Call Centre after auth · (c) Close CTA router.back() behaves " +
+      "correctly on direct-URL entry (no history entry prior to the gate) · " +
+      "(d) heartbeat pulse is visible + not seizure-inducing · (e) reduced-" +
+      "motion freezes the pulse to its 'full glow' resting frame. Sealed " +
+      "standard DOES NOT auto-wire other surfaces · each must be added per " +
+      "owner directive: Vault / Status Create / private chat / manage · " +
+      "candidates listed in feedback_nex_auth_gate_standard_2026_11_21.md.",
+    ledgerAnchor: "#NEX_AUTH_GATE_20261121",
+  },
 ];
 
 // ─── Text diagram (pre-formatted; no live JS) ────────────────────────
