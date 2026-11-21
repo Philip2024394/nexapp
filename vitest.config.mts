@@ -60,6 +60,12 @@ export default defineConfig({
       // that did not make the nexapp carve-out.
       "src/lib/nex-agent-runtime/**",
       "src/lib/nex-agent/**",
+      // 2026-11-21 · DEAD subtree per Scope Reduction 2026-11-06.
+      // merchant-assistant surface removed; zero live-route imports of
+      // either components/nex-app/merchant-assistant/* or
+      // lib/nex/merchant-assistant/*. The 3 tests here were imports-
+      // only reachable code paths · all dead.
+      "src/lib/nex/merchant-assistant/**",
     ],
   },
   resolve: {
