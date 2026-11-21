@@ -9,22 +9,32 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { OsmAttributionBadge } from "./OsmAttributionBadge";
 
 describe("OsmAttributionBadge · rendering", () => {
+  // 2026-11-21 · Test updated to match the component's current
+  // button-with-onClick shape (renderToStaticMarkup can't execute the
+  // onClick). The component intentionally uses <button> rather than
+  // <a href> to avoid invalid <a>-inside-<a> nesting when the badge
+  // is placed inside card-wide anchor wrappers (DirectoryCard,
+  // ListingDetailPanel) — see OsmAttributionBadge.tsx:73-82.
+  // ODbL attribution is still carried via aria-label + ref data
+  // attribute + onClick window.open · the SSR markup doesn't emit
+  // the href because the open happens at click time.
   it("renders a linked badge for a valid OSM node ref", () => {
     const html = renderToStaticMarkup(
       <OsmAttributionBadge osmId="node/123456789" />,
     );
     expect(html).toContain("data-nex-osm-attribution-badge");
     expect(html).toContain('data-nex-osm-attribution-badge-ref="node/123456789"');
-    expect(html).toContain('href="https://www.openstreetmap.org/node/123456789"');
+    expect(html).toContain('<button');
+    expect(html).toContain('type="button"');
+    expect(html).toContain('aria-label="OpenStreetMap source: node/123456789');
     expect(html).toContain("OpenStreetMap contributors (ODbL)");
-    expect(html).toContain('target="_blank"');
-    expect(html).toContain('rel="noopener noreferrer"');
   });
 
   it("renders a linked badge for way and relation refs", () => {
     for (const ref of ["way/1000", "relation/42"]) {
       const html = renderToStaticMarkup(<OsmAttributionBadge osmId={ref} />);
-      expect(html).toContain(`href="https://www.openstreetmap.org/${ref}"`);
+      expect(html).toContain(`data-nex-osm-attribution-badge-ref="${ref}"`);
+      expect(html).toContain(`aria-label="OpenStreetMap source: ${ref}`);
     }
   });
 

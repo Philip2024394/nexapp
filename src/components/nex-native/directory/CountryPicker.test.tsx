@@ -64,12 +64,17 @@ const ENTRIES: readonly CountryEntry[] = [
   { isoAlpha2: "ZZ", name: null, count: 1 },
 ];
 
-function renderInitial(initial = "ID", flagSrcFor?: (c: string) => string | null): string {
+function renderInitial(
+  initial = "ID",
+  flagSrcFor?: (c: string) => string | null,
+  triggerIcon?: "globe" | "flag",
+): string {
   return renderToStaticMarkup(
     React.createElement(CountryPicker, {
       entries: ENTRIES,
       initialSelected: initial,
       flagSrcFor,
+      triggerIcon,
     }),
   );
 }
@@ -121,8 +126,16 @@ describe("CountryPicker · initial trigger button render", () => {
 // ═════════════════════════════════════════════════════════════════════
 
 describe("CountryPicker · flag badge fallback", () => {
+  // 2026-11-21 · Tests that exercise the FlagBadge fallback now pass
+  // `triggerIcon="flag"` explicitly. The component default changed
+  // to `"globe"` (a decorative world-icon trigger that never renders
+  // the FlagBadge) · so the FlagBadge-contract tests must opt in to
+  // the flag-mode trigger. See CountryPicker.tsx:65-69 + 249-252.
+  // The regional-indicator check still runs against the default
+  // (globe) render · regional-indicator emoji must NEVER appear in
+  // either trigger mode.
   it("renders the ISO code inside the badge when flagSrcFor is undefined", () => {
-    const html = renderInitial("ID");
+    const html = renderInitial("ID", undefined, "flag");
     // The circular badge renders the alpha-2 inside a <span> · after
     // whitespace normalisation we see ">ID</span>".
     expect(html).toContain(">ID</span>");
@@ -137,13 +150,13 @@ describe("CountryPicker · flag badge fallback", () => {
   });
 
   it("renders an <img> element when flagSrcFor returns a non-null string", () => {
-    const html = renderInitial("ID", (code) => `/flags/${code.toLowerCase()}.svg`);
+    const html = renderInitial("ID", (code) => `/flags/${code.toLowerCase()}.svg`, "flag");
     expect(html).toContain('src="/flags/id.svg"');
     expect(html).toContain('<img');
   });
 
   it("falls back to the text badge when flagSrcFor returns null", () => {
-    const html = renderInitial("ID", () => null);
+    const html = renderInitial("ID", () => null, "flag");
     // No <img> emitted · the inner markup is the alpha-2 text.
     expect(html).not.toContain("<img");
     expect(html).toContain(">ID</span>");
