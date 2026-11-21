@@ -11,6 +11,17 @@ vi.mock("@/lib/crm/loadContactTimeline", () => ({
   loadContactSummary: (...args: unknown[]) => loadContactSummaryMock(...args)
 }));
 
+// resolver.ts → enrichWithRegistry → resolveContactForAI. Not under test
+// here (the real resolver's registry lookup is covered elsewhere); stub
+// with a deterministic empty-match result so the search/contact-id paths
+// don't hang on a real network/DB call.
+vi.mock("@/lib/nex/ai/contact_resolver", () => ({
+  resolveContactForAI: async () => ({
+    matches: [],
+    resolved_at: "2026-11-21T00:00:00.000Z",
+  }),
+}));
+
 vi.mock("@/lib/supabaseAdmin", () => {
   const buildBuilder = (rowsGetter: () => unknown) => {
     const builder: {
