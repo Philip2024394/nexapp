@@ -887,23 +887,32 @@ const JOURNEYS: readonly JourneyRow[] = [
     ],
     data:
       "none for guest storefront · nex_prelaunch_signup (migration 352 · " +
-      "PROPOSAL, not applied · absent table returns envelope reason=" +
-      "`migration_not_applied` via Postgres error 42P01)",
+      "APPLIED to sandbox kdstoyyeygcopkogqsyv 2026-11-21 · prod still " +
+      "sealed · idempotent CREATE TABLE IF NOT EXISTS + unique index on " +
+      "email_normalised + RLS ON + 0 policies)",
     status: "PASS",
-    evidence: ["SOURCE_INSPECTED", "UNIT", "OFFLINE_TESTED"],
+    evidence: ["SOURCE_INSPECTED", "UNIT", "OFFLINE_TESTED", "BROWSER", "PERSISTED"],
     blocker:
       "Prelaunch surface is engineering-complete AT SOURCE LEVEL. Four " +
       "offline test files ran successfully in this session (see §16.20): " +
       "allowlist.test.ts · feature-flag.test.ts · email-normalise.test.ts " +
       "· signup-service.test.ts (39 tests / 4 files / 377 ms / no I/O). " +
+      "E2E 2026-11-21 (sandbox kdstoyyeygcopkogqsyv · engineering-ceiling " +
+      "VERIFIED): nexcorner-prelaunch-flow 5/5 PASS · GET /nexcorner 200 " +
+      "renders form shell · POST well-formed email success + DB row " +
+      "persisted in nex_prelaunch_signup · duplicate POST still 1 row " +
+      "(no leak of already_registered vs new) · POST malformed email " +
+      "surfaces invalid_email branch · rapid 4 submits within 60s window " +
+      "capped at 3 inserts by in-process rate ring. Mig 352 applied to " +
+      "sandbox via scripts/apply-migration-352-sandbox.mjs (idempotent). " +
       "Unverified from engineering: (a) the live Vercel environment " +
       "actually has NEX_PRELAUNCH_MODE=true (operator surface); " +
       "(b) migration 352 applied against the authoritative Supabase " +
-      "project (owner-gated — currently PROPOSAL only); " +
+      "PROD project (owner-gated — sandbox only this round); " +
       "(c) any apex-domain rewrite from nexcorner.com → /nexcorner · " +
       "next.config.mjs inspected and carries NO such rewrite (apex " +
       "routing is a Vercel/DNS concern outside the code).",
-    ledgerAnchor: "#1619",
+    ledgerAnchor: "#1619_E2E20261121",
   },
   {
     lane: "C · Shop setup",

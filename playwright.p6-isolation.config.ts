@@ -247,5 +247,19 @@ export default defineConfig({
       testMatch: /product-linked-inquiry\.spec\.ts/,
       timeout: 360_000,
     },
+    {
+      // 2026-11-21 · Lane B · /nexcorner prelaunch landing + launch-interest
+      // signup. Requires mig 352 applied to sandbox (nex_prelaunch_signup)
+      // + NEX_PRELAUNCH_MODE=true in the dev process.
+      name: "nexcorner-prelaunch-flow-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /nexcorner-prelaunch-flow\.spec\.ts/,
+      timeout: 120_000,
+    },
   ],
 });
