@@ -83,6 +83,26 @@ export default defineConfig({
       // in this fork). Zero live-route imports of business-context
       // from src/app/**.
       "src/lib/nex/business-context/**",
+      // 2026-11-21 · Six individual test files blocked on missing
+      // Indonesia-brain + Programmer-Agent assets that were never
+      // ported in the 2026-10-10 nexapp carve-out:
+      //   · city-registry.test.ts            → data/nex-city-catalogue.json missing
+      //   · worker-specialists-registration  → @/lib/nex/agents/nex-vision/corpus missing
+      //   · adversarial-evaluator.test.ts    → @/lib/nex/agents/nex-speaking/corpus-phase4 missing
+      //   · evaluator.test.ts                → tests/fixtures/programmer-benchmark-proof/_corpus_v1/cases missing
+      //   · stability.test.ts                → same fixture missing
+      //   · reviewer.test.ts                 → tests/fixtures/programmer-review-proof/_phase_c_fixture_cases missing
+      // Zero live-route imports of these specific modules from
+      // src/app/**. Sibling tests in each subtree still run and pass
+      // (programmer-* 7 files · 106 tests · agent-runtime 2 files ·
+      // 47 tests) so we exclude only the per-file dead signals, not
+      // the subtrees. Reversal: delete each line.
+      "src/lib/nex/city-registry.test.ts",
+      "src/lib/nex/agent-runtime/worker-specialists-registration.test.ts",
+      "src/lib/nex/programmer-improvement/adversarial-evaluator.test.ts",
+      "src/lib/nex/programmer-benchmark/evaluator.test.ts",
+      "src/lib/nex/programmer-stability/stability.test.ts",
+      "src/lib/nex/programmer-review/reviewer.test.ts",
     ],
   },
   resolve: {
