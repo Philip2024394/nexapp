@@ -48,7 +48,7 @@ function CameraIcon(): React.ReactElement {
         d="M9 3.5 7.7 5.5H4.5A2.5 2.5 0 0 0 2 8v10a2.5 2.5 0 0 0 2.5 2.5h15A2.5 2.5 0 0 0 22 18V8a2.5 2.5 0 0 0-2.5-2.5h-3.2L15 3.5H9z"
         fill="currentColor"
       />
-      <circle cx="12" cy="13" r="4" fill="#000000" />
+      <circle cx="12" cy="13" r="4" fill="#EAE6DD" />
     </svg>
   );
 }
@@ -97,15 +97,15 @@ export function CallCentreClient(): React.JSX.Element {
         }
         [data-nex-call-centre-tile]:hover {
           transform: translateY(-2px);
-          border-color: rgba(255, 114, 0, 0.85);
-          background: #0A0A0A;
-          box-shadow: 0 10px 28px rgba(255, 114, 0, 0.3),
-                      0 2px 6px rgba(0, 0, 0, 0.6);
+          border-color: rgba(255, 114, 0, 0.6);
+          background: #E8E4DB;
+          box-shadow: 0 10px 28px rgba(255, 114, 0, 0.18),
+                      0 2px 6px rgba(0, 0, 0, 0.12);
         }
         [data-nex-call-centre-tile]:active {
           transform: translateY(0);
-          box-shadow: 0 4px 14px rgba(255, 114, 0, 0.35),
-                      0 1px 3px rgba(0, 0, 0, 0.6);
+          box-shadow: 0 4px 14px rgba(255, 114, 0, 0.22),
+                      0 1px 3px rgba(0, 0, 0, 0.12);
         }
         [data-nex-call-centre-tile]:focus-visible {
           outline: 2px solid var(--nex-kp-accent, #FF7200);
@@ -151,16 +151,17 @@ export function CallCentreClient(): React.JSX.Element {
               gap: 16,
               padding: "18px 20px",
               borderRadius: 18,
-              // Owner directive 2026-11-21 · Call Centre tiles are now
-              // flat black containers with an orange accent border +
-              // orange icon pod (sealed keypad accent). Replaces the
-              // Ireland emerald `rgba(27,81,56,0.55)` tile.
-              background: "#000000",
-              border: "1.5px solid var(--nex-kp-accent, #FF7200)",
-              color: "#F2F5F8",
+              // Owner directive 2026-11-21 (iter 2) · tiles are
+              // light-gray containers on the cream page background ·
+              // the orange accent lives in the icon pod + chevron, not
+              // in the container fill. Supersedes the black-container
+              // interpretation earlier same day.
+              background: "#EAE6DD",
+              border: "1.5px solid rgba(26, 26, 26, 0.08)",
+              color: "#1A1A1A",
               textDecoration: "none",
               minHeight: 88,
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
             }}
           >
             <span
@@ -196,7 +197,7 @@ export function CallCentreClient(): React.JSX.Element {
                   fontSize: 17,
                   fontWeight: 800,
                   letterSpacing: "-0.01em",
-                  color: "#F2F5F8",
+                  color: "#1A1A1A",
                 }}
               >
                 {tile.label}
@@ -204,7 +205,7 @@ export function CallCentreClient(): React.JSX.Element {
               <span
                 style={{
                   fontSize: 13,
-                  color: "var(--nex-world-primary-ink, #AFC5B5)",
+                  color: "#4A4A4A",
                   lineHeight: 1.4,
                   opacity: 0.92,
                 }}

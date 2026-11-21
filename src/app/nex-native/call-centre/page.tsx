@@ -59,13 +59,11 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
           width: "100%",
           height: "100dvh",
           overflow: "hidden",
-          // Owner directive 2026-11-21 · Call Centre black-and-orange ·
-          // page background is now flat black (previously Ireland
-          // emerald via --nex-world-drawer-bg). Tile icons stay orange
-          // via --nex-kp-accent (sealed keypad accent) so the whole
-          // surface reads as black containers with orange call icon.
-          background: "#000000",
-          color: "#F2F5F8",
+          // Owner directive 2026-11-21 (iter 2) · Call Centre is cream
+          // page + light-gray tile containers + orange call-button pods.
+          // Supersedes the earlier black-and-orange interpretation.
+          background: "#F5F1E8",
+          color: "#1A1A1A",
           padding:
             "calc(env(safe-area-inset-top,0) + 16px) 20px calc(env(safe-area-inset-bottom,0) + 20px)",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -101,7 +99,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             <BackLink
               fallbackHref="/nex-native/contacts"
               style={{
-                color: "var(--nex-world-secondary, #C6A15B)",
+                color: "#1A1A1A",
                 fontSize: 13,
                 fontWeight: 700,
               }}
@@ -156,7 +154,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
                 margin: "6px auto 0",
                 maxWidth: 380,
                 fontSize: 13,
-                color: "var(--nex-world-primary-ink, #AFC5B5)",
+                color: "#4A4A4A",
                 lineHeight: 1.5,
                 opacity: 0.92,
               }}
@@ -174,7 +172,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
               margin: "12px auto 0",
               maxWidth: 420,
               fontSize: 10,
-              color: "rgba(175, 197, 181, 0.72)",
+              color: "rgba(26, 26, 26, 0.72)",
               textAlign: "center",
               lineHeight: 1.45,
             }}
