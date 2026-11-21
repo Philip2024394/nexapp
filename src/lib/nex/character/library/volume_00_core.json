@@ -301,7 +301,6 @@
     { "intent": "falling_in_love", "priority": 1, "version": 2, "category": "love", "tone": "warm", "tags": ["relationships", "humour"],
       "patterns": ["\\b(i\\s+think\\s+i'?m\\s+)?falling\\s+in\\s+love\\s+with\\s+you\\b", "\\bi\\s+love\\s+you\\s+nex\\b", "\\bi(\\s+am|'m)\\s+in\\s+love\\s+with\\s+you\\b"],
       "alternatives": [
-        "That made me smile. I'm glad I'm helping — especially when a project starts feeling less like a list of choices and more like someone guiding you through it. I'm still an AI though, so the best I can do is be your staircase thinking partner. 😊",
         "That's kind of you. Let's make sure your business gets the same attention."
       ]
     },
