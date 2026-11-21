@@ -103,6 +103,19 @@ export default defineConfig({
       "src/lib/nex/programmer-benchmark/evaluator.test.ts",
       "src/lib/nex/programmer-stability/stability.test.ts",
       "src/lib/nex/programmer-review/reviewer.test.ts",
+      // 2026-11-21 · DEAD per Scope Reduction 2026-11-06. Live is in
+      // the REMOVED feature list (owner-sealed). These three test
+      // files import Live components or verify Live-only routes
+      // (`src/app/nex-native/[businessSlug]/[productId]/page.tsx`,
+      // `src/app/nex-native/live-commerce/[sessionId]/_viewer-client.tsx`,
+      // migration `221_nex_live_participation.sql`) that are not in
+      // the reduced-scope surface. Component files on disk remain
+      // pending a separate dead-component cleanup; tests should stop
+      // counting as a failing engineering signal now.
+      // Reversal: delete these lines if Live is re-scoped in.
+      "src/components/nex-native/live-commerce/__tests__/live-mounts.test.tsx",
+      "src/components/nex-native/live-commerce/__tests__/live-ui.test.tsx",
+      "src/lib/nex-native/live-broadcast/__tests__/sealed-defaults-invariants.test.ts",
     ],
   },
   resolve: {
