@@ -66,6 +66,23 @@ export default defineConfig({
       // lib/nex/merchant-assistant/*. The 3 tests here were imports-
       // only reachable code paths · all dead.
       "src/lib/nex/merchant-assistant/**",
+      // 2026-11-21 · DEAD per Scope Reduction 2026-11-06. Trade Centre
+      // is REMOVED (nex-shop-entitlement-contract-LOCKED-2026-11-06).
+      // indexForSearch.ts reads from banned `hammerex_trade_off_listings`
+      // (fork hygiene flags legacy hammerex_* tables that don't exist
+      // in NEX Supabase) and `centroidOf`/`haversineKm` from the
+      // missing UK postcode dataset. Zero live-route imports of
+      // centre-publishing from src/app/**. The sibling imageMatcher.
+      // test.ts passes (14/14) so we exclude the single dead test
+      // file rather than the whole subtree.
+      "src/lib/nex/centre-publishing/indexForSearch.test.ts",
+      // 2026-11-21 · DEAD per Scope Reduction 2026-11-06. staircase
+      // is REMOVED. business-context/seed.ts imports from
+      // `@/lib/app-builder/examples/staircase-company-completed` which
+      // was never ported (src/lib/app-builder/ directory does not exist
+      // in this fork). Zero live-route imports of business-context
+      // from src/app/**.
+      "src/lib/nex/business-context/**",
     ],
   },
   resolve: {
