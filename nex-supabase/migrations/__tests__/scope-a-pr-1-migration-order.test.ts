@@ -42,9 +42,14 @@ describe("Scope-A PR-1 · migration file inventory", () => {
       );
       expect(collisions, `migration number ${n} collides: ${collisions.join(", ")}`).toEqual([]);
     }
-    // 266+ should not exist yet (otherwise ordering is contested).
-    const future = existing.filter((f) => /^(26[6-9]|27\d)_/.test(f));
-    expect(future, `unexpected migration numbers above 265: ${future.join(", ")}`).toEqual([]);
+    // 2026-11-21 · Removed stale historical gate "no migration numbers
+    // above 265 may exist" · that guard made sense while PR-1 was
+    // in-flight to catch competing allocations, but migrations 266+
+    // have since been authored by subsequent workstreams (Emergency
+    // Help, Support Tickets, Merchant Payments, Scope Reduction).
+    // The real invariant — PR-1 owns the 260-265 window and no
+    // non-PR-1 file collides with those slots — is still enforced
+    // by the collisions check above.
     // Sanity: at least 259 exists in the tree.
     expect(prefixes.has("259"), "expected baseline migration 259 to exist").toBe(true);
   });
