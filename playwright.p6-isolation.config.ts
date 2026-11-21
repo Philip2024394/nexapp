@@ -277,5 +277,23 @@ export default defineConfig({
       testMatch: /account-deletion-flow\.spec\.ts/,
       timeout: 180_000,
     },
+    {
+      // 2026-11-21 · Lane F · delivery-quote per-ring verification
+      // browser e2e. Seeds nex_business.location_lat/lng + a per-ring
+      // product with spec.__delivery.local.radii. Signs in CK5 buyer,
+      // patches the hidden cart_payload to inject delivery_quote +
+      // buyer lat/lng, asserts server acceptance / refusal paths.
+      // Hard-refuses prod ref; cleans up business coords + product on
+      // teardown.
+      name: "delivery-quote-flow-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /delivery-quote-flow\.spec\.ts/,
+      timeout: 240_000,
+    },
   ],
 });

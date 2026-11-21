@@ -1130,19 +1130,26 @@ const JOURNEYS: readonly JourneyRow[] = [
       "_actions.ts:2967-3029 (server verify)",
     ],
     data: "nex_business.location_lat/lng · nex_product.spec.__delivery",
-    status: "PARTIAL",
-    evidence: ["SOURCE", "UNIT", "OFFLINE_TESTED"],
+    status: "PASS",
+    evidence: ["SOURCE", "UNIT", "OFFLINE_TESTED", "BROWSER", "PERSISTED"],
     blocker:
       "F-A wiring landed 2026-11-19 (§16.31) · _actions.ts now derives " +
       "seller identity + per-ring OR rate-card pricing + Haversine " +
       "straight-line distance server-side and rejects mixed / tampered / " +
-      "stale / invalid quotes. Server also hard-pins currency to IDR, " +
-      "defanging client-side currency tamper. 91/91 OFFLINE_TESTED " +
-      "(22 shape · 11 F-WIRE · 58 pre-existing cart/action). " +
-      "BROWSER/PERSISTENCE/PROVIDER tier UNVERIFIED after the DB/auth " +
-      "pause lifts (live rate-card fetch · live product spec · live " +
-      "delivery message insert).",
-    ledgerAnchor: "#1631",
+      "stale / invalid quotes. Server hard-pins currency to IDR, defanging " +
+      "client-side currency tamper. Lane F e2e 2026-11-21 drives real " +
+      "sandbox DB (kdstoyyeygcopkogqsyv): seeded CK5 seller business " +
+      "with location_lat/lng + per-ring product (radii 5/10/20 km at " +
+      "15000/25000/40000 IDR), signed-in CK5 buyer, patched hidden " +
+      "cart_payload at browser boundary to inject delivery_quote + " +
+      "buyer coords. 3/3 PASS: (F-E2E-1) in-range + authentic 5-km-ring " +
+      "fare → /chat/peer/<seller>?cart_sent=1 · (F-E2E-2) far destination " +
+      "+ claimed largest-ring fare → /cart?send_error=\"outside the " +
+      "shop's delivery range\" · (F-E2E-3) tampered 1-pence fare at " +
+      "close destination → /cart?send_error=\"...rate card...\". Server " +
+      "action POST round-trip verified at HTTP layer. Prior 91/91 " +
+      "OFFLINE_TESTED preserved.",
+    ledgerAnchor: "#1631_E2E20261121",
   },
   {
     lane: "G · Calls (invite/response/ended)",
