@@ -78,8 +78,11 @@ const UUID_SHAPE =
 // Owner directive 2026-11-08 · emerald + gold palette · the local
 // page tokens. Sealed calls-chrome/* primitives keep their own
 // palette because they're reused by production peer-chat.
+// Owner directive 2026-11-21 (iter 10) · base page bg routed to
+// --nex-world-drawer-bg so this splash shares the Call Centre page
+// colour the owner just sealed. Previously --nex-world-background-base.
 const NEX = {
-  bg: "var(--nex-world-background-base, #040E09)",
+  bg: "var(--nex-world-drawer-bg, #0A1526)",
   emerald: "#16D66B",
   emeraldSoft: "rgba(22,214,107,0.12)",
   emeraldBorder: "rgba(22,214,107,0.28)",

@@ -66,11 +66,14 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
           width: "100%",
           height: "100dvh",
           overflow: "hidden",
-          // Owner directive 2026-11-21 (iter 2) · Call Centre is cream
-          // page + light-gray tile containers + orange call-button pods.
-          // Supersedes the earlier black-and-orange interpretation.
-          background: "#F5F1E8",
-          color: "#1A1A1A",
+          // Owner directive 2026-11-21 (iter 9) · the Call Centre page
+          // background matches the sealed ControlDrawer panel colour
+          // (--nex-world-drawer-bg) so the page and drawer read as one
+          // continuous surface when the drawer slides in. Supersedes
+          // the cream page from iter 2. Hero + footer ink flipped to
+          // light; tiles remain light-gray so they float as cards.
+          background: "var(--nex-world-drawer-bg, #0A1526)",
+          color: "#F2F5F8",
           padding:
             "calc(env(safe-area-inset-top,0) + 12px) 16px calc(env(safe-area-inset-bottom,0) + 12px)",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -142,7 +145,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
                 margin: "4px auto 0",
                 maxWidth: 380,
                 fontSize: 12,
-                color: "#4A4A4A",
+                color: "var(--nex-world-primary-ink, #AFC5B5)",
                 lineHeight: 1.35,
                 opacity: 0.92,
               }}
@@ -163,7 +166,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
             style={{
               marginTop: "auto",
               paddingTop: 8,
-              borderTop: "1px solid rgba(26, 26, 26, 0.08)",
+              borderTop: "1px solid rgba(242, 245, 248, 0.08)",
               textAlign: "center",
             }}
           >
@@ -172,7 +175,7 @@ export default async function CallCentrePage(): Promise<React.JSX.Element> {
                 margin: "0 auto",
                 maxWidth: 420,
                 fontSize: 10,
-                color: "rgba(26, 26, 26, 0.72)",
+                color: "rgba(242, 245, 248, 0.68)",
                 lineHeight: 1.4,
               }}
             >
