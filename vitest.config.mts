@@ -47,6 +47,19 @@ export default defineConfig({
       "**/*.test.mjs",
       "**/*.spec.mjs",
       "src/**/tests/**/*.mjs",
+      // 2026-11-21 · DEAD subtree per #61 reachability classification +
+      // owner path (a) directive. Neither tree is reachable from any
+      // nexapp shipped route (src/app/nex-native/**) or lib surface used
+      // by live code. Tests remain on disk for future revival; vitest
+      // just stops counting them as a failing engineering signal.
+      //
+      // Reversal: delete these two lines. No test file edited to earn
+      // the skip. This mirrors the 2026-11-19 D:/trades BANNED rule's
+      // spirit (keep separate product lineages honest) · nex-agent /
+      // nex-agent-runtime are historical NEX-Native runtime experiments
+      // that did not make the nexapp carve-out.
+      "src/lib/nex-agent-runtime/**",
+      "src/lib/nex-agent/**",
     ],
   },
   resolve: {
