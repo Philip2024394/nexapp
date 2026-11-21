@@ -9,6 +9,7 @@
 
 import type { EmailAdapter } from "./types";
 import { resendAdapter, isResendHealthy } from "./adapters/resend";
+import { brevoAdapter, isBrevoHealthy } from "./adapters/brevo";
 
 let cached: EmailAdapter | null = null;
 
@@ -23,9 +24,11 @@ function build(kind: string): EmailAdapter {
   switch (kind) {
     case "resend":
       return resendAdapter;
+    case "brevo":
+      return brevoAdapter;
     // Future: "ses" · "sendgrid" · "smtp" · "mailgun" · "postmark"
     default:
-      throw new Error(`[nex-email] unknown provider: ${kind} · set NEX_EMAIL_PROVIDER to one of: resend`);
+      throw new Error(`[nex-email] unknown provider: ${kind} · set NEX_EMAIL_PROVIDER to one of: resend, brevo`);
   }
 }
 
@@ -42,6 +45,7 @@ export function knownAdapters(): Array<{ id: string; label: string; status: "sup
   const activeId = (process.env.NEX_EMAIL_PROVIDER ?? "resend").toLowerCase();
   return [
     { id: "resend",   label: "Resend",                status: "supported", active: activeId === "resend" },
+    { id: "brevo",    label: "Brevo",                 status: "supported", active: activeId === "brevo" },
     { id: "smtp",     label: "SMTP (generic)",        status: "planned",   active: false },
     { id: "sendgrid", label: "SendGrid",              status: "planned",   active: false },
     { id: "ses",      label: "Amazon SES",            status: "planned",   active: false },
@@ -56,6 +60,10 @@ export async function isEmailHealthy(): Promise<{ healthy: boolean; detail?: str
   if (adapter.name === "resend") {
     const r = await isResendHealthy();
     return { ...r, provider: "resend" };
+  }
+  if (adapter.name === "brevo") {
+    const r = await isBrevoHealthy();
+    return { ...r, provider: "brevo" };
   }
   return { healthy: false, detail: `no health probe for provider: ${adapter.name}`, provider: adapter.name };
 }
