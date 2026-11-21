@@ -28,6 +28,13 @@ vi.mock("next/navigation", () => ({
     refresh: () => {},
     prefetch: () => {},
   }),
+  // 2026-11-21 · ControlDrawer (rendered inside the component under
+  // test) calls usePathname() to close the drawer on route change.
+  // Returning a stable string keeps the SSR render deterministic.
+  usePathname: () => "/nex-native/emergency-help",
+  // Component tree also touches useSearchParams during SSR · empty
+  // URLSearchParams is the honest "no params" value.
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 import { EmergencyConfirmationScreen } from "../EmergencyConfirmationScreen";
