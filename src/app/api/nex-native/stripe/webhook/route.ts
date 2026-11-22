@@ -37,7 +37,33 @@ import {
   NEX_STRIPE_SYSTEM_ACTOR_ID,
 } from "@/lib/nex-native/payments/stripe-webhook-service";
 import { markOrderPaid } from "@/lib/nex-native/commerce-service";
-import { recordOrderEvent } from "@/lib/nex-native/order-service";
+import { getOrderById, listOrderEvents, recordOrderEvent } from "@/lib/nex-native/order-service";
+import {
+  ensureDurablePaidOrderRow,
+  notifySellerPaidOrder,
+} from "@/lib/nex-native/manage-orders/order-notification-service";
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+
+/**
+ * Idempotency gate · match PayPal webhook route.
+ * Returns true if a prior `nex_order_event` row was already written for
+ * this `stripe_event_id`. On any error returns false (fail-safe
+ * re-dispatch · downstream `markOrderPaid` is state-machine idempotent).
+ * Owner directive 2026-11-23 · raise exactly-once-push guarantee at the
+ * webhook boundary rather than relying on the post-handler marker alone.
+ */
+async function alreadyProcessed(stripeEventId: string): Promise<boolean> {
+  try {
+    const { data } = await nexSupabaseAdmin
+      .from("nex_order_event")
+      .select("id")
+      .contains("metadata", { stripe_event_id: stripeEventId })
+      .limit(1);
+    return Array.isArray(data) && data.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,6 +112,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // 3a · Replay-with-recovery · owner directive 2026-11-23c.
+  // A prior `nex_order_event` carrying this `stripe_event_id` means we
+  // reached the record step on some earlier delivery. But a crash
+  // BETWEEN recordOrderEvent and the inbox/push steps would have left
+  // durable work undone. So on replay we do NOT silently return · we
+  // instead run the idempotent reconciliation path:
+  //   · ensureDurablePaidOrderRow (writer with preserve_read_state ·
+  //     exactly-once-created · no-op if row already exists)
+  //   · seller_notified_paid marker check · push fan-out if missing
+  // The order object is fetched via its id so we can call the helper.
+  // If any reconciliation fails we still 200 (we've been retried) and
+  // rely on the next retry to complete missing work.
+  let isReplay = false;
+  try {
+    isReplay = await alreadyProcessed(event.id);
+  } catch {
+    // never block handling on dedup-probe failure
+  }
+
   // 4 · Dispatch by event type.
   try {
     if (event.type === "checkout.session.completed") {
@@ -100,26 +145,278 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ ok: true, outcome: "no_order_ref" }, { status: 200 });
       }
 
-      // `markOrderPaid` is idempotent · duplicate deliveries do not
-      // double-post the ledger. We ALWAYS record the Stripe event id
-      // on `nex_order_event` so replays are visible in the audit trail.
-      const result = await markOrderPaid(orderId, NEX_STRIPE_SYSTEM_ACTOR_ID);
+      // Owner directive 2026-11-23 · do NOT treat
+      // `checkout.session.completed` as proof of settled payment on its
+      // own · Stripe fires this event for non-paid outcomes too (e.g.
+      // asynchronous bank-debit that completes later, or
+      // payment_status === 'unpaid' for Afterpay / BNPL variants).
+      // Only transition the order + fire the seller "paid order"
+      // notification when `payment_status === 'paid'`. Non-paid
+      // deliveries are audit-logged and 200'd so Stripe stops retrying;
+      // the matching `payment_intent.*` settled event (when it fires)
+      // will complete the transition.
+      const paymentStatus = event.data.object.payment_status ?? null;
+      if (paymentStatus !== "paid") {
+        // Non-paid outcomes do no durable inbox work; on replay just
+        // 200 without duplicating the audit row.
+        if (isReplay) {
+          return NextResponse.json(
+            { ok: true, outcome: "replay_ignored_not_paid" },
+            { status: 200 },
+          );
+        }
+        await recordOrderEvent({
+          order_id: orderId,
+          event: "stripe.checkout.session.completed.not_paid",
+          actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
+          metadata: {
+            stripe_event_id: event.id,
+            stripe_session_id: event.data.object.id,
+            stripe_payment_status: paymentStatus,
+            stripe_connected_account_id: event.connectedAccountId,
+          },
+        });
+        return NextResponse.json(
+          { ok: true, outcome: "awaiting_settlement" },
+          { status: 200 },
+        );
+      }
 
-      await recordOrderEvent({
-        order_id: orderId,
-        event: "stripe.checkout.session.completed",
-        actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
-        metadata: {
-          stripe_event_id: event.id,
-          stripe_session_id: event.data.object.id,
-          stripe_payment_status: event.data.object.payment_status ?? null,
-          stripe_connected_account_id: event.connectedAccountId,
-          ledger_entry_id: result.ledgerEntryId,
-          order_state_after: result.order.state,
-        },
-      });
+      // First-delivery · take the full flow. Replay · skip ledger state
+      // transition + the per-event audit row (both already done on the
+      // earlier delivery) and go STRAIGHT to the idempotent recovery
+      // steps · ensure durable inbox row + seller_notified_paid marker.
+      let orderForDispatch: Awaited<ReturnType<typeof getOrderById>> | null;
+      if (!isReplay) {
+        // `markOrderPaid` is idempotent · duplicate deliveries do not
+        // double-post the ledger. We ALWAYS record the Stripe event id
+        // on `nex_order_event` so replays are visible in the audit trail.
+        const result = await markOrderPaid(orderId, NEX_STRIPE_SYSTEM_ACTOR_ID);
 
-      return NextResponse.json({ ok: true, outcome: "order_paid" }, { status: 200 });
+        await recordOrderEvent({
+          order_id: orderId,
+          event: "stripe.checkout.session.completed",
+          actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
+          metadata: {
+            stripe_event_id: event.id,
+            stripe_session_id: event.data.object.id,
+            stripe_payment_status: paymentStatus,
+            stripe_connected_account_id: event.connectedAccountId,
+            ledger_entry_id: result.ledgerEntryId,
+            order_state_after: result.order.state,
+          },
+        });
+        orderForDispatch = result.order;
+      } else {
+        // Replay recovery · re-fetch the order so downstream ensure/push
+        // helpers have the row to operate on. `markOrderPaid` already
+        // ran successfully on the earlier delivery so the order is paid.
+        orderForDispatch = await getOrderById(orderId);
+        if (!orderForDispatch) {
+          // Order vanished between deliveries · nothing to reconcile.
+          return NextResponse.json(
+            { ok: true, outcome: "replay_order_missing" },
+            { status: 200 },
+          );
+        }
+      }
+
+      // Durable inbox row · exactly-once-created via
+      // preserve_read_state ON CONFLICT DO NOTHING. First-delivery
+      // inserts. Replay no-ops safely (does NOT revive a read alert).
+      // Runs regardless of push outcome and regardless of whether this
+      // is first-delivery or replay recovery.
+      try {
+        await ensureDurablePaidOrderRow(orderForDispatch);
+      } catch (ensureErr) {
+        console.error(
+          "[nex-stripe/webhook] ensureDurablePaidOrderRow failed:",
+          ensureErr instanceof Error ? ensureErr.message : String(ensureErr),
+        );
+      }
+
+      // Owner directive 2026-11-23 · seller receives the "paid order"
+      // push ONLY after verified settlement. Dedup via a
+      // `seller_notified_paid` marker in nex_order_event · marker is
+      // only written AFTER a dispatch that actually attempted
+      // (attempted > 0) · a zero-attempt skip leaves the marker absent
+      // so the next retry can try again. HONEST: push is at-least-once.
+      try {
+        const priorEvents = await listOrderEvents(orderId);
+        const alreadyNotifiedPaid = priorEvents.some(
+          (e) => e.event === "seller_notified_paid",
+        );
+        if (!alreadyNotifiedPaid) {
+          const dispatch = await notifySellerPaidOrder(orderForDispatch);
+          if (dispatch.attempted > 0) {
+            await recordOrderEvent({
+              order_id: orderId,
+              event: "seller_notified_paid",
+              actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
+              metadata: {
+                source: isReplay
+                  ? "stripe.checkout.session.completed.replay_recovery"
+                  : "stripe.checkout.session.completed",
+                stripe_event_id: event.id,
+                attempted: dispatch.attempted,
+                delivered: dispatch.delivered,
+                failed: dispatch.failed,
+                ...(dispatch.skipped_reason
+                  ? { skipped_reason: dispatch.skipped_reason }
+                  : {}),
+              },
+            });
+          }
+        }
+      } catch (notifyErr) {
+        // Never fail the webhook because a push dispatch failed · the
+        // order is already paid, the ledger is posted, and a future
+        // retry (or a dispatch-recovery sweep) can still deliver.
+        console.error(
+          "[nex-stripe/webhook] seller paid-order notify failed:",
+          notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+        );
+      }
+
+      return NextResponse.json(
+        { ok: true, outcome: isReplay ? "order_paid_replay_recovered" : "order_paid" },
+        { status: 200 },
+      );
+    }
+
+    if (event.type === "checkout.session.async_payment_succeeded") {
+      // Owner directive 2026-11-23 · Stripe fires this event when a
+      // delayed-settlement method (bank-debit · BNPL · certain redirect
+      // flows) FINALLY settles after the initial `completed` event
+      // reported `payment_status !== 'paid'`. This is the authoritative
+      // moment to flip the order to paid + fire the seller push.
+      // Flow mirrors the `completed → paid` branch exactly.
+      const orderId = extractNexOrderId(event);
+      if (!orderId) {
+        console.warn(
+          "[nex-stripe/webhook] async_payment_succeeded with no nex_order_id",
+          { stripe_event_id: event.id, session_id: event.data.object.id },
+        );
+        return NextResponse.json(
+          { ok: true, outcome: "no_order_ref" },
+          { status: 200 },
+        );
+      }
+
+      let orderForDispatch: Awaited<ReturnType<typeof getOrderById>> | null;
+      if (!isReplay) {
+        const result = await markOrderPaid(orderId, NEX_STRIPE_SYSTEM_ACTOR_ID);
+
+        await recordOrderEvent({
+          order_id: orderId,
+          event: "stripe.checkout.session.async_payment_succeeded",
+          actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
+          metadata: {
+            stripe_event_id: event.id,
+            stripe_session_id: event.data.object.id,
+            stripe_payment_status: event.data.object.payment_status ?? null,
+            stripe_connected_account_id: event.connectedAccountId,
+            ledger_entry_id: result.ledgerEntryId,
+            order_state_after: result.order.state,
+          },
+        });
+        orderForDispatch = result.order;
+      } else {
+        orderForDispatch = await getOrderById(orderId);
+        if (!orderForDispatch) {
+          return NextResponse.json(
+            { ok: true, outcome: "replay_order_missing" },
+            { status: 200 },
+          );
+        }
+      }
+
+      // Durable inbox row · idempotent, no-op on replay, never revives
+      // a read alert (preserve_read_state).
+      try {
+        await ensureDurablePaidOrderRow(orderForDispatch);
+      } catch (ensureErr) {
+        console.error(
+          "[nex-stripe/webhook] ensureDurablePaidOrderRow failed (async):",
+          ensureErr instanceof Error ? ensureErr.message : String(ensureErr),
+        );
+      }
+
+      try {
+        const priorEvents = await listOrderEvents(orderId);
+        const alreadyNotifiedPaid = priorEvents.some(
+          (e) => e.event === "seller_notified_paid",
+        );
+        if (!alreadyNotifiedPaid) {
+          const dispatch = await notifySellerPaidOrder(orderForDispatch);
+          if (dispatch.attempted > 0) {
+            await recordOrderEvent({
+              order_id: orderId,
+              event: "seller_notified_paid",
+              actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
+              metadata: {
+                source: isReplay
+                  ? "stripe.checkout.session.async_payment_succeeded.replay_recovery"
+                  : "stripe.checkout.session.async_payment_succeeded",
+                stripe_event_id: event.id,
+                attempted: dispatch.attempted,
+                delivered: dispatch.delivered,
+                failed: dispatch.failed,
+                ...(dispatch.skipped_reason
+                  ? { skipped_reason: dispatch.skipped_reason }
+                  : {}),
+              },
+            });
+          }
+        }
+      } catch (notifyErr) {
+        console.error(
+          "[nex-stripe/webhook] seller paid-order notify failed (async):",
+          notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+        );
+      }
+
+      return NextResponse.json(
+        { ok: true, outcome: isReplay ? "order_paid_async_replay_recovered" : "order_paid_async" },
+        { status: 200 },
+      );
+    }
+
+    if (event.type === "checkout.session.async_payment_failed") {
+      // Owner directive 2026-11-23 · audit-only. A delayed-settlement
+      // attempt failed · the order remains in its pre-paid state (the
+      // original `completed` branch already took the `awaiting_settlement`
+      // path). We log so operators can see the failure trail; we do NOT
+      // transition state and we do NOT dispatch a seller push.
+      if (isReplay) {
+        return NextResponse.json(
+          { ok: true, outcome: "replay_ignored_async_failed" },
+          { status: 200 },
+        );
+      }
+      const orderId = extractNexOrderId(event);
+      if (orderId) {
+        await recordOrderEvent({
+          order_id: orderId,
+          event: "stripe.checkout.session.async_payment_failed",
+          actor_account_id: NEX_STRIPE_SYSTEM_ACTOR_ID,
+          metadata: {
+            stripe_event_id: event.id,
+            stripe_session_id: event.data.object.id,
+            stripe_payment_status: event.data.object.payment_status ?? null,
+            stripe_connected_account_id: event.connectedAccountId,
+          },
+        });
+      } else {
+        console.info(
+          "[nex-stripe/webhook] async_payment_failed without nex_order_id · logged only",
+          { stripe_event_id: event.id, session_id: event.data.object.id },
+        );
+      }
+      return NextResponse.json(
+        { ok: true, outcome: "async_payment_failed_logged" },
+        { status: 200 },
+      );
     }
 
     if (event.type === "charge.refunded") {
@@ -127,6 +424,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // on the PaymentIntent) is populated by the merchant-direct checkout
       // session build-out. For now we log + record a free-standing event row
       // when we can identify an order, otherwise we log and 200.
+      if (isReplay) {
+        return NextResponse.json(
+          { ok: true, outcome: "replay_ignored_refund" },
+          { status: 200 },
+        );
+      }
       const meta = event.data.object.metadata ?? null;
       const orderId = meta && typeof meta.nex_order_id === "string" ? meta.nex_order_id : null;
       if (orderId) {

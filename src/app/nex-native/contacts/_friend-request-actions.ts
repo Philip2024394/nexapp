@@ -23,6 +23,10 @@ import {
   UnknownHandleError,
   type FriendRequestCategory,
 } from "@/lib/nex-native/friend-request-service";
+import {
+  writeContactRequestNotification,
+  writeContactAcceptedNotification,
+} from "@/lib/nex-native/notifications/nex-notification-writer";
 
 // ─── Shared result shape ────────────────────────────────────────
 
@@ -49,6 +53,27 @@ export async function createFriendRequestAction(
       rawHandle,
       rawIntroNote ?? null,
     );
+    // Durable in-app row · owner directive 2026-11-23b. The actionable
+    // surface remains /nex-native/contacts (where the recipient can
+    // accept/reject); this row is a pointer in the drawer so a
+    // push-disabled recipient still sees the request arrive. Only
+    // written when the recipient account exists (handle-known path);
+    // handle-unknown invites have no account to notify.
+    if (row.recipient_account_id) {
+      void writeContactRequestNotification({
+        recipient_account_id: row.recipient_account_id,
+        request_id: row.id,
+        sender_account_id: session.account.id,
+        sender_handle_or_name:
+          session.account.chosen_handle ||
+          session.account.nex_handle ||
+          session.account.display_name ||
+          "Someone",
+        intro_note_or_blank: (rawIntroNote ?? "").trim(),
+      }).catch(() => {
+        /* non-fatal · writer already logs */
+      });
+    }
     revalidatePath("/nex-native/contacts");
     return { kind: "ok", requestId: row.id };
   } catch (err) {
@@ -77,6 +102,24 @@ export async function acceptFriendRequestAction(
 
   try {
     const row = await acceptInvite(requestId, session.account.id, category);
+    // Durable in-app row for the ORIGINAL SENDER · owner directive
+    // 2026-11-23b. Lets the sender see "they accepted" in the drawer
+    // even when push is disabled.
+    if (row.sender_account_id) {
+      void writeContactAcceptedNotification({
+        recipient_account_id: row.sender_account_id,
+        request_id: row.id,
+        accepter_account_id: session.account.id,
+        accepter_handle_or_name:
+          session.account.chosen_handle ||
+          session.account.nex_handle ||
+          session.account.display_name ||
+          "Someone",
+        category,
+      }).catch(() => {
+        /* non-fatal · writer already logs */
+      });
+    }
     revalidatePath("/nex-native/contacts");
     return { kind: "ok", requestId: row.id };
   } catch (err) {

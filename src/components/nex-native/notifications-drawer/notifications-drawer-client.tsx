@@ -31,6 +31,13 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BankSetupPanel,
+  BankConfirmPanel,
+  QrConfirmPanel,
+  type DrawerPanelMode,
+} from "./notifications-drawer-panels";
 import {
   MOCK_NOTIFICATIONS,
   NOTIFICATION_SECTIONS,
@@ -38,6 +45,52 @@ import {
   type NotificationItem,
   type NotificationSectionKey,
 } from "@/lib/nex-native/notifications/mock-notifications-data";
+
+// Durable-inbox wiring · owner directive 2026-11-23b.
+// Shape mirrors `NexNotificationRow` on the server side. We duplicate
+// the type (rather than import) because this is a "use client" file and
+// the server reader imports "server-only".
+type ServerNotificationRow = {
+  readonly id: string;
+  readonly recipient_account_id: string;
+  readonly source: string;
+  readonly source_ref: string | null;
+  readonly category:
+    | "chats"
+    | "shop"
+    | "orders"
+    | "follows"
+    | "system";
+  readonly title: string;
+  readonly subtitle: string;
+  readonly href: string;
+  readonly thumbnail_url: string | null;
+  readonly sender_account_id: string | null;
+  readonly profile_href: string | null;
+  readonly sender_has_shop: boolean;
+  readonly created_at: string;
+  readonly read_at: string | null;
+};
+
+/** Map a durable-inbox row to the drawer's `NotificationItem` contract.
+ *  Rows whose server category is `system` have no active drawer section
+ *  yet · skipped until the sections UI gains a system pill. */
+function convertServerRow(row: ServerNotificationRow): NotificationItem | null {
+  if (row.category === "system") return null;
+  return {
+    id: row.id,
+    section: row.category,
+    title: row.title,
+    subtitle: row.subtitle,
+    href: row.href,
+    createdAt: row.created_at,
+    unread: row.read_at === null,
+    thumbnailUrl: row.thumbnail_url ?? null,
+    senderAccountId: row.sender_account_id ?? null,
+    profileHref: row.profile_href ?? null,
+    senderHasShop: Boolean(row.sender_has_shop),
+  };
+}
 // Owner-authorised 2026-11-16 · MOCK-ONLY review-demo checkpoint.
 // The order-placed rows are rendered as a self-contained section at
 // the top of the drawer and ONLY when the explicit demo flag is on
@@ -111,7 +164,67 @@ export function NotificationsDrawer({
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
 
-  const items = initialNotifications ?? MOCK_NOTIFICATIONS;
+  // Owner directive 2026-11-23c · in-drawer panel mode. The quick
+  // actions switch this from "list" to a setup / confirmation panel;
+  // when the drawer closes we always return to the list.
+  const [panelMode, setPanelMode] = React.useState<DrawerPanelMode>("list");
+
+  // Durable-inbox state · owner directive 2026-11-23b.
+  // `durableItems` holds rows fetched from
+  // /api/nex-native/notifications/list on each open (and re-fetched
+  // while open at a modest interval). Merged with the initial/mock
+  // array below so sections, filter pills, and the unread count stay
+  // on their existing contract.
+  const [durableItems, setDurableItems] = React.useState<
+    ReadonlyArray<NotificationItem>
+  >([]);
+
+  const loadDurable = React.useCallback(async (): Promise<void> => {
+    if (isGuest) return;
+    try {
+      const res = await fetch("/api/nex-native/notifications/list", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!res.ok) return; // keep last known state on 503
+      const body = (await res.json()) as {
+        rows?: ReadonlyArray<ServerNotificationRow>;
+      };
+      if (!body || !Array.isArray(body.rows)) return;
+      const mapped: NotificationItem[] = [];
+      for (const r of body.rows) {
+        const item = convertServerRow(r);
+        if (item) mapped.push(item);
+      }
+      setDurableItems(mapped);
+    } catch {
+      // network error · keep last known state
+    }
+  }, [isGuest]);
+
+  // Merge sources · durable rows win when an id appears in both
+  // (durable is the authoritative recipient-scoped store; the mock
+  // array is empty in production and only exists as a prototype hook).
+  const baseItems = initialNotifications ?? MOCK_NOTIFICATIONS;
+  const items = React.useMemo<ReadonlyArray<NotificationItem>>(() => {
+    if (durableItems.length === 0) return baseItems;
+    const seen = new Set<string>();
+    const out: NotificationItem[] = [];
+    for (const row of durableItems) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
+    for (const row of baseItems) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
+    // Keep newest-first across the merged list for stable section order.
+    out.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+    return out;
+  }, [durableItems, baseItems]);
 
   // Derived state · effective-unread respects both the item's own
   // `unread` flag and the session-local `readIds` set (tapped rows mark
@@ -145,6 +258,9 @@ export function NotificationsDrawer({
     // Unmount after animation so focus returns cleanly.
     setTimeout(() => {
       setRendered(false);
+      // Always return to the list view next open · a stale confirm
+      // or setup panel across opens would be surprising.
+      setPanelMode("list");
       triggerRef.current?.focus();
     }, 280);
   }, []);
@@ -163,6 +279,44 @@ export function NotificationsDrawer({
   React.useEffect(() => {
     if (visible) closeRef.current?.focus();
   }, [visible]);
+
+  // Owner directive 2026-11-23c · detect the active peer chat at the
+  // drawer level so the quick actions AND the confirmation panels agree
+  // on who the recipient is. If the owner opens the drawer on top of
+  // a peer chat, this will be the peer's account id; otherwise null.
+  const pathname = usePathname() ?? "";
+  const activePeerId = React.useMemo(() => {
+    const m = pathname.match(/^\/nex-native\/chat\/peer\/([^/?#]+)/);
+    return m ? m[1] : null;
+  }, [pathname]);
+
+  // Invalidate any open confirmation panel if the active peer changes
+  // while it's open · the preview was for the previous peer. Setup is
+  // peer-independent so it stays.
+  const activePeerAtPanelOpen = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (panelMode === "bank-confirm" || panelMode === "qr-confirm") {
+      if (
+        activePeerAtPanelOpen.current !== null &&
+        activePeerAtPanelOpen.current !== activePeerId
+      ) {
+        setPanelMode("list");
+        activePeerAtPanelOpen.current = null;
+      }
+    } else {
+      activePeerAtPanelOpen.current = null;
+    }
+  }, [activePeerId, panelMode]);
+
+  const requestPanel = React.useCallback(
+    (mode: DrawerPanelMode) => {
+      if (mode === "bank-confirm" || mode === "qr-confirm") {
+        activePeerAtPanelOpen.current = activePeerId;
+      }
+      setPanelMode(mode);
+    },
+    [activePeerId],
+  );
 
   // 2026-11-17 · Listen for a window-level CustomEvent so external
   // surfaces (e.g. the Settings "Notifications" row) can open the
@@ -195,17 +349,56 @@ export function NotificationsDrawer({
     return groups;
   }, [filteredItems]);
 
-  const markAllAsRead = React.useCallback(() => {
-    setReadIds(new Set(items.map((n) => n.id)));
-  }, [items]);
+  // Load durable rows when drawer opens + light polling while open
+  // (10s · same ballpark as the chat unread-badge cadence). Doesn't
+  // poll while closed to avoid background fetches on every page.
+  React.useEffect(() => {
+    if (!open) return;
+    void loadDurable();
+    const iv = setInterval(() => {
+      void loadDurable();
+    }, 10_000);
+    return () => clearInterval(iv);
+  }, [open, loadDurable]);
 
-  const onRowTap = React.useCallback((id: string) => {
-    setReadIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
+  const markAllAsRead = React.useCallback(() => {
+    // Optimistic · update local state first for instant feedback
+    setReadIds(new Set(items.map((n) => n.id)));
+    // Durable · scope to current durable id set (never marks another
+    // account's rows read · the endpoint enforces recipient scope too).
+    if (isGuest) return;
+    const durableIds = durableItems.map((n) => n.id);
+    void fetch("/api/nex-native/notifications/mark-read", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(durableIds.length > 0 ? { ids: durableIds } : { all: true }),
+    })
+      .then(() => loadDurable())
+      .catch(() => {});
+  }, [items, durableItems, isGuest, loadDurable]);
+
+  const onRowTap = React.useCallback(
+    (id: string) => {
+      setReadIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      if (isGuest) return;
+      // Only POST when the id is a durable row · guards against
+      // trying to mark prototype/mock ids on the server.
+      const isDurable = durableItems.some((n) => n.id === id);
+      if (!isDurable) return;
+      void fetch("/api/nex-native/notifications/mark-read", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: [id] }),
+      }).catch(() => {});
+    },
+    [isGuest, durableItems],
+  );
 
   const overlay = (
     <>
@@ -435,6 +628,72 @@ export function NotificationsDrawer({
           </div>
         ) : (
           <>
+        {/* Owner directive 2026-11-23 · two drawer-top actions:
+            (1) QR · signed-in user's shareable PROFILE/shop QR at the
+                sealed /nex-native/manage/share surface (owner-sealed
+                2026-11-13). Explicitly labelled "Profile QR" when sent
+                into chat · NEVER as a payment QR. No new QR source.
+            (2) Bank details · the account's own
+                `nex_business.payment_instructions` (mig 018). Empty
+                state routes the user to /nex-native/settings/payments.
+            Context behaviour (new 2026-11-23b):
+              · When the drawer is opened WHILE a peer chat route is
+                active (/nex-native/chat/peer/[accountId]), each button
+                SENDS a share card directly into that chat with one tap.
+              · Otherwise each button NAVIGATES to its standalone
+                surface (unchanged) · acts as the setup/edit path.
+            Send paths call server actions that enforce session,
+            authorise the recipient via the sealed privacy gate, and
+            NEVER mark an order paid (sharing is a chat primitive). */}
+        <QuickShareActions
+          onCloseDrawer={closeDrawer}
+          isGuest={isGuest}
+          activePeerId={activePeerId}
+          onEnterPanel={requestPanel}
+        />
+
+        {/* Owner directive 2026-11-23c · when a quick action has
+            switched the drawer into a setup/confirm mode, the panel
+            REPLACES the filter + list. Closing the drawer always
+            returns to the list. */}
+        {panelMode === "bank-setup" ? (
+          <BankSetupPanel
+            onCancel={() => setPanelMode("list")}
+            onSaved={() => {
+              // Stay in the setup panel on save success · the panel's
+              // own success message confirms the write. The owner can
+              // then tap Back (or re-tap Bank in the list) to proceed
+              // to the confirmation flow when they next want to share.
+            }}
+          />
+        ) : panelMode === "bank-confirm" ? (
+          <BankConfirmPanel
+            peerId={activePeerId}
+            onCancel={() => setPanelMode("list")}
+            onSent={() => {
+              // Return to list + close drawer after a brief delay so
+              // the "Sent" message renders at least one frame.
+              window.setTimeout(() => {
+                setPanelMode("list");
+                closeDrawer();
+              }, 400);
+            }}
+            onOpenSetup={() => setPanelMode("bank-setup")}
+          />
+        ) : panelMode === "qr-confirm" ? (
+          <QrConfirmPanel
+            peerId={activePeerId}
+            onCancel={() => setPanelMode("list")}
+            onSent={() => {
+              window.setTimeout(() => {
+                setPanelMode("list");
+                closeDrawer();
+              }, 400);
+            }}
+          />
+        ) : (
+          <>
+
         {/* Filter dropdown · owner-authorised 2026-11-10 · replaces the
             horizontal chip row with a single native select for a cleaner
             drawer header and native-picker UX on mobile. */}
@@ -628,6 +887,8 @@ export function NotificationsDrawer({
         </footer>
           </>
         )}
+          </>
+        )}
       </aside>
     </>
   );
@@ -717,6 +978,179 @@ export function NotificationsDrawer({
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────
+
+/**
+ * Owner directive 2026-11-23 · context-aware QR + Bank-details share
+ * controls. Keeps BOTH buttons (owner constraint). When the current
+ * route is a peer-chat page, tapping a button SENDS the corresponding
+ * share card into that chat via a server action. Otherwise tapping
+ * navigates to the standalone surface (setup / edit path).
+ */
+function QuickShareActions({
+  onCloseDrawer,
+  isGuest,
+  activePeerId,
+  onEnterPanel,
+}: {
+  readonly onCloseDrawer: () => void;
+  readonly isGuest: boolean;
+  readonly activePeerId: string | null;
+  readonly onEnterPanel: (mode: DrawerPanelMode) => void;
+}): React.JSX.Element {
+  // Owner directive 2026-11-23c:
+  //   · BOTH buttons always visible (section 1).
+  //   · Guest click → route to sign-in · never to owner fields or
+  //     invented notifications (section 1).
+  //   · Bank click when no chat is active → in-drawer SETUP panel
+  //     (section 2) · never navigation to /settings/payments.
+  //   · Bank click when chat is active → CONFIRMATION panel with the
+  //     real recipient + preview + Yes/No (section 3). The panel
+  //     itself calls previewBankShareAction and only on Yes does it
+  //     call the send action. If details aren't configured the
+  //     confirmation panel offers an in-drawer "Set up bank details"
+  //     entry · still never a navigation to Settings.
+  //   · QR click when chat is active → confirmation panel similarly.
+  //     QR click when no chat is active → in-drawer notice ·
+  //     navigating to the standalone share surface is still a valid
+  //     fallback (the surface itself is a setup/edit path) but the
+  //     recipient CHOOSER remaining work is tracked honestly.
+  const inActiveChat = !isGuest && typeof activePeerId === "string";
+
+  const baseButtonStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: "10px 12px",
+    borderRadius: 10,
+    background: "transparent",
+    border: `1px solid ${PANEL_BORDER}`,
+    color: TEXT,
+    fontSize: 13,
+    fontWeight: 600,
+    textDecoration: "none",
+    cursor: "pointer",
+  };
+
+  const onTapQr = React.useCallback(() => {
+    if (isGuest) {
+      // Section 1 · guests get sign-in, not owner fields.
+      if (typeof window !== "undefined") {
+        window.location.href = "/nex-native/sign-in";
+      }
+      return;
+    }
+    if (inActiveChat) {
+      onEnterPanel("qr-confirm");
+      return;
+    }
+    // No active chat · recipient chooser is remaining work · for now
+    // route to the sealed share surface which lets the owner discover
+    // their QR + copy / share by other means.
+    onCloseDrawer();
+    if (typeof window !== "undefined") {
+      window.location.href = "/nex-native/manage/share";
+    }
+  }, [isGuest, inActiveChat, onEnterPanel, onCloseDrawer]);
+
+  const onTapBank = React.useCallback(() => {
+    if (isGuest) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/nex-native/sign-in";
+      }
+      return;
+    }
+    if (inActiveChat) {
+      onEnterPanel("bank-confirm");
+      return;
+    }
+    // Section 2 · no active chat · open in-drawer SETUP (not Settings).
+    onEnterPanel("bank-setup");
+  }, [isGuest, inActiveChat, onEnterPanel]);
+
+  return (
+    <div
+      role="group"
+      aria-label="Quick actions"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 8,
+        padding: "10px 14px 2px 14px",
+      }}
+    >
+      <button
+        type="button"
+        onClick={onTapQr}
+        data-nex-notifications-quick-action={inActiveChat ? "qr-send" : "qr"}
+        style={baseButtonStyle}
+        aria-label={
+          inActiveChat
+            ? "Share Profile QR into this chat"
+            : "Open Profile QR"
+        }
+      >
+        <QrIcon />
+        <span>{inActiveChat ? "Send Profile QR" : "QR"}</span>
+      </button>
+      <button
+        type="button"
+        onClick={onTapBank}
+        data-nex-notifications-quick-action={
+          inActiveChat ? "bank-send" : "bank-details"
+        }
+        style={baseButtonStyle}
+        aria-label={
+          inActiveChat ? "Share bank details into this chat" : "Bank details"
+        }
+      >
+        <BankIcon />
+        <span>{inActiveChat ? "Send bank details" : "Bank details"}</span>
+      </button>
+    </div>
+  );
+}
+
+function QrIcon(): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+    </svg>
+  );
+}
+
+function BankIcon(): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 10l9-6 9 6" />
+      <path d="M5 10v9M19 10v9M9 10v9M15 10v9" />
+      <path d="M3 21h18" />
+    </svg>
+  );
+}
 
 // Owner-authorised 2026-11-16 · MOCK-ONLY review-demo section. Only
 // rendered when the explicit demo flag is on. Filter honoured · the
