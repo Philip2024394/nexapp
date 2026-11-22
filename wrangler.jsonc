@@ -1,13 +1,23 @@
 {
-  // Cloudflare Workers config for nexapp · generated from OpenNext template
-  // Reference: node_modules/@opennextjs/cloudflare/templates/wrangler.jsonc
+  // Cloudflare Workers config for nexapp · OpenNext adapter target
+  // -------------------------------------------------------------------
   //
-  // STATUS: DRAFT 2026-11-22 — local build-proof only.
-  // This file is NOT deployed. Deploy requires separate owner approval
-  // per CLAUDE.md §4 and §5.
+  // Top-level config = production Worker (name: nexapp).
+  // env.preview = sandbox preview Worker (name: nexapp-preview).
   //
-  // The $schema path resolves from this file's location (repo root)
-  // down into node_modules/wrangler/config-schema.json.
+  // Minimal bindings for first deploy:
+  //   · ASSETS (Workers static-asset binding, free, required)
+  //   · nodejs_compat + global_fetch_strictly_public (free flags)
+  //
+  // Deferred bindings — add only when a surface proves it needs them:
+  //   · r2_buckets (NEXT_INC_CACHE_R2_BUCKET) · needs R2 enabled on
+  //     account; dummyCache is adequate for first deploy
+  //   · services (WORKER_SELF_REFERENCE) · chicken-and-egg on first
+  //     deploy; add only once self-fetch is actually required
+  //   · images (Workers Images) · paid feature
+  //
+  // Deploys are gated by CLAUDE.md §4/§5 and the Cloudflare deploy
+  // workflow is manual-only (workflow_dispatch).
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
   "name": "nexapp",
@@ -20,19 +30,28 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "nexapp"
+  "vars": {
+    "NEXT_PUBLIC_APP_ENV": "production",
+    "NEXT_PUBLIC_SITE_URL": "https://nexcorner.com",
+    "NEX_SITE_URL": "https://nexcorner.com"
+  },
+  "env": {
+    "preview": {
+      "name": "nexapp-preview",
+      "compatibility_date": "2026-11-21",
+      "compatibility_flags": [
+        "nodejs_compat",
+        "global_fetch_strictly_public"
+      ],
+      "assets": {
+        "directory": ".open-next/assets",
+        "binding": "ASSETS"
+      },
+      "vars": {
+        "NEXT_PUBLIC_APP_ENV": "preview",
+        "NEXT_PUBLIC_SITE_URL": "",
+        "NEX_SITE_URL": ""
+      }
     }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "nexapp-opennext-cache"
-    }
-  ],
-  "images": {
-    "binding": "IMAGES"
   }
 }
