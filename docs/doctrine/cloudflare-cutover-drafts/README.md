@@ -26,8 +26,12 @@ Gate status after 2026-11-22 update:
    from their logged-in Cloudflare dashboard. The previously supplied
    `cfat_...` string is a Zero Trust credential, not an API token, and
    has been verified dead against `api.cloudflare.com/user/tokens/verify`.
-2. **Pages vs Workers** · **SEALED → Pages** · see `02-SEALED-DECISIONS.md`
-   Gate 2. `@cloudflare/next-on-pages` adapter, Node 20, `nodejs_compat`.
+2. **Pages vs Workers** · **SEALED → Workers via `@opennextjs/cloudflare`**
+   · see `02-SEALED-DECISIONS.md` Gate 2 REVISED 2026-11-22. Reason:
+   `@cloudflare/next-on-pages@latest` peer-requires Next ≤15.5.2 and
+   nexapp runs Next 16.3.8. `@opennextjs/cloudflare@1.20.11` peerDep
+   accepts the installed Next version as-is. Pinned adapter version;
+   later adapter upgrades gated on a Next patch bump.
 3. **Node-native dep disposition** · **SEALED per-dep** · see
    `02-SEALED-DECISIONS.md` Gate 3. `pg` KEEP · `nodemailer` route
    through existing Brevo adapter · `ffprobe-static`+`fluent-ffmpeg`
@@ -35,12 +39,12 @@ Gate status after 2026-11-22 update:
    lazy-imported WASM) · `@imgly/background-removal`+`onnxruntime-web`
    uninstall at Stage 1 cleanup (zero live imports).
 
-## Chosen architecture · SEALED 2026-11-22
+## Chosen architecture · SEALED 2026-11-22 (revised)
 
 | Piece | Choice | Why |
 |---|---|---|
-| App hosting | **Cloudflare Pages** via `@cloudflare/next-on-pages` | Pages has longer CPU limits + larger bundle allowance than Workers; closer to the Next.js 16 feature set the app already uses. |
-| Cron jobs | **Separate Cloudflare Worker** with 3 Cron Triggers, each doing `fetch(PAGES_ORIGIN + cronHandlerPath, { headers: { Authorization } })` | Keeps the 3 existing HTTP cron handlers in `src/app/api/nex-native/.../cron/*/route.ts` unchanged. The Worker is a thin dispatcher. |
+| App hosting | **Cloudflare Workers** via `@opennextjs/cloudflare@1.20.11` + Workers Assets | OpenNext's Cloudflare adapter is the actively-maintained path per Cloudflare's own docs. `@cloudflare/next-on-pages` peer-requires Next ≤15.5.2; nexapp is on Next 16.3.8. Workers Assets covers static delivery; `nodejs_compat` + `global_fetch_strictly_public` flags cover `pg`, `Buffer`, `stream`. |
+| Cron jobs | **Separate Cloudflare Worker** with 3 Cron Triggers, each doing `fetch(WORKER_ORIGIN + cronHandlerPath, { headers: { Authorization } })` | Keeps the 3 existing HTTP cron handlers in `src/app/api/nex-native/.../cron/*/route.ts` unchanged. The cron Worker is a thin dispatcher. |
 | DNS | Cloudflare (already proxying `nexcorner.com`) | Zone already added by owner. |
 | Email | Brevo HTTPS API | Replaces `nodemailer` SMTP (Workers-incompatible). Separate workstream — not in this folder. |
 | Analytics | Cloudflare Web Analytics | Replaces `@vercel/analytics` + `@vercel/speed-insights` (both at 0 imports today — safe to drop at cleanup). |

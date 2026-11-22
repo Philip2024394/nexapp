@@ -416,3 +416,11 @@ public/dev/live-videos/
 scripts/gate-a-connected-matrix/*.OUTPUT
 scripts/gate-a-connected-matrix/*.OUTPUT.*
 !scripts/gate-a-connected-matrix/*.PLACEHOLDER
+
+# 2026-11-22 · Cloudflare Workers / OpenNext adapter build output.
+# `.open-next/` is the bundled Worker + assets produced by
+# `opennextjs-cloudflare build`. `.wrangler/` is wrangler's local state
+# (compat cache, dev sessions). Both are regenerable from source and
+# must never land in git.
+.open-next/
+.wrangler/

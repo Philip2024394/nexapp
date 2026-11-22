@@ -1,0 +1,38 @@
+{
+  // Cloudflare Workers config for nexapp · generated from OpenNext template
+  // Reference: node_modules/@opennextjs/cloudflare/templates/wrangler.jsonc
+  //
+  // STATUS: DRAFT 2026-11-22 — local build-proof only.
+  // This file is NOT deployed. Deploy requires separate owner approval
+  // per CLAUDE.md §4 and §5.
+  //
+  // The $schema path resolves from this file's location (repo root)
+  // down into node_modules/wrangler/config-schema.json.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "nexapp",
+  "compatibility_date": "2026-11-21",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "nexapp"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "nexapp-opennext-cache"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  }
+}
