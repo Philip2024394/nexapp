@@ -6,7 +6,67 @@ the Pages project is actually provisioned.
 
 ---
 
-## Gate 2 · SEALED: Cloudflare Pages (not Workers)
+## Gate 2 · REVISED 2026-11-22 — Cloudflare Workers via `@opennextjs/cloudflare`
+
+**Supersedes the 2026-11-21 Pages / `@cloudflare/next-on-pages` seal**
+below. The prior seal was made without verifying the adapter's
+peerDependency against the installed Next version; a verified compat
+audit changed the choice.
+
+### Verified evidence
+
+| Fact | Value | Source |
+|---|---|---|
+| Installed Next version | `16.3.8` | `package-lock.json` `node_modules/next.version` |
+| Declared range | `^16.2.9` | `package.json` `dependencies.next` |
+| Registry | `https://registry.npmjs.org/` | `npm config get registry` |
+| `@cloudflare/next-on-pages@1.13.16` peerDep on Next | `>=14.3.0 && <=15.5.2` | `npm view` |
+| `@opennextjs/cloudflare@1.20.18` peerDep on Next | `>=15.5.29 <16 \|\| >=16.4.5` | `npm view` |
+| **`@opennextjs/cloudflare@1.20.11` peerDep on Next** | **`>=15.5.27 <16 \|\| >=16.3.8`** | `npm view` |
+| Official OpenNext Cloudflare docs statement | *"All minor and patch versions of Next.js 16 and the latest minor of Next.js 15 are supported."* | `opennext.js.org/cloudflare` |
+
+### Decision
+
+- **Keep Next at the installed `16.3.8`.** No upgrade, no downgrade.
+- **Pin `@opennextjs/cloudflare@1.20.11`** as a devDependency — newest
+  adapter release whose declared peerDep explicitly accepts our Next.
+- **Deploy target is Cloudflare Workers**, not Pages. OpenNext's
+  Cloudflare adapter targets Workers + Workers Assets. This is the
+  actively maintained path per Cloudflare's own documentation; the
+  Pages adapter (`next-on-pages`) is in soft-deprecation.
+- **Later adapter upgrades** (1.20.12+) are gated on a Next patch bump
+  to `≥16.4.1` or `≥16.4.5`. Do not upgrade the adapter alone.
+
+### Why not the originally-sealed Pages path
+
+- `@cloudflare/next-on-pages@latest` peer-requires Next `≤15.5.2`.
+  Installing it against our Next 16.3.8 would fail peer-dep checks or
+  require `--legacy-peer-deps`, which defeats the point of peer
+  contracts and masks real runtime incompatibilities.
+- Downgrading Next 16.3.8 → 15.5.2 would drop every Next-16-only API
+  surface the codebase already depends on. The owner directive
+  "no silent feature removal" rules this out.
+
+### Why not newer adapter + Next bump (1.20.18 + Next 16.4.6)
+
+Rejected under directive "Prefer retaining the current Next version
+if a verified supported OpenNext release accepts it." 1.20.11 accepts
+16.3.8 as-is, so no Next change is justified at this step. If a later
+need forces a Next bump, it is re-evaluated on evidence then — not
+pre-emptively here.
+
+### Companion decision — crons
+
+The 3 Vercel crons still migrate to a **separate Cloudflare Worker**
+(`wrangler.crons.toml` + `crons-worker.ts`) that HTTPs-dispatches to
+the Workers origin. Keeps the app Worker unaware of scheduling.
+
+---
+
+## Gate 2 · ORIGINAL 2026-11-21 (superseded) — Cloudflare Pages
+
+**Historical record. Superseded 2026-11-22 by the revised seal above.
+Do not act on this section.**
 
 Decision: nexapp ships on **Cloudflare Pages** via
 `@cloudflare/next-on-pages`.
