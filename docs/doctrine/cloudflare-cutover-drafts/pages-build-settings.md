@@ -61,24 +61,14 @@ future).
 - **Access policy** · do NOT put Cloudflare Access in front of the
   Pages project. The app has its own auth.
 
-## Known build-time blockers to resolve BEFORE first push
+## Known build-time blockers
 
-From the forensic audit (`cloudflare-brevo-migration-scope-2026-11-21.md`
-§6), the following deps are Node-native and may fail the Workers
-runtime even with `nodejs_compat`. Pages is more forgiving than Workers
-but still constrained:
+Replaced 2026-11-22 by `02-SEALED-DECISIONS.md` Gate 3 · each of the
+7 flagged deps now has a concrete disposition (KEEP, GATE, ROUTE, or
+UNINSTALL) driven by a real `src/` audit rather than a severity guess.
 
-| Dep | Used by | Risk on Pages | Action |
-|---|---|---|---|
-| `pg` | direct Supabase pooler scripts (not runtime) | **low** — only used in `scripts/` + migrations, not in app routes | leave |
-| `nodemailer` | 1 server action | **high** — SMTP client needs Node sockets | **replace with Brevo HTTPS API** (separate workstream) before first build |
-| `ffmpeg-static` | video thumbnail route | **high** — ships a static binary | gate the route behind feature flag; disable until a Workers-compatible path exists |
-| `ffprobe-static` | ditto | **high** | ditto |
-| `tesseract.js` | OCR route | **medium** — WASM; may work with increased bundle limits on Pages | test on preview, gate behind flag if it fails |
-| `@imgly/background-removal` | image edit | **medium** — WASM | test, gate if needed |
-| `onnxruntime-web` | ML inference | **medium** — WASM | test, gate if needed |
-
-**Pre-build gate:** before enabling the Cloudflare Pages Git
-integration (which would auto-build on every push), confirm the above
-items are either ported, gated behind a flag that defaults OFF, or
-accepted as temporarily broken on the preview.
+Pre-build gate: confirm the three env flags
+(`NEX_VIDEO_PROBE_ENABLED`, `NEX_EMAIL_RUNTIME`, `NEX_OCR_ENABLED`)
+are present on both Production and Preview environments with the
+defaults from `02-SEALED-DECISIONS.md` before enabling the Pages Git
+integration.

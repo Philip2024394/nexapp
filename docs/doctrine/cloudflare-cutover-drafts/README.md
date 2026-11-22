@@ -19,26 +19,23 @@ The Vercel origin is still serving the live site (confirmed via
 `x-vercel-id` / `x-vercel-cache` response headers on `www.nexcorner.com`).
 Deleting Vercel before Cloudflare is green would create an outage.
 
-Three gates still CLOSED before execution:
+Gate status after 2026-11-22 update:
 
-1. **Valid Cloudflare API token** — the `cfat_...` string supplied
-   earlier is a Cloudflare Access (Zero Trust) credential, not an API
-   token. `GET /user/tokens/verify` returned `{"code":1000,"Invalid API
-   Token"}`. Needs a real API token from
-   `dash.cloudflare.com → My Profile → API Tokens → Create Token`
-   with these scopes (minimum):
-   - Account · Cloudflare Pages · Edit
-   - Account · Workers Scripts · Edit
-   - Account · Account Settings · Read
-   - Zone · DNS · Edit (for `nexcorner.com`)
-   - Zone · Zone · Read
-2. **Pages vs Workers decision** — recommendation below is Pages.
-   Owner hasn't picked yet.
-3. **Node-native dep disposition** — 7 deps currently prevent a pure
-   Workers deploy. Pages gives more room here. See `env-vars.md` + the
-   Cloudflare scope doc §6 for the enumeration.
+1. **Cloudflare API token** · **OPEN ACTION ON OWNER** · full clickpath
+   + verify curl in `01-TOKEN-SETUP.md`. Only the owner can issue this
+   from their logged-in Cloudflare dashboard. The previously supplied
+   `cfat_...` string is a Zero Trust credential, not an API token, and
+   has been verified dead against `api.cloudflare.com/user/tokens/verify`.
+2. **Pages vs Workers** · **SEALED → Pages** · see `02-SEALED-DECISIONS.md`
+   Gate 2. `@cloudflare/next-on-pages` adapter, Node 20, `nodejs_compat`.
+3. **Node-native dep disposition** · **SEALED per-dep** · see
+   `02-SEALED-DECISIONS.md` Gate 3. `pg` KEEP · `nodemailer` route
+   through existing Brevo adapter · `ffprobe-static`+`fluent-ffmpeg`
+   gate behind `NEX_VIDEO_PROBE_ENABLED` · `tesseract.js` KEEP (already
+   lazy-imported WASM) · `@imgly/background-removal`+`onnxruntime-web`
+   uninstall at Stage 1 cleanup (zero live imports).
 
-## Chosen architecture (recommended, not approved)
+## Chosen architecture · SEALED 2026-11-22
 
 | Piece | Choice | Why |
 |---|---|---|
@@ -85,6 +82,8 @@ Order matters — each step is reversible up to step 6.
 | File | Purpose |
 |---|---|
 | `README.md` | this file |
+| `01-TOKEN-SETUP.md` | Gate 1 · owner clickpath + verify curl |
+| `02-SEALED-DECISIONS.md` | Gate 2 + Gate 3 · sealed per-dep dispositions |
 | `pages-build-settings.md` | the exact Pages project settings to enter in the dashboard |
 | `env-vars.md` | env variable inventory · what to set on Cloudflare, what to NOT carry over |
 | `wrangler.crons.toml` | config for the cron-dispatcher Worker |

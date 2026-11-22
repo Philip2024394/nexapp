@@ -64,13 +64,34 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ### Brevo (email · replaces nodemailer)
 
 ```
-BREVO_API_KEY
-BREVO_FROM_EMAIL
-BREVO_FROM_NAME
+NEX_DELIVERY_BREVO_API_KEY        # primary · read first by brevo.ts adapter
+BREVO_API_KEY                      # legacy fallback name · same value acceptable
+NEX_EMAIL_DEFAULT_FROM             # sender address fallback
+BREVO_FROM_EMAIL                   # legacy alternate, optional
+BREVO_FROM_NAME                    # legacy alternate, optional
 ```
 
-> Separate workstream — the SMTP-to-HTTPS-API port must land in code
-> before these matter. Setting the keys early is harmless.
+> The Brevo adapter at `src/lib/nex/email/adapters/brevo.ts` already
+> exists (native fetch, Workers-compatible). What's gated is the
+> runtime switchover — see `NEX_EMAIL_RUNTIME` below.
+
+### Cut-over feature flags · SEALED 2026-11-22
+
+Added by `02-SEALED-DECISIONS.md` to let Cloudflare Pages preview come
+up green while Node-native code paths stay dark until each one is
+verified.
+
+```
+NEX_EMAIL_RUNTIME                  # "nodemailer" (current) | "brevo" (Cloudflare)
+NEX_VIDEO_PROBE_ENABLED            # "true" | "false" · ffprobe path
+NEX_OCR_ENABLED                    # "true" | "false" · tesseract.js path
+```
+
+| Flag | Vercel prod | CF Pages preview | CF Pages prod (initial) |
+|---|---|---|---|
+| `NEX_EMAIL_RUNTIME` | unset (= nodemailer) | `brevo` | `brevo` |
+| `NEX_VIDEO_PROBE_ENABLED` | unset (= true) | `false` | `false` until probe passes |
+| `NEX_OCR_ENABLED` | unset (= true) | `false` | `false` until bundle fits |
 
 ### LLM / observability (optional at runtime)
 

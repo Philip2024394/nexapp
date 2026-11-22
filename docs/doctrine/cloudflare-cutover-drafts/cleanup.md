@@ -13,19 +13,31 @@ back DNS if anything surfaces.
 
 ## Stage 1 · immediately safe (zero live references)
 
-These dependencies are at **0 imports** across `src/` today
-(verified pre-cutover during forensic audit). Remove at any time.
+These dependencies are at **0 live imports** across `src/` today
+(verified 2026-11-22 against both forensic audit + fresh grep). Remove
+at any time.
 
 | Target | Kind | Why safe |
 |---|---|---|
 | `@vercel/analytics` | dep in `package.json` | 0 imports |
 | `@vercel/speed-insights` | dep in `package.json` | 0 imports |
+| `@imgly/background-removal` | dep in `package.json` | 0 imports in `src/` |
+| `onnxruntime-web` | dep in `package.json` | only a comment reference in `src/lib/nex-native/intelligence/models/qwen25-05b-instruct.ts`; model not reached at runtime |
 
 Action:
 
 ```bash
 # proposal, not executed
-npm uninstall @vercel/analytics @vercel/speed-insights
+npm uninstall @vercel/analytics @vercel/speed-insights \
+              @imgly/background-removal onnxruntime-web
+```
+
+Grep probes to re-verify before pulling the trigger (zero hits
+required for each):
+
+```bash
+rg -n "@imgly/background-removal" src/
+rg -n "onnxruntime-web" src/
 ```
 
 ## Stage 2 · safe once Brevo port lands
