@@ -25,6 +25,7 @@ import "server-only";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { videoProbeEnabled } from "@/lib/nex-native/runtime-flags";
 
 interface FfprobeMetadata {
   format?: { duration?: number | string };
@@ -40,6 +41,11 @@ export async function probeVideoDurationSeconds(
   bytes: Uint8Array,
   extension: string,
 ): Promise<number> {
+  // Workers cut-over gate: when NEX_VIDEO_PROBE_ENABLED=false we return -1
+  // without touching ffprobe-static / fluent-ffmpeg. Callers already treat
+  // -1 as "duration unknown · reject" per the file's honest-limitations
+  // doctrine. Default-unset keeps Vercel behavior exactly.
+  if (!videoProbeEnabled()) return -1;
   const safeExt = /^[a-z0-9]{2,5}$/i.test(extension) ? extension : "mp4";
   let tempDir: string | null = null;
   try {

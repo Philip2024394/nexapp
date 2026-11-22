@@ -12,7 +12,14 @@
 //  - Never throws to caller · every failure surfaces as structured result.
 //  - No retry logic in this module · caller decides.
 
-import nodemailer, { type Transporter } from "nodemailer";
+// Type-only import keeps the Transporter signature intact without pulling
+// nodemailer into the Workers bundle. Runtime value is dynamically imported
+// inside buildTransport() so the module can load on edge runtimes where
+// nodemailer isn't bundled. When NEX_EMAIL_RUNTIME=brevo, sendBatch() skips
+// buildTransport() entirely and dispatches via the Brevo HTTPS adapter.
+import type { Transporter } from "nodemailer";
+import { emailRuntime } from "@/lib/nex-native/runtime-flags";
+import { brevoAdapter } from "@/lib/nex/email/adapters/brevo";
 
 export interface SmtpConfig {
   readonly url: string;                // e.g. smtps://user:pass@smtp.gmail.com:465
@@ -80,9 +87,24 @@ export function resolveSmtpConfig(env: NodeJS.ProcessEnv = process.env): SmtpRes
   };
 }
 
-/** Build a nodemailer transporter from a resolved SmtpConfig. */
-export function buildTransport(cfg: SmtpConfig): Transporter {
-  return nodemailer.createTransport({
+/** Build a nodemailer transporter from a resolved SmtpConfig.
+ *
+ *  Loads nodemailer via Function-hidden dynamic import so Turbopack/Webpack
+ *  do not bundle it statically. This is the same escape-hatch pattern used
+ *  in listing-chat/smtp.ts. Throws with a clear reason if nodemailer is not
+ *  installed — callers already handle the per-recipient "failed" shape.
+ */
+export async function buildTransport(cfg: SmtpConfig): Promise<Transporter> {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  const dynImport = new Function("m", "return import(m)") as (m: string) => Promise<unknown>;
+  const mod = await dynImport("nodemailer").catch(() => null) as
+    | { default?: { createTransport: (opts: Record<string, unknown>) => Transporter }; createTransport?: (opts: Record<string, unknown>) => Transporter }
+    | null;
+  const createTransport = mod?.default?.createTransport ?? mod?.createTransport;
+  if (!createTransport) {
+    throw new Error("nodemailer_not_installed · run: npm install nodemailer");
+  }
+  return createTransport({
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
@@ -149,7 +171,8 @@ export async function sendBatch(input: BatchSendInput, env: NodeJS.ProcessEnv = 
 
   const cfg = resolution.config;
   const from_display = cfg.from_name ? `${cfg.from_name} <${cfg.from_address}>` : cfg.from_address;
-  const transport = buildTransport(cfg);
+  const useBrevo = emailRuntime() === "brevo";
+  const transport = useBrevo ? null : await buildTransport(cfg);
   const results: RecipientResult[] = [];
 
   for (const recipient of input.recipients) {
@@ -157,26 +180,55 @@ export async function sendBatch(input: BatchSendInput, env: NodeJS.ProcessEnv = 
     const html = decorateHtml(input.body_html, input.body_text, unsub_url, from_display);
     const textWithFooter = `${input.body_text}\n\n—\nSent by ${from_display}. Unsubscribe: ${unsub_url}`;
     try {
-      const info = await transport.sendMail({
-        from: from_display,
-        to: recipient.email_address,
-        replyTo: cfg.reply_to || undefined,
-        subject: input.subject,
-        text: textWithFooter,
-        html,
-        headers: {
-          "List-Unsubscribe": `<${unsub_url}>`,
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-      });
-      results.push({
-        recipient_id: recipient.recipient_id,
-        email_address: recipient.email_address,
-        status: "sent",
-        smtp_message_id: info.messageId ?? null,
-        error_reason: null,
-        sent_at: new Date().toISOString(),
-      });
+      // Workers cut-over routing: Brevo HTTPS adapter when flag flipped.
+      // Default-unset = nodemailer transport = Vercel behavior.
+      if (useBrevo) {
+        const result = await brevoAdapter.send({
+          from: cfg.from_name
+            ? { address: cfg.from_address, name: cfg.from_name }
+            : { address: cfg.from_address },
+          to: [{ address: recipient.email_address }],
+          reply_to: cfg.reply_to || undefined,
+          subject: input.subject,
+          text: textWithFooter,
+          html,
+          kind: "marketing",
+          headers: {
+            "List-Unsubscribe": `<${unsub_url}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        });
+        if (!result.ok) throw new Error(result.reason);
+        results.push({
+          recipient_id: recipient.recipient_id,
+          email_address: recipient.email_address,
+          status: "sent",
+          smtp_message_id: result.provider_message_id,
+          error_reason: null,
+          sent_at: result.sent_at,
+        });
+      } else {
+        const info = await transport!.sendMail({
+          from: from_display,
+          to: recipient.email_address,
+          replyTo: cfg.reply_to || undefined,
+          subject: input.subject,
+          text: textWithFooter,
+          html,
+          headers: {
+            "List-Unsubscribe": `<${unsub_url}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        });
+        results.push({
+          recipient_id: recipient.recipient_id,
+          email_address: recipient.email_address,
+          status: "sent",
+          smtp_message_id: info.messageId ?? null,
+          error_reason: null,
+          sent_at: new Date().toISOString(),
+        });
+      }
     } catch (e) {
       results.push({
         recipient_id: recipient.recipient_id,
@@ -189,7 +241,9 @@ export async function sendBatch(input: BatchSendInput, env: NodeJS.ProcessEnv = 
     }
   }
 
-  try { transport.close(); } catch { /* ignore */ }
+  if (transport) {
+    try { transport.close(); } catch { /* ignore */ }
+  }
   return { configured: true, smtp_host: cfg.host, results };
 }
 
