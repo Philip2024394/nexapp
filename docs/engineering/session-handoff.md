@@ -11,21 +11,23 @@ What requires the owner before continuing?
 
 **Repository:** `C:/Users/Victus/nexapp` (remote `Philip2024394/nexapp.git`)
 **Branch:** `release-audit-v1-2026-11-14`
-**Last verified HEAD:** `daf3068a` (notifications drawer · webhook recovery ·
-in-drawer bank+QR share)
+**Last verified HEAD:** `de2426b0` (competitor portability doctrine)
 
-**Working tree (not committed):**
+**Commits this session** (on `release-audit-v1-2026-11-14`, not yet pushed
+at the time this line was written — see "Push status" below):
+
+| SHA | Scope |
+|---|---|
+| `6e8d1b5f` | docs: engineering workflow scaffold (feature-ledger + handoff + ADR index) |
+| `43119e44` | feat(NEX-007): switch calculator · dated presets + honest savings math (26/26 vitest pass) |
+| `4a1d07a5` | feat(NEX-006): /nex-native/why-nex public page · 6 competitive wedges |
+| `de2426b0` | docs: competitor portability map · 11 competitors · 6 failure patterns |
+
+**Working tree (not staged, intentionally left alone):**
 - `M scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (pre-existing modification · not mine)
-- `?? docs/doctrine/cloudflare-cutover-drafts/06-OWNER-APPROVAL-CHECKLIST-2026-11-22.md` (prior session)
-- `?? docs/doctrine/competitor-portability-map-2026-11-23.md` (this cycle · agent output)
-- `?? docs/doctrine/competitor-portability-map-part2-2026-11-23.md` (this cycle · agent output)
-- `?? docs/product/feature-ledger.md` (this cycle · the ledger)
-- `?? docs/engineering/session-handoff.md` (this file)
-- `?? docs/architecture/decisions/README.md` (this cycle · ADR index)
-- `?? src/app/nex-native/switch/` (this cycle · page + client)
-- `?? src/app/nex-native/why-nex/` (this cycle · public page)
+- `?? docs/doctrine/cloudflare-cutover-drafts/06-OWNER-APPROVAL-CHECKLIST-2026-11-22.md` (prior session · not part of this cycle's scope)
 
-Nothing has been committed or pushed this session.
+**Push status:** see bottom of this file after push attempt.
 
 ---
 
