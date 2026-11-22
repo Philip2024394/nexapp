@@ -62,30 +62,17 @@ let cached: SupabaseClient | null = null;
 
 export function getNexBrowserSupabase(): SupabaseClient {
   if (cached) return cached;
-  const nexUrl = process.env.NEXT_PUBLIC_NEX_SUPABASE_URL;
-  const nexAnon = process.env.NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY;
-  const legacyUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const legacyAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  // Prefer the canonical NEX pair. Both must be present together ·
-  // mixing a NEX url with a legacy anon (or vice versa) would
-  // authenticate against the wrong project at the Supabase edge.
-  let url: string | undefined;
-  let anon: string | undefined;
-  if (nexUrl && nexAnon) {
-    url = nexUrl;
-    anon = nexAnon;
-  } else if (legacyUrl && legacyAnon) {
-    url = legacyUrl;
-    anon = legacyAnon;
-  }
+  // Owner-authorised 2026-11-23 · legacy msdonkkechxzgagyguoe fallback
+  // removed. The canonical NEX pair is the only accepted credential
+  // source; this prevents the legacy project URL from being inlined
+  // into the shipped client bundle.
+  const url = process.env.NEXT_PUBLIC_NEX_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY;
 
   if (!url || !anon) {
     throw new Error(
       "NEX realtime: no browser Supabase credentials found. " +
-        "Set NEXT_PUBLIC_NEX_SUPABASE_URL + NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY " +
-        "(canonical NEX project) or, for legacy environments, " +
-        "NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+        "Set NEXT_PUBLIC_NEX_SUPABASE_URL + NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY.",
     );
   }
   cached = createBrowserClient(url, anon);

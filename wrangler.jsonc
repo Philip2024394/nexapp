@@ -19,7 +19,7 @@
   // Deploys are gated by CLAUDE.md §4/§5 and the Cloudflare deploy
   // workflow is manual-only (workflow_dispatch).
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "cloudflare/worker.mjs",
   "name": "nexapp",
   "compatibility_date": "2026-11-21",
   "compatibility_flags": [
@@ -33,8 +33,21 @@
   "vars": {
     "NEXT_PUBLIC_APP_ENV": "production",
     "NEXT_PUBLIC_SITE_URL": "https://nexcorner.com",
-    "NEX_SITE_URL": "https://nexcorner.com"
+    "NEX_SITE_URL": "https://nexcorner.com",
+    "NEX_APP_IDENTITY": "ireland",
+    "NEX_PUBLIC_SITE_URL_IE": "https://nexcorner.com",
+    "NEX_PUBLIC_SITE_URL_WW": "https://nexcorner.com"
   },
+  // Crons declared here stay DORMANT (commented) until Vercel crons are
+  // confirmed off. Enabling this list is the second deploy per the
+  // staged cutover plan.
+  // "triggers": {
+  //   "crons": [
+  //     "0 * * * *",        // harvest/tick · hourly
+  //     "*/15 * * * *",     // billing/cron/reconcile · 15 min
+  //     "*/10 * * * *"      // cron/security-audit-reconcile · 10 min
+  //   ]
+  // },
   "env": {
     "preview": {
       "name": "nexapp-preview",
