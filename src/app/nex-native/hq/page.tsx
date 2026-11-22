@@ -49,7 +49,7 @@ const CARDS: readonly CountryCard[] = [
     image: "/nex-brand/hq/ireland-studio.png",
     imageAlt: "NEX Ireland · emerald + cream studio background",
     ringColor: "#1F8B4C",
-    appUrl: "https://nex-ireland-preview.vercel.app/nex-native/contacts",
+    appUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/nex-native/contacts`,
   },
 ];
 
