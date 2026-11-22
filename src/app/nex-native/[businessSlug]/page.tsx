@@ -277,7 +277,8 @@ export default async function PublicShopPage({
       const botLikely = isLikelyBot(userAgent);
       const { tokenHash } = await resolveViewerToken();
       const country = resolveViewCountry({
-        vercelIpCountry: hdrs.get("x-vercel-ip-country"),
+        vercelIpCountry:
+          hdrs.get("cf-ipcountry") ?? hdrs.get("x-vercel-ip-country"),
         envCountry: process.env.NEX_APP_COUNTRY,
       });
       void recordPageView({

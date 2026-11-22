@@ -50,13 +50,19 @@ type LedgerEntry =
 
 function ensureDir(): void {
   const dir = idempotencyDataRoot();
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  // Turbopack-ignore: the path here is dynamic by design (env-overridable
+  // via NEX_IDEMPOTENCY_DATA_ROOT for test isolation). Without this comment
+  // Turbopack traces the entire project tree, bloating Workers bundles.
+  // Not a Workers runtime concern — this filesystem branch only runs on
+  // the Node origin; Workers deployments will use a Postgres-backed
+  // IdempotencyStore implementation instead.
+  if (!existsSync(/*turbopackIgnore: true*/ dir)) mkdirSync(/*turbopackIgnore: true*/ dir, { recursive: true });
 }
 
 function readAllEntries(): LedgerEntry[] {
   const p = idempotencyLedgerPath();
-  if (!existsSync(p)) return [];
-  const raw = readFileSync(p, "utf8");
+  if (!existsSync(/*turbopackIgnore: true*/ p)) return [];
+  const raw = readFileSync(/*turbopackIgnore: true*/ p, "utf8");
   const out: LedgerEntry[] = [];
   for (const line of raw.split(/\r?\n/)) {
     const t = line.trim();
@@ -73,7 +79,7 @@ function readAllEntries(): LedgerEntry[] {
 
 function appendEntry(entry: LedgerEntry): void {
   ensureDir();
-  appendFileSync(idempotencyLedgerPath(), JSON.stringify(entry) + "\n", "utf8");
+  appendFileSync(/*turbopackIgnore: true*/ idempotencyLedgerPath(), JSON.stringify(entry) + "\n", "utf8");
 }
 
 /** Fold the append-only log into current-state per-key. */
@@ -150,7 +156,7 @@ export class JsonlIdempotencyStore implements IdempotencyStore {
   /** For tests · truncate the ledger. */
   reset(): void {
     const p = idempotencyLedgerPath();
-    if (existsSync(p)) writeFileSync(p, "", "utf8");
+    if (existsSync(/*turbopackIgnore: true*/ p)) writeFileSync(/*turbopackIgnore: true*/ p, "", "utf8");
   }
 }
 

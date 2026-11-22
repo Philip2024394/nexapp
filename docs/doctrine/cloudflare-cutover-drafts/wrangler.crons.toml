@@ -1,0 +1,61 @@
+# docs/doctrine/cloudflare-cutover-drafts/wrangler.crons.toml
+#
+# DRAFT 2026-11-21 · NOT at repo root · NOT read by any tool.
+#
+# This is the config for a standalone Cloudflare Worker whose sole
+# job is to fire the three cron schedules currently in vercel.json
+# and dispatch each tick to the matching HTTP handler running on the
+# Cloudflare Pages deployment (where the Next.js app lives).
+#
+# When ready to deploy, copy this file to its own small repo (or a
+# subfolder outside the Next.js build root) and run:
+#   wrangler deploy --config wrangler.crons.toml
+#
+# Keeping the Worker separate from the Pages project is deliberate:
+#   · Pages build is unaware of this file (no accidental config drift)
+#   · Worker can be redeployed without rebuilding the app
+#   · Worker is tiny · no dependencies · fast cold start
+#
+# The three schedules below are copied verbatim from vercel.json:
+#   /api/nex-native/harvest/tick                   0 * * * *
+#   /api/nex-native/billing/cron/reconcile         */15 * * * *
+#   /api/nex-native/cron/security-audit-reconcile  */10 * * * *
+
+name = "nexapp-crons"
+main = "crons-worker.ts"
+compatibility_date = "2026-11-21"
+compatibility_flags = ["nodejs_compat"]
+
+# Cron schedules · same cadence as the Vercel setup, no behaviour
+# change for the app routes themselves.
+[triggers]
+crons = [
+  "0 * * * *",      # hourly  · harvest tick
+  "*/15 * * * *",   # 15 min  · billing reconcile
+  "*/10 * * * *"    # 10 min  · security-audit reconcile
+]
+
+# Non-secret vars · the Pages origin URL is public anyway.
+# Secrets (NEX_HARVEST_CRON_SECRET, NEX_BILLING_CRON_SECRET,
+# NEX_CRON_SECRET) are set via `wrangler secret put <NAME>` AFTER
+# deploy, NOT in this file.
+[vars]
+# During cut-over phase (step 4 of README.md checklist), point this
+# at the preview pages.dev URL. Flip to the apex at step 7.
+PAGES_ORIGIN = "https://nexapp.pages.dev"
+
+# Optional: observability knob so the Worker tags its outbound
+# requests. The Pages handlers already log by handler name; this is
+# just extra context in Cloudflare Workers logs.
+WORKER_TAG = "nexapp-crons/v1"
+
+# Secrets to set after deploy (DO NOT put values here):
+#   wrangler secret put NEX_HARVEST_CRON_SECRET  --name nexapp-crons
+#   wrangler secret put NEX_BILLING_CRON_SECRET  --name nexapp-crons
+#   wrangler secret put NEX_CRON_SECRET          --name nexapp-crons
+#
+# These MUST match the values set on the Cloudflare Pages project
+# for the same-named vars, otherwise the Pages routes will reject
+# the Worker's requests.
+
+# No KV, no R2, no D1, no Durable Objects. Pure fetch dispatcher.

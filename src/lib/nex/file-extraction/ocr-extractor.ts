@@ -12,6 +12,7 @@
 
 import type { FileExtractor, FileExtractRequest, FileExtractResult } from "./contract";
 import { hashFileContent } from "./contract";
+import { ocrEnabled } from "@/lib/nex-native/runtime-flags";
 
 const IMAGE_MIMES = new Set([
   "image/png",
@@ -59,6 +60,25 @@ export function makeOcrExtractor(): FileExtractor {
     async extract(input: FileExtractRequest, buffer: Buffer): Promise<FileExtractResult> {
       const t0 = performance.now();
       const file_hash = hashFileContent(input.content_base64);
+      // Workers cut-over gate: when NEX_OCR_ENABLED=false we short-circuit
+      // with the same "not available" shape the module already emits when
+      // tesseract.js isn't installed. Default-unset keeps Vercel behavior.
+      if (!ocrEnabled()) {
+        return {
+          extraction_id: `ext:${file_hash}`,
+          text: "",
+          provider: "ocr-disabled",
+          mime_type: input.mime_type,
+          filename: input.filename ?? null,
+          file_hash,
+          bytes: buffer.length,
+          text_length: 0,
+          page_count: 1,
+          request_ms: Math.round(performance.now() - t0),
+          completed: false,
+          error: "ocr_disabled_by_flag",
+        };
+      }
       const worker = await getWorker();
       if (!worker) {
         return {

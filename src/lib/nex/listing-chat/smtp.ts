@@ -18,6 +18,8 @@
 
 import { createHash } from "node:crypto";
 import { getKnowledgeFactoryDbPool } from "@/lib/nex/live-chat-completion/kf-pool";
+import { emailRuntime } from "@/lib/nex-native/runtime-flags";
+import { brevoAdapter } from "@/lib/nex/email/adapters/brevo";
 
 function sha16(s: string): string {
   return createHash("sha256").update(s).digest("hex").slice(0, 16);
@@ -117,6 +119,22 @@ export async function enqueueEmail(args: EnqueueArgs): Promise<EnqueueResult> {
 }
 
 async function deliverViaSmtp(cfg: SmtpConfig, args: EnqueueArgs): Promise<string> {
+  // Workers cut-over routing: when NEX_EMAIL_RUNTIME=brevo we skip nodemailer
+  // entirely and dispatch via the Brevo HTTPS adapter (Workers-compatible,
+  // native fetch, no SMTP). Default-unset = Vercel behavior = nodemailer.
+  if (emailRuntime() === "brevo") {
+    const result = await brevoAdapter.send({
+      from: { address: cfg.from },
+      to: [{ address: args.to_email }],
+      subject: args.subject,
+      text: args.body_text,
+      html: args.body_html,
+      kind: "transactional",
+    });
+    if (!result.ok) throw new Error(`brevo_delivery_failed: ${result.reason}`);
+    return result.provider_message_id;
+  }
+
   // Dynamic import hidden from bundler static analysis. `nodemailer` is
   // genuinely optional at build time — Turbopack/Webpack will not try to
   // resolve it via new Function. When installed and env vars set, this

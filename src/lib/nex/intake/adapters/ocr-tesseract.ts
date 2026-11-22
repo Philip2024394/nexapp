@@ -30,6 +30,7 @@ import type {
   NexOcrResponse,
   NexOcrService,
 } from "../nex-ocr-service";
+import { ocrEnabled } from "@/lib/nex-native/runtime-flags";
 
 const CONFIDENCE_CEILING = 95;
 
@@ -81,6 +82,10 @@ export const ocrTesseract: NexOcrService = {
   name: "tesseract",
 
   async extract(req: NexOcrRequest): Promise<NexOcrResponse | null> {
+    // Workers cut-over gate: when NEX_OCR_ENABLED=false we return null, the
+    // same honest "no OCR evidence" shape the module already emits on any
+    // failure. Default-unset keeps Vercel behavior.
+    if (!ocrEnabled()) return null;
     try {
       const languages =
         Array.isArray(req.languages) && req.languages.length > 0
