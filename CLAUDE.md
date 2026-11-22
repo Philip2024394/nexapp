@@ -131,6 +131,30 @@ nexapp has **exactly one Supabase project**. This is the sole database of record
 ## End Safety Constitution
 ## ═══════════════════════════════════════════════════════════════
 
+## 9 · Session-start reading (required before changing code)
+
+Before editing any file, read in this order:
+
+1. `docs/engineering/session-handoff.md` — the one record of where we are.
+2. `docs/product/feature-ledger.md` — authoritative feature status.
+3. `docs/architecture/decisions/README.md` — index of ADRs.
+4. Any requirement in `docs/product/requirements/` matching your task.
+
+**These docs win over any conversational memory or prior-session summary.**
+If memory and the ledger disagree, the ledger is correct until updated with
+evidence. Never claim VERIFIED without recording the evidence in the ledger
+and the handoff.
+
+If the record for the feature you're about to touch says NOT VERIFIED or
+CODE PRESENT (NOT VERIFIED), run the search-before-build gate (inventory
+code + tests + migration state) before writing new code. Prefer integrating
+existing verified code over adding parallel implementations.
+
+When ending a session (or before context compaction), update
+`docs/engineering/session-handoff.md` with: current branch, last verified
+HEAD, uncommitted paths, what was built this cycle, what remains blocked and
+why, and the exact next safe action. Never store secrets in handoffs.
+
 ## Repository layout
 
 Only these trees exist in nexapp:
