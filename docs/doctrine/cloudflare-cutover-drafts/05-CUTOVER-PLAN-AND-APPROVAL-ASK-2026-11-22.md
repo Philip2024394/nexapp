@@ -35,14 +35,29 @@ Reference | What it proves
 
 ## Phase 1 · owner-only blockers (NO code change can unblock these)
 
-| # | Blocker | Owner action | Evidence of unblock |
+| # | Blocker | Owner action | Status |
 |---|---|---|---|
-| A | Cloudflare API token | Follow `01-TOKEN-SETUP.md` clickpath · paste token into chat (not into a file) | `curl user/tokens/verify` returns `success:true` |
-| B | Windows symlink permission for OpenNext local builds | Enable Windows Developer Mode OR run build in WSL2 | `opennextjs-cloudflare build` exits 0 with `.open-next/worker.js` present |
-| C | Domain `nexcorner.com` zone status | Owner confirms zone is ACTIVE in Cloudflare dashboard with nameservers assigned | Zone shows green ACTIVE in dashboard |
+| A | Cloudflare credential | Owner ran `wrangler login` and completed OAuth consent · 2026-11-22 | **✅ UNBLOCKED 2026-11-22** · `wrangler whoami` succeeds · OAuth token on `phillipofarrell@gmail.com` · bound to account `nex` (`a46ee668c0b1bc53b2de925e5b4bcd0a`) · scopes include `workers:write`, `workers_scripts:write`, `workers_kv:write`, `pages:write`, `zone:read`, `email_sending:write` · creds at `C:\Users\Victus\AppData\Roaming\xdg.config\.wrangler\config\default.toml` |
+| B | Windows symlink permission for OpenNext local builds | Enable Windows Developer Mode OR run build in WSL2 OR use GitHub Actions CI | ⏳ BLOCKED · `opennextjs-cloudflare build` still fails EPERM at server-function symlink phase on Windows |
+| C | Domain `nexcorner.com` zone status | Owner confirms zone is ACTIVE in Cloudflare dashboard with nameservers assigned | ⏳ Not re-verified this session · zone-level read-only check deferred until Phase 3 |
 
-**None of A / B / C is fixable by me.** Items D onward assume all three
-are unblocked.
+### Account `nex` baseline (established 2026-11-22 read-only inventory)
+
+```
+Workers scripts named "nexapp":   NONE  (code 10007)
+R2 buckets:                       R2 NOT YET ENABLED  (code 10042 · needs dashboard enable)
+KV namespaces:                    0
+Pages projects:                   0
+```
+
+The clean slate on account `nex` means the proposed provisioning
+(Worker `nexapp` + R2 bucket `nexapp-opennext-cache`) has **no
+collisions** to resolve. R2 must be enabled via the dashboard before
+`wrangler r2 bucket create` can succeed — owner action.
+
+**Items D-F are code-side and complete (commit `811f480c`, pushed).**
+**Items H onward still require blocker B unblock _plus_ a per-action
+owner word-trigger per CLAUDE.md §4/§5.**
 
 ## Phase 2 · code remediation (build-time only · no Workers deploy yet)
 
