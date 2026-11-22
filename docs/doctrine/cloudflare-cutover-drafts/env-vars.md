@@ -1,7 +1,16 @@
-# Cloudflare Pages · env-var inventory · DRAFT 2026-11-21
+# Cloudflare Workers · env-var inventory · DRAFT 2026-11-22
+
+> **2026-11-22 Workers reconciliation.** This file was drafted
+> against Cloudflare Pages on 2026-11-21. The 2026-11-22 Gate 2
+> revision switches the target to Cloudflare Workers (via
+> `@opennextjs/cloudflare@1.20.11`, Next 16.3.8 peer-compatible).
+> Pages-specific terminology has been reconciled below. Notably,
+> Workers does NOT auto-inject `CF_PAGES_URL` / `CF_PAGES_BRANCH` /
+> `CF_PAGES_COMMIT_SHA` — see §PROVIDER-SPECIFIC for the replacement
+> contract.
 
 Scope: enumerate every `process.env.*` read in the nexapp runtime and
-classify each for the Cloudflare Pages cut-over. Secrets listed here
+classify each for the Cloudflare Workers cut-over. Secrets listed here
 are NAMES ONLY. No values. Do not paste values into this repo.
 
 Three buckets:
@@ -12,7 +21,12 @@ Three buckets:
   replaced by Cloudflare equivalent or (b) retired at cleanup.
 - **DEV-ONLY / LEGACY** — do NOT carry over.
 
-## LAUNCH-CRITICAL · set on Cloudflare Pages (Production + Preview)
+## LAUNCH-CRITICAL · set on Cloudflare Workers (Production + Preview)
+
+> On Workers, set these via `wrangler secret put <NAME>` for secrets
+> and the `[vars]` block in `wrangler.jsonc` (or the Workers Variables
+> and Secrets panel in the dashboard) for non-secret config. Preview
+> environments use `wrangler.jsonc` `env.<name>` sections.
 
 ### Supabase (sealed project `ijvqdvsvwtwxzcqmoqit`)
 
@@ -36,7 +50,7 @@ NEX_SITE_URL                 # server-side canonical origin
 NEXT_PUBLIC_APP_ENV          # "production" | "preview" | "development"
 ```
 
-### Cron authentication (used by the dispatcher Worker)
+### Cron authentication (used by Workers Cron Triggers)
 
 ```
 NEX_HARVEST_CRON_SECRET
@@ -44,9 +58,12 @@ NEX_BILLING_CRON_SECRET
 NEX_CRON_SECRET              # security-audit reconcile
 ```
 
-> Also set on the cron-dispatcher Worker (see `wrangler.crons.toml`).
-> Same values on both sides; the Worker sends them as the
-> `Authorization: Bearer <secret>` header, the Pages route verifies.
+> Workers Cron Triggers invoke the same Worker (`nexapp`) via scheduled
+> `fetch` against an internal cron handler path. Same secret values on
+> both the trigger request builder (inside `scheduled()` export of the
+> Worker) and the route handlers — same `Authorization: Bearer <secret>`
+> contract that currently exists for Vercel cron dispatch, just
+> originating from within the Worker instead of Vercel's cron runner.
 
 ### Stripe (currently gated OFF, surface still reads env at import)
 
@@ -77,9 +94,10 @@ BREVO_FROM_NAME                    # legacy alternate, optional
 
 ### Cut-over feature flags · SEALED 2026-11-22
 
-Added by `02-SEALED-DECISIONS.md` to let Cloudflare Pages preview come
-up green while Node-native code paths stay dark until each one is
-verified.
+Added by `02-SEALED-DECISIONS.md` to let Cloudflare Workers preview
+come up green while Node-native code paths stay dark until each one is
+verified. Implemented in `src/lib/nex-native/runtime-flags.ts` and
+contract-locked by `src/lib/nex-native/__tests__/runtime-flags.test.ts`.
 
 ```
 NEX_EMAIL_RUNTIME                  # "nodemailer" (current) | "brevo" (Cloudflare)
@@ -87,7 +105,7 @@ NEX_VIDEO_PROBE_ENABLED            # "true" | "false" · ffprobe path
 NEX_OCR_ENABLED                    # "true" | "false" · tesseract.js path
 ```
 
-| Flag | Vercel prod | CF Pages preview | CF Pages prod (initial) |
+| Flag | Vercel prod | CF Workers preview | CF Workers prod (initial) |
 |---|---|---|---|
 | `NEX_EMAIL_RUNTIME` | unset (= nodemailer) | `brevo` | `brevo` |
 | `NEX_VIDEO_PROBE_ENABLED` | unset (= true) | `false` | `false` until probe passes |
@@ -103,22 +121,26 @@ NEX_OBSERVABILITY_DSN           # optional
 
 ## PROVIDER-SPECIFIC · DO NOT carry over
 
-These are set on Vercel today. Either Cloudflare provides them
-automatically, or they are no longer needed.
+These are set on Vercel today. Workers does NOT auto-inject hosting
+metadata the way Vercel or Pages does — the cutover contract is to
+either (a) set a custom env var manually in `wrangler.jsonc` / Workers
+Variables panel, or (b) drop the read. The CF_PAGES_* names are listed
+only because older `cleanup.md` wording referenced them; those names do
+**not** exist on Workers.
 
-| Vercel var | Replace with | Notes |
+| Vercel var | Replace with (Workers) | Notes |
 |---|---|---|
-| `VERCEL_URL` | `CF_PAGES_URL` | Cloudflare sets this automatically on Pages |
-| `VERCEL_ENV` | `CF_PAGES_BRANCH` / custom `NEXT_PUBLIC_APP_ENV` | choose one convention |
-| `VERCEL_GIT_COMMIT_SHA` | `CF_PAGES_COMMIT_SHA` | Cloudflare sets this automatically |
+| `VERCEL_URL` | `NEX_SITE_URL` / `NEXT_PUBLIC_SITE_URL` | set manually; no Workers auto-inject |
+| `VERCEL_ENV` | `NEXT_PUBLIC_APP_ENV` | set per-environment in `wrangler.jsonc` |
+| `VERCEL_GIT_COMMIT_SHA` | `NEX_GIT_COMMIT_SHA` | set by CI (GitHub Actions) at deploy time; no Workers auto-inject |
 | `VERCEL_PROJECT_ID` | — | **drop** |
 | `VERCEL_ORG_ID` | — | **drop** |
 | any `NEXT_PUBLIC_VERCEL_*` | — | **drop** |
 
-Code audit action (NOT executed here, added to `cleanup.md`): grep
-`src/` for `process.env.VERCEL_` reads and either replace with
-`CF_PAGES_*` or make them optional with a sensible fallback. Any
-hard-fail on missing `VERCEL_*` is a launch blocker.
+Code audit action (NOT executed here, listed in `cleanup.md` Stage 5):
+grep `src/` for `process.env.VERCEL_` reads and either replace with the
+Workers-contract equivalent above or make them optional with a sensible
+fallback. Any hard-fail on missing `VERCEL_*` is a launch blocker.
 
 ## DEV-ONLY / LEGACY · DO NOT carry over
 
@@ -133,7 +155,7 @@ CI                                  # set automatically by CI
 
 The forensic scope doc counted **334 unique** `process.env.*` reads.
 This document enumerates the launch-critical subset. Before first
-Pages build, run:
+Workers deploy, run:
 
 ```bash
 # proposed audit command (do not run in prod CI yet)
@@ -143,15 +165,23 @@ rg -no --no-heading -I "process\.env\.[A-Z_][A-Z0-9_]+" src/ \
   | sort -u > /tmp/nexapp-env-names.txt
 ```
 
-Compare the output against the Cloudflare Pages Variables panel.
-Anything on the file that isn't in the panel and isn't in the
-"DEV-ONLY" bucket above is a candidate launch blocker — triage before
-flipping DNS.
+Compare the output against the Workers Variables and Secrets panel
+(or the `[vars]` / `wrangler secret list` output). Anything on the file
+that isn't bound and isn't in the "DEV-ONLY" bucket above is a candidate
+launch blocker — triage before flipping DNS.
 
 ## Encryption at rest
 
-Cloudflare Pages env vars are encrypted at rest. Mark anything that
-is a secret (not a public key, not a URL) as **Encrypted** in the
-dashboard. The `NEXT_PUBLIC_*` prefix convention still applies — vars
-with that prefix are bundled into the client JS and MUST be treated
-as public.
+On Cloudflare Workers there are two bindings:
+
+- **Secrets** (`wrangler secret put <NAME>`) — encrypted at rest; never
+  returned in plaintext after upload; not visible in the dashboard
+  value field.
+- **Vars** (`[vars]` in `wrangler.jsonc`) — plaintext config committed
+  to the deploy config; visible in the dashboard.
+
+Anything that is a secret (API keys, service role keys, Stripe secret,
+cron secrets, SMTP passwords) MUST be a secret binding — never a `[vars]`
+entry. The `NEXT_PUBLIC_*` prefix convention still applies — vars with
+that prefix are bundled into the client JS and MUST be treated as
+public.
