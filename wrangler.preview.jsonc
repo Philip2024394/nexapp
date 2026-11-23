@@ -1,0 +1,34 @@
+{
+  // Cloudflare Workers config for nexapp · PREVIEW build only.
+  //
+  // Standalone config used by Cloudflare Workers Builds when the
+  // nexapp-preview worker service's build is attached to this repo.
+  // Workers Builds validates the deploying worker name against the
+  // top-level "name" in the config file, so the preview service
+  // requires its own config file with "name": "nexapp-preview" at
+  // the top level (the env.preview nesting in wrangler.jsonc does
+  // not satisfy that check).
+  //
+  // Dashboard deploy command:
+  //   npx wrangler deploy --config wrangler.preview.jsonc
+  //
+  // Production stays on wrangler.jsonc (name: nexapp). Any prod
+  // deploy still requires CLAUDE.md §5 separate approval.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "cloudflare/worker.mjs",
+  "name": "nexapp-preview",
+  "compatibility_date": "2026-11-21",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NEXT_PUBLIC_APP_ENV": "preview",
+    "NEXT_PUBLIC_SITE_URL": "",
+    "NEX_SITE_URL": ""
+  }
+}
