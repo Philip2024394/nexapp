@@ -1,0 +1,32 @@
+# CODEOWNERS — nexapp
+# Purpose: every PR gets an automatic review request for the owner; GitHub
+#          branch-protection rulesets can then require CODEOWNERS approval
+#          to merge, so no file in this list changes without a founder OK.
+# Policy : default owner is @Philip2024394. Sensitive paths are listed
+#          again below (redundant but explicit) so they can never be
+#          silently overridden by a broader pattern later in the file.
+# Sealed : 2026-11-23
+# Docs   : https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+*                                                @Philip2024394
+
+# --- Protected roots ------------------------------------------------------
+/CLAUDE.md                                       @Philip2024394
+/CODEOWNERS                                      @Philip2024394
+
+# --- Git-level safety infrastructure --------------------------------------
+/.githooks/                                      @Philip2024394
+/.github/                                        @Philip2024394
+
+# --- Destructive / state-changing scripts ---------------------------------
+/scripts/apply-migration-*                       @Philip2024394
+/scripts/install-githooks.mjs                    @Philip2024394
+/scripts/snapshot-before-destructive.mjs         @Philip2024394
+/scripts/assert-nexapp-cwd-and-remote.mjs        @Philip2024394
+
+# --- Database schema ------------------------------------------------------
+/nex-supabase/migrations/                        @Philip2024394
+
+# --- Runtime chokepoints --------------------------------------------------
+/src/middleware.ts                               @Philip2024394
+/src/app/api/nex-native/version/route.ts         @Philip2024394

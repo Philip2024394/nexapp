@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — nexapp commit guard
+# Purpose: refuse commits that touch protected paths without founder tag,
+#          add oversized files, leak dotenv or key material, or embed
+#          obviously-secret patterns (AWS/Stripe/GitHub/OpenAI/Supabase SR).
+# Sealed: 2026-11-23
+# Escape: GIT_HOOKS_FOUNDER_OK=1 (used by scripted installers only)
+set -euo pipefail
+
+MAX_BYTES=$((10 * 1024 * 1024))   # 10 MB
+MSG_FILE=".git/COMMIT_EDITMSG"
+FOUNDER_TAG_RE='\[founder\]'
+
+fail() {
+  echo "pre-commit: BLOCKED" >&2
+  echo "  reason: $1" >&2
+  [ -n "${2:-}" ] && echo "  file:   $2" >&2
+  exit 1
+}
+
+# Collect staged files (added/copied/modified/renamed, NUL-safe).
+staged_files=()
+while IFS= read -r -d '' f; do
+  staged_files+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+
+# No staged files → nothing to check.
+[ "${#staged_files[@]}" -eq 0 ] && exit 0
+
+# --- Rule 1: protected-path edits need [founder] tag or env override ------
+protected_hit=""
+for f in "${staged_files[@]}"; do
+  case "$f" in
+    CLAUDE.md|.githooks/*)
+      protected_hit="$f"
+      break
+      ;;
+  esac
+done
+if [ -n "$protected_hit" ]; then
+  if [ "${GIT_HOOKS_FOUNDER_OK:-}" != "1" ]; then
+    msg=""
+    [ -f "$MSG_FILE" ] && msg="$(cat "$MSG_FILE" 2>/dev/null || true)"
+    if ! printf '%s' "$msg" | grep -Eq "$FOUNDER_TAG_RE"; then
+      fail "protected path edited without [founder] tag in commit message (or GIT_HOOKS_FOUNDER_OK=1)" "$protected_hit"
+    fi
+  fi
+fi
+
+# --- Rule 2: file size ----------------------------------------------------
+for f in "${staged_files[@]}"; do
+  [ -f "$f" ] || continue
+  size=$(wc -c < "$f" 2>/dev/null | tr -d ' \t\r\n' || echo 0)
+  [ -z "$size" ] && size=0
+  if [ "$size" -gt "$MAX_BYTES" ]; then
+    fail "file exceeds 10 MB limit (${size} bytes)" "$f"
+  fi
+done
+
+# --- Rule 3: dotenv and key files not already gitignored ------------------
+is_ignored() { git check-ignore -q "$1"; }
+for f in "${staged_files[@]}"; do
+  base="$(basename "$f")"
+  case "$base" in
+    .env|.env.local|.env.*.local|*.pem|*.key)
+      if ! is_ignored "$f"; then
+        fail "secret-bearing file is staged and NOT in .gitignore" "$f"
+      fi
+      ;;
+  esac
+done
+
+# --- Rule 4: obvious secret patterns in staged content --------------------
+# Build a single regex of high-signal patterns. Service-role JWT detection
+# is a two-step check (eyJ... header + decoded "service_role" claim guess).
+SECRET_RE='AKIA[0-9A-Z]{16}|sk_live_[0-9a-zA-Z]{16,}|ghp_[0-9A-Za-z]{30,}|sk-proj-[0-9A-Za-z_-]{20,}|-----BEGIN (RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----'
+
+for f in "${staged_files[@]}"; do
+  [ -f "$f" ] || continue
+  # Skip binary blobs.
+  if git diff --cached --numstat -- "$f" | awk '{print $1$2}' | grep -q '^-'; then
+    continue
+  fi
+  diff_body="$(git diff --cached -U0 -- "$f" 2>/dev/null || true)"
+  [ -z "$diff_body" ] && continue
+
+  if printf '%s' "$diff_body" | grep -E -q "$SECRET_RE"; then
+    fail "secret-like pattern detected in staged diff" "$f"
+  fi
+
+  # Supabase service_role JWT heuristic: look at each added eyJ... token
+  # and base64-decode the payload segment to search for "role":"service_role".
+  while IFS= read -r token; do
+    [ -z "$token" ] && continue
+    payload="${token#*.}"
+    payload="${payload%%.*}"
+    # pad base64 to a multiple of 4
+    case $(( ${#payload} % 4 )) in
+      2) payload="${payload}==" ;;
+      3) payload="${payload}=" ;;
+    esac
+    decoded="$(printf '%s' "$payload" | tr '_-' '/+' | base64 -d 2>/dev/null || true)"
+    if printf '%s' "$decoded" | grep -q '"role":"service_role"'; then
+      fail "Supabase service_role JWT detected in staged diff" "$f"
+    fi
+  done < <(printf '%s' "$diff_body" | grep -oE 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' || true)
+done
+
+echo "pre-commit: OK (${#staged_files[@]} files checked)"
+exit 0

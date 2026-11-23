@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg — nexapp commit message guard
+# Purpose: enforce Conventional Commits prefix, cap subject length at 100
+#          chars, and require a body for feat/fix/perf commits.
+# Sealed: 2026-11-23
+set -euo pipefail
+
+msg_file="${1:-}"
+[ -z "$msg_file" ] && { echo "commit-msg: no message file argument" >&2; exit 1; }
+[ -f "$msg_file" ] || { echo "commit-msg: message file missing ($msg_file)" >&2; exit 1; }
+
+fail() {
+  echo "commit-msg: BLOCKED" >&2
+  echo "  reason: $1" >&2
+  exit 1
+}
+
+# Strip comment lines (lines beginning with '#') and leading blank lines.
+clean="$(grep -v '^#' "$msg_file" | awk 'NF || seen {seen=1; print}')"
+subject="$(printf '%s\n' "$clean" | awk 'NR==1')"
+# Body = everything after the first blank separator line.
+body="$(printf '%s\n' "$clean" | awk 'BEGIN{sep=0} NR==1 {next} sep==0 && NF==0 {sep=1; next} sep==1 {print}')"
+
+[ -z "$subject" ] && fail "commit subject is empty"
+
+CC_RE='^(feat|fix|chore|docs|refactor|test|perf|build|ci|style|revert)(\([a-z0-9._/-]+\))?!?: .+'
+if ! printf '%s' "$subject" | grep -Eq "$CC_RE"; then
+  fail "subject must start with Conventional Commits prefix e.g. 'feat:', 'fix(scope):', 'perf:' — got: $subject"
+fi
+
+if [ "${#subject}" -gt 100 ]; then
+  fail "subject length ${#subject} > 100 chars"
+fi
+
+prefix="$(printf '%s' "$subject" | sed -E 's/^([a-z]+).*/\1/')"
+case "$prefix" in
+  feat|fix|perf)
+    # body must have at least one non-blank line
+    if ! printf '%s' "$body" | grep -q '[^[:space:]]'; then
+      fail "commit type '$prefix' requires a non-empty body explaining WHY"
+    fi
+    ;;
+esac
+
+echo "commit-msg: OK"
+exit 0

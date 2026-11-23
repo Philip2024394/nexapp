@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# .githooks/pre-push — nexapp push guard
+# Purpose: refuse pushes to the wrong remote, pushes to main without
+#          explicit opt-in, and force/delete pushes without explicit
+#          opt-in. Reads ref-update lines from stdin per githooks(5).
+# Sealed: 2026-11-23
+# Escape: NEX_ALLOW_MAIN_PUSH=yes, NEX_ALLOW_FORCE_PUSH=yes
+set -euo pipefail
+
+remote_name="${1:-}"
+remote_url="${2:-}"
+
+EXPECTED_HTTPS="https://github.com/Philip2024394/nexapp.git"
+EXPECTED_SSH="git@github.com:Philip2024394/nexapp.git"
+ZERO_SHA="0000000000000000000000000000000000000000"
+
+fail() {
+  echo "pre-push: BLOCKED" >&2
+  echo "  reason: $1" >&2
+  [ -n "${2:-}" ] && echo "  hint:   $2" >&2
+  exit 1
+}
+
+# --- Remote URL check -----------------------------------------------------
+if [ "$remote_url" != "$EXPECTED_HTTPS" ] && [ "$remote_url" != "$EXPECTED_SSH" ]; then
+  fail "remote URL mismatch (got '$remote_url', expected '$EXPECTED_HTTPS' or '$EXPECTED_SSH')" \
+       "check 'git remote -v' — do not silently re-point the remote"
+fi
+
+# --- Ref inspection from stdin -------------------------------------------
+# stdin format per line: <local_ref> <local_sha> <remote_ref> <remote_sha>
+pushed_main=""
+delete_detected=""
+force_detected=""
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${remote_ref:-}" ] && continue
+
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    pushed_main="$remote_ref"
+  fi
+
+  # Deletion: local SHA is the zero SHA.
+  if [ "$local_sha" = "$ZERO_SHA" ]; then
+    delete_detected="$remote_ref"
+    continue
+  fi
+
+  # Force detection: remote has a non-zero SHA that is NOT an ancestor
+  # of the local SHA → non-fast-forward (force).
+  if [ "$remote_sha" != "$ZERO_SHA" ]; then
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      force_detected="$remote_ref"
+    fi
+  fi
+done
+
+if [ -n "$pushed_main" ] && [ "${NEX_ALLOW_MAIN_PUSH:-}" != "yes" ]; then
+  fail "push to refs/heads/main is blocked" \
+       "if intentional, set NEX_ALLOW_MAIN_PUSH=yes for this invocation only"
+fi
+
+if [ -n "$delete_detected" ] && [ "${NEX_ALLOW_FORCE_PUSH:-}" != "yes" ]; then
+  fail "ref deletion detected ($delete_detected)" \
+       "if intentional, set NEX_ALLOW_FORCE_PUSH=yes"
+fi
+
+if [ -n "$force_detected" ] && [ "${NEX_ALLOW_FORCE_PUSH:-}" != "yes" ]; then
+  fail "non-fast-forward (force) push detected ($force_detected)" \
+       "if intentional, set NEX_ALLOW_FORCE_PUSH=yes"
+fi
+
+branch_display="${pushed_main:-$(git symbolic-ref --short HEAD 2>/dev/null || echo "?")}"
+echo "pre-push: OK  remote=$remote_name url=$remote_url branch=$branch_display"
+exit 0
