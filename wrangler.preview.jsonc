@@ -30,5 +30,15 @@
     "NEXT_PUBLIC_APP_ENV": "preview",
     "NEXT_PUBLIC_SITE_URL": "",
     "NEX_SITE_URL": ""
+  },
+  // Mirrors the nexapp-preview worker's observability settings
+  // configured via the Cloudflare dashboard on 2026-11-23.
+  // Keeps local `wrangler dev` / `wrangler deploy` in sync so the
+  // next deploy does not revert dashboard-set values.
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "invocation_logs": true
+    }
   }
 }
