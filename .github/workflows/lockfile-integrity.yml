@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# lockfile-integrity.yml — nexapp dependency lockfile verification
+# Sealed: 2026-11-23
+#
+# Purpose:
+#   When a PR changes package.json or package-lock.json, verify that:
+#     1. The lockfile matches package.json and is reproducible (`npm ci`).
+#     2. No high/critical CVE is present in production dependencies.
+#     3. Package signatures verify when supported (non-fatal).
+#
+#   `--ignore-scripts` is used so a compromised transitive dep cannot execute
+#   arbitrary install-time scripts in CI. This is deliberate supply-chain
+#   hardening — do not remove without owner approval.
+#
+# Related: CLAUDE.md §4 (push is a separate gate).
+# ─────────────────────────────────────────────────────────────────────────────
+name: Lockfile integrity
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify lockfile + audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect Node version
+        id: node-version
+        run: |
+          if [ -f .nvmrc ]; then
+            echo "version=$(cat .nvmrc | tr -d 'v\n')" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=20" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: "npm"
+
+      - name: Verify lockfile is reproducible (npm ci --ignore-scripts)
+        run: npm ci --ignore-scripts
+
+      - name: Audit production dependencies (fail on high/critical)
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Verify package signatures (non-fatal)
+        continue-on-error: true
+        run: |
+          if npm audit signatures --help >/dev/null 2>&1; then
+            npm audit signatures || echo "::warning::npm audit signatures reported issues (non-fatal in this job)"
+          else
+            echo "::notice::npm audit signatures not supported by this npm version — skipping"
+          fi

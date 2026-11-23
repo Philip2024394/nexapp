@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# sbom.yml — nexapp Software Bill of Materials generation
+# Sealed: 2026-11-23
+#
+# Purpose:
+#   Generate a CycloneDX SBOM for every push to protected branches (and on
+#   manual dispatch), upload as a workflow artifact with 90-day retention,
+#   and — when the run is on a tagged commit — attach the SBOM to the GitHub
+#   release for downstream audit.
+#
+#   The SBOM is the authoritative record of "what was in the build" at a
+#   given commit, matching WhatsApp-tier supply-chain parity expected by the
+#   NEX competitive wedges (see MEMORY.md).
+#
+# Related: CLAUDE.md §4 (push is a separate gate), §5 (deploy is a separate
+# gate). SBOM generation never deploys anything.
+# ─────────────────────────────────────────────────────────────────────────────
+name: SBOM
+
+on:
+  push:
+    branches:
+      - main
+      - release-audit-v1-2026-11-14
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate SBOM (CycloneDX)
+        id: sbom
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          artifact-name: nexapp-sbom-${{ github.sha }}.cyclonedx.json
+          output-file: ./nexapp-sbom-${{ github.sha }}.cyclonedx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexapp-sbom-${{ github.sha }}
+          path: ./nexapp-sbom-${{ github.sha }}.cyclonedx.json
+          retention-days: 90
+          if-no-files-found: error
+
+      # Optional release attachment — only runs when the triggering ref is a tag.
+      - name: Attach SBOM to GitHub release (if tagged)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./nexapp-sbom-${{ github.sha }}.cyclonedx.json
+          fail_on_unmatched_files: false
