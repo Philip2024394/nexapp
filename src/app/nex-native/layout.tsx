@@ -245,15 +245,42 @@ export default async function NexNativeLayout({
   // Owner-authorised 2026-10-31 (country-preview round) · preload the
   // country-specific desktop backdrop. Rendering a <link rel="preload">
   // element inside a server component · Next.js hoists resource hints
-  // into <head> automatically. Minimises the window during which the
-  // viewport paints the solid base colour while the ~2.6 MB PNG is
-  // still downloading.
+  // into <head> automatically.
+  //
+  // Perf regression fix 2026-11-23 (sealed in CLAUDE.md §10 blueprint):
+  //   · Added `media="(min-width: 500px)"` so mobile viewports skip
+  //     the 2.1 MB PNG preload entirely (the CSS backdrop is
+  //     @media-gated to ≥500px anyway · mobile never used it).
+  //   · Added `fetchPriority="low"` so the preload does not contend
+  //     with critical JS/CSS on the fast path. The resource hint
+  //     still warms the browser cache before the CSS rule paints,
+  //     but it no longer blocks LCP-adjacent work.
+  // Enforced by tests/e2e/perf-regression-asset-budgets.spec.ts.
   const activeBackdropUrl = getWorldDesktopBackdrop(activeWorld.meta.id);
+  const supabasePublicUrl = process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ?? null;
 
   return (
     <I18nProvider initialLang={initialLang}>
       {/* Preload the country backdrop. See activeBackdropUrl above. */}
-      <link rel="preload" as="image" href={activeBackdropUrl} />
+      <link
+        rel="preload"
+        as="image"
+        href={activeBackdropUrl}
+        media="(min-width: 500px)"
+        fetchPriority="low"
+      />
+      {/* Perf regression fix 2026-11-23 · Supabase is on the critical
+          path for every signed-in route (auth refresh + realtime +
+          data fetches). Opening the TLS handshake in parallel with
+          the HTML download shaves the first Supabase round-trip by
+          ~1 RTT. Only emitted when the env var resolves at request
+          time (dev may not set it) · never a hard-coded host. */}
+      {supabasePublicUrl ? (
+        <>
+          <link rel="preconnect" href={supabasePublicUrl} crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href={supabasePublicUrl} />
+        </>
+      ) : null}
       {/* Owner directive 2026-11-12 · DevImpersonationBanner (the
           blue "Impersonating nex-99901" strip at the top) is no
           longer mounted · the strip was visually intrusive even in

@@ -1,13 +1,21 @@
 // src/lib/nex-native/notifications/seller-order-notifications.ts
 //
 // NEX · Seller-side order notifications feed · owner-authorised
-// 2026-11-16 as a bounded read-path wiring. Reuses the EXISTING
-// `nex_business` ownership and `nex_order.state='created'` model
-// already honoured by `countSellerUnreadOrders`. No new tables,
-// no new RPC, no new schema.
+// 2026-11-16, tightened by owner directive 2026-11-23: notification
+// rows are reserved for VERIFIED PAID orders only. Reuses the
+// EXISTING `nex_business` ownership and `nex_order` model. No new
+// tables, no new RPC, no new schema.
+//
+// Owner directive 2026-11-23 · do not surface `state='created'` rows
+// here. A merely-created order has not been settled yet · surfacing
+// it as a seller notification would advertise it as a sale before
+// Stripe/PayPal/manual confirmation has actually moved funds. Those
+// unpaid rows are still reachable in /manage/orders (the orders
+// queue is the right place for unpaid-order triage · the drawer is
+// for "something happened you should know about").
 //
 // Scope:
-//   · Map the signed-in seller's current `state='created'` orders
+//   · Map the signed-in seller's current `state='paid'` orders
 //     into the `NotificationItem` contract the LEFT notifications
 //     drawer consumes.
 //   · Row id namespace is prefixed with `order-` so there's no
@@ -55,11 +63,12 @@ function formatOrderPriceLabel(pricePence: number, currency: string): string {
 }
 
 /**
- * List the signed-in seller's `state='created'` orders mapped into
+ * List the signed-in seller's `state='paid'` orders mapped into
  * `NotificationItem`s for the LEFT notifications drawer's "Orders"
  * section. Returns `[]` when the viewer is not signed in, owns no
- * businesses, has no orders awaiting action, or when any query
- * fails (soft-fail by design).
+ * businesses, has no verified-paid orders, or when any query fails
+ * (soft-fail by design). Unpaid / pending orders are deliberately
+ * excluded · see the header owner directive 2026-11-23.
  */
 export async function listSellerOrderNotifications(
   accountId: NexUuid | null,
@@ -83,12 +92,17 @@ export async function listSellerOrderNotifications(
   const businessIds = (owned ?? []).map((b: { id: string }) => b.id);
   if (businessIds.length === 0) return [];
 
-  // 2 · pull the newest `created` orders scoped to those businesses.
+  // 2 · pull the newest `paid` orders scoped to those businesses.
+  //     Owner directive 2026-11-23 · `state='paid'` is the ONLY value
+  //     the drawer surfaces. A seller sees paid-order notifications
+  //     when a Stripe/PayPal webhook has flipped the row (or a
+  //     merchant-confirmed QR payment has transitioned it); unpaid
+  //     and pending orders live in the /manage/orders queue instead.
   const { data, error } = await nexSupabaseAdmin
     .from("nex_order")
     .select("id,product_id,price_pence,currency,created_at,state,business_id")
     .in("business_id", businessIds)
-    .eq("state", "created")
+    .eq("state", "paid")
     .order("created_at", { ascending: false })
     .limit(MAX_ROWS);
   if (error) {
@@ -142,11 +156,13 @@ export async function listSellerOrderNotifications(
     const price =
       typeof r.price_pence === "number" && r.price_pence > 0
         ? formatOrderPriceLabel(r.price_pence, r.currency ?? "EUR")
-        : "new order";
+        : "paid order";
     const name = nameById.get(r.product_id) ?? "";
     // Subtitle is metadata-only · product name is catalogue data the
-    // seller already owns; never cart content / buyer notes.
-    const subtitle = name ? `${name} · ${price}` : price;
+    // seller already owns; never cart content / buyer notes. "paid"
+    // prefix matches the owner directive 2026-11-23: these rows only
+    // surface after a verified Stripe/PayPal settlement.
+    const subtitle = name ? `Paid · ${name} · ${price}` : `Paid · ${price}`;
     return {
       id: `order-${r.id}`,
       section: "orders" as const,

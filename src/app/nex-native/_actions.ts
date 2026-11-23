@@ -42,6 +42,10 @@ import {
 // payload contract (conversation_id, message_group_id, sent_at only).
 import { emitMessageArrival } from "@/lib/nex-native/realtime/message-arrival";
 import { dispatchPushNotification } from "@/lib/nex-native/notification-dispatch-service";
+import {
+  writePeerMessageNotification,
+  writeProductInquiryNotification,
+} from "@/lib/nex-native/notifications/nex-notification-writer";
 import { resolveAccountLocale, t as tI18n } from "@/lib/nex/i18n/server";
 import * as sellerResponsivenessService from "@/lib/nex-native/seller-responsiveness-service";
 import { getThemeStickerBySlug } from "@/lib/nex-native/theme-sticker-service";
@@ -107,7 +111,6 @@ import * as reportService from "@/lib/nex-native/report-service";
 import * as likedProductService from "@/lib/nex-native/liked-product-service";
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
-import { notifySellerNewOrder } from "@/lib/nex-native/manage-orders/order-notification-service";
 import {
   getCheckoutDestinationForBusiness,
 } from "@/lib/nex-native/payments/method-resolver-service";
@@ -1338,6 +1341,24 @@ export async function sendPeerMessageAction(
     conversationId: conversation.id,
     messageGroupId: insertedRow.id,
     sentAtIso: insertedRow.sent_at,
+  });
+
+  // Durable in-app row · owner directive 2026-11-23b. Persist a
+  // recipient-scoped nex_notification row independently of push
+  // outcome. Grouped by conversation (source_ref='msg:<conv_id>') so
+  // the drawer shows one row per thread · new activity flips it back
+  // to unread via UPSERT ON CONFLICT. Fire-and-forget · a durable-
+  // write failure MUST NOT flip a successful send into a failed send.
+  // E2E doctrine: no message body is passed through · only generic
+  // "Sent you a message" / "Sent you an attachment" copy.
+  void writePeerMessageNotification({
+    recipient_account_id: peerAccountId,
+    conversation_id: conversation.id,
+    sender_account_id: session.account.id,
+    sender_display_name: session.account.display_name || "Someone",
+    has_attachment: attachmentType !== null,
+  }).catch(() => {
+    /* non-fatal · writer already logs */
   });
 
   // R8 Stage 3b · fan a push notification to the recipient's registered
@@ -2617,6 +2638,22 @@ export async function sendProductInquiryAction(
     send_intent_id: sendIntentId,
   });
 
+  // Durable in-app row · owner directive 2026-11-23b. Writer is keyed
+  // on (seller, product, buyer) so repeated inquiries about the same
+  // product from the same buyer collapse to one row and flip read_at
+  // back to NULL via UPSERT ON CONFLICT. Deep-link opens the seller's
+  // peer chat with the buyer · the actionable surface is the chat
+  // itself. Fire-and-forget · never blocks the send.
+  void writeProductInquiryNotification({
+    seller_account_id: peerAccountId,
+    product_id: product.id,
+    product_name: product.name,
+    buyer_account_id: session.account.id,
+    buyer_display_name: session.account.display_name || "A buyer",
+  }).catch(() => {
+    /* non-fatal · writer already logs */
+  });
+
   // Phase 1 · Slice 1D · owner-authorised 2026-10-24 · fire the
   // enquiry_initiated marketing signal AFTER the peer-message insert
   // resolves successfully, so the signal reflects a confirmed send.
@@ -3879,59 +3916,17 @@ export async function sendCartOrderAction(
               : null,
         });
 
-        // Lane E · round 17 · E-NOTIFY · 2026-11-19. Wire the supported
-        // seller push-notification path (same one placeOrderAction uses
-        // at _actions.ts:~7707) into the cart-send flow, ONLY after the
-        // nex_order row is confirmed present. Privacy-safe generic copy
-        // ("You have received a new order.") · no PII in visible body ·
-        // dispatched via notifications/notification-dispatch-service.
-        //
-        // Retry/dedup safeguard: `createOrder` is idempotent on
-        // `idempotency_key = sendIntentId` and returns the EXISTING row
-        // on a race / retry. Without a dedup check, the second tap would
-        // re-notify the seller for the same cart. Before notifying, we
-        // check `nex_order_event` for a prior `seller_notified` marker
-        // on this order.id · if present, skip · else notify then record
-        // the marker. The check-then-write is not atomic · a concurrent
-        // double-tap CAN still double-notify in the narrow window before
-        // the event row lands. That residual race is acknowledged · the
-        // push-subscription + browser layers already deduplicate on
-        // `eventKind + orderId` so this is defence-in-depth, not a
-        // guarantee.
-        //
-        // Fail-soft: notification failure MUST NOT reverse the cart send
-        // or the order row · both are already persisted. Matches the
-        // placeOrderAction pattern exactly.
-        try {
-          const priorEvents = await orderService.listOrderEvents(createdOrder.id);
-          const alreadyNotified = priorEvents.some(
-            (ev) => ev.event === "seller_notified",
-          );
-          if (!alreadyNotified) {
-            await notifySellerNewOrder(createdOrder);
-            try {
-              await orderService.recordOrderEvent({
-                order_id: createdOrder.id,
-                event: "seller_notified",
-                actor_account_id: null,
-                metadata: {
-                  source: "cart_order",
-                  send_intent_id: sendIntentId ?? null,
-                },
-              });
-            } catch (markErr) {
-              console.warn(
-                "[cart-order E-NOTIFY] seller_notified marker write failed · notify did fire",
-                markErr instanceof Error ? markErr.message : markErr,
-              );
-            }
-          }
-        } catch (notifyErr) {
-          console.warn(
-            "[cart-order E-NOTIFY] seller notification failed · order persisted",
-            notifyErr instanceof Error ? notifyErr.message : notifyErr,
-          );
-        }
+        // Owner directive 2026-11-23 · seller push-notification is NO
+        // LONGER fired at order-create time. A created order has not
+        // been settled by Stripe/PayPal/manual-confirm yet · advertising
+        // it as a sale on push would mislead the seller + would fire
+        // on bank-detail share / "payment sent" taps that are not
+        // settlement events. The seller push now fires from the Stripe
+        // / PayPal webhook branches only, gated on a verified settled
+        // status, with its own `seller_notified_paid` marker in
+        // nex_order_event for idempotency. The cart message + order
+        // row are still persisted here · the order is still visible in
+        // /manage/orders (as unpaid) so the seller can triage it.
       } catch (e) {
         console.warn(
           "[cart-order #14] deterministic nex_order insert failed · cart message retained",
@@ -3939,49 +3934,13 @@ export async function sendCartOrderAction(
         );
       }
     }
-  } else if (atomicTxCreatedOrderId) {
-    // Post-RPC seller notification. Mirrors the legacy nested notify
-    // block · same `seller_notified` event-marker dedup so a tx-path
-    // double-tap converges on exactly one push notification. Fail-soft:
-    // the RPC already committed message + order atomically, so notify
-    // failures MUST NOT invalidate what the user and seller see.
-    try {
-      const createdOrder = await orderService.getOrderById(
-        atomicTxCreatedOrderId,
-      );
-      if (createdOrder) {
-        const priorEvents = await orderService.listOrderEvents(createdOrder.id);
-        const alreadyNotified = priorEvents.some(
-          (ev) => ev.event === "seller_notified",
-        );
-        if (!alreadyNotified) {
-          await notifySellerNewOrder(createdOrder);
-          try {
-            await orderService.recordOrderEvent({
-              order_id: createdOrder.id,
-              event: "seller_notified",
-              actor_account_id: null,
-              metadata: {
-                source: "cart_order",
-                send_intent_id: sendIntentId ?? null,
-                via: "atomic_tx",
-              },
-            });
-          } catch (markErr) {
-            console.warn(
-              "[cart-order #5 wire · E-NOTIFY] seller_notified marker write failed · notify did fire",
-              markErr instanceof Error ? markErr.message : markErr,
-            );
-          }
-        }
-      }
-    } catch (notifyErr) {
-      console.warn(
-        "[cart-order #5 wire · E-NOTIFY] seller notification failed · order persisted via RPC",
-        notifyErr instanceof Error ? notifyErr.message : notifyErr,
-      );
-    }
   }
+  // Owner directive 2026-11-23 · the former `else if (atomicTxCreatedOrderId)`
+  // branch that fired a seller push after the atomic-tx RPC success is
+  // retired. Seller push now fires from the Stripe / PayPal webhook
+  // only, after a verified settled payment (see the webhook routes +
+  // `notifySellerPaidOrder`). The atomic-tx RPC still commits the
+  // message + order atomically · that behaviour is unchanged.
 
   // Phase 1 · Slice 1D · emit cart_sent after a confirmed cart
   // delivery. Metadata carries aggregate shape (item_count,
@@ -7875,14 +7834,12 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
     redirect(`/nex-native/${business.slug}?${qs.toString()}`);
   }
 
-  // P4 · notify the seller a new order has arrived. Fail-soft: a
-  // notification outage must never undo or block a confirmed order.
-  // The service resolves the recipient via nex_business.owner_account_id
-  // from order.business_id (snapshotted server-side in createOrder from
-  // the product record) · the buyer cannot inject a different seller.
-  try {
-    await notifySellerNewOrder(order);
-  } catch { /* silent · deliberate · order already persisted */ }
+  // Owner directive 2026-11-23 · no seller push at order create. The
+  // seller is notified ONLY after a verified settled payment via the
+  // Stripe / PayPal webhook branches (see notifySellerPaidOrder). The
+  // order row is still persisted above · it will appear in the
+  // seller's /manage/orders queue as unpaid until a settlement event
+  // fires.
 
   // Tag payment_method based on the resolver outcome. Multi-method
   // picker leaves the tag unset until the buyer picks. chat_only

@@ -32,7 +32,7 @@ const {
   setPaymentMethodMock,
   transitionOrderStateMock,
   recordOrderEventMock,
-  notifySellerNewOrderMock,
+  notifySellerPaidOrderMock,
   revalidatePathMock,
 } = vi.hoisted(() => ({
   resolveSessionMock: vi.fn(),
@@ -47,7 +47,13 @@ const {
   setPaymentMethodMock: vi.fn(),
   transitionOrderStateMock: vi.fn(),
   recordOrderEventMock: vi.fn(),
-  notifySellerNewOrderMock: vi.fn(),
+  // Owner directive 2026-11-23 · placeOrderAction no longer calls
+  // notifySellerNewOrder. The seller push fires only from the Stripe
+  // / PayPal webhook branches after verified settlement. We keep a
+  // mock for notifySellerPaidOrder so the module factory stays
+  // self-consistent · the assertions below verify the paid-path
+  // mock is NOT invoked during placeOrderAction.
+  notifySellerPaidOrderMock: vi.fn(),
   revalidatePathMock: vi.fn(),
 }));
 
@@ -109,7 +115,7 @@ vi.mock("@/lib/nex-native/order-service", () => ({
 }));
 
 vi.mock("@/lib/nex-native/manage-orders/order-notification-service", () => ({
-  notifySellerNewOrder: notifySellerNewOrderMock,
+  notifySellerPaidOrder: notifySellerPaidOrderMock,
   notifyBuyerPaymentConfirmed: vi.fn(),
   notifyBuyerOrderCancelled: vi.fn(),
 }));
@@ -183,7 +189,7 @@ function installHappyBoundaries() {
   });
   setPaymentMethodMock.mockResolvedValue(undefined);
   transitionOrderStateMock.mockResolvedValue(undefined);
-  notifySellerNewOrderMock.mockResolvedValue({ attempted: 0, delivered: 0, failed: 0 });
+  notifySellerPaidOrderMock.mockResolvedValue({ attempted: 0, delivered: 0, failed: 0 });
 }
 
 function buildFormData(): FormData {
@@ -252,8 +258,10 @@ describe("placeOrderAction · payment gateway routing", () => {
     // An awaiting_chat_arrangement event IS recorded for the audit trail.
     expect(recordOrderEventMock).toHaveBeenCalledTimes(1);
     expect(recordOrderEventMock.mock.calls[0][0].event).toBe("awaiting_chat_arrangement");
-    // Notification still fires.
-    expect(notifySellerNewOrderMock).toHaveBeenCalledTimes(1);
+    // Owner directive 2026-11-23 · seller push is NOT fired at order
+    // create. The push now fires only from the Stripe / PayPal webhook
+    // after verified settlement.
+    expect(notifySellerPaidOrderMock).not.toHaveBeenCalled();
   });
 
   test("QR-only · redirect = /pay · payment_method tag = qr_manual", async () => {

@@ -3,8 +3,12 @@
 # Cloudflare Workers deploy for nexapp · Linux CI resolves the
 # Windows NTFS symlink blocker that prevents local OpenNext builds.
 #
-# Manual-only (workflow_dispatch). Never fires on push. Per
-# CLAUDE.md §4 and §5 each deploy is a separate explicit action.
+# Triggers:
+#   · push to release-audit-v1-2026-11-14 → auto-deploys PREVIEW
+#     (sandbox Supabase · nexapp-preview worker). Authorised 2026-11-23.
+#   · workflow_dispatch → manual deploy to preview OR production.
+#     PRODUCTION remains dispatch-only. Per CLAUDE.md §5 each
+#     production deploy is a separate explicit action.
 #
 # -----------------------------------------------------------------------
 # Required GitHub Actions repository secrets BEFORE first PREVIEW deploy:
@@ -44,6 +48,12 @@
 name: Cloudflare Workers deploy
 
 on:
+  push:
+    branches:
+      - release-audit-v1-2026-11-14
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
     inputs:
       environment:
@@ -62,6 +72,10 @@ jobs:
   deploy:
     name: Build + deploy
     runs-on: ubuntu-latest
+    # Push events always deploy to preview. Production requires
+    # workflow_dispatch with environment=production (CLAUDE.md §5).
+    env:
+      TARGET_ENV: ${{ github.event_name == 'push' && 'preview' || inputs.environment }}
     steps:
       - uses: actions/checkout@v4
 
@@ -78,7 +92,7 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Validate preview secrets present
-        if: ${{ inputs.environment == 'preview' }}
+        if: ${{ env.TARGET_ENV == 'preview' }}
         env:
           URL: ${{ secrets.NEX_SANDBOX_SUPABASE_URL }}
           ANON: ${{ secrets.NEX_SANDBOX_SUPABASE_ANON_KEY }}
@@ -98,7 +112,7 @@ jobs:
           fi
 
       - name: Validate production secrets present
-        if: ${{ inputs.environment == 'production' }}
+        if: ${{ env.TARGET_ENV == 'production' }}
         env:
           URL: ${{ secrets.NEX_PROD_SUPABASE_URL }}
           ANON: ${{ secrets.NEX_PROD_SUPABASE_ANON_KEY }}
@@ -118,7 +132,7 @@ jobs:
           fi
 
       - name: Build OpenNext Workers bundle (preview)
-        if: ${{ inputs.environment == 'preview' }}
+        if: ${{ env.TARGET_ENV == 'preview' }}
         env:
           NEX_GIT_COMMIT_SHA: ${{ steps.sha.outputs.sha }}
           # Build-time NEXT_PUBLIC_* values so Next.js inlines them
@@ -129,7 +143,7 @@ jobs:
         run: npx opennextjs-cloudflare build
 
       - name: Build OpenNext Workers bundle (production)
-        if: ${{ inputs.environment == 'production' }}
+        if: ${{ env.TARGET_ENV == 'production' }}
         env:
           NEX_GIT_COMMIT_SHA: ${{ steps.sha.outputs.sha }}
           NEXT_PUBLIC_NEX_SUPABASE_URL: ${{ secrets.NEX_PROD_SUPABASE_URL }}
@@ -140,7 +154,7 @@ jobs:
         run: npx opennextjs-cloudflare build
 
       - name: Push runtime secrets to Worker (preview)
-        if: ${{ inputs.environment == 'preview' }}
+        if: ${{ env.TARGET_ENV == 'preview' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -155,7 +169,7 @@ jobs:
           printf '%s' "$KEY"  | npx wrangler secret put NEX_SUPABASE_SERVICE_ROLE_KEY       --env preview
 
       - name: Push runtime secrets to Worker (production)
-        if: ${{ inputs.environment == 'production' }}
+        if: ${{ env.TARGET_ENV == 'production' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -174,7 +188,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ "${{ inputs.environment }}" = "production" ]; then
+          if [ "${{ env.TARGET_ENV }}" = "production" ]; then
             npx wrangler deploy
           else
             npx wrangler deploy --env preview
@@ -183,7 +197,7 @@ jobs:
       - name: Summary
         run: |
           echo "### Cloudflare deploy complete" >> $GITHUB_STEP_SUMMARY
-          echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ env.TARGET_ENV }}" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: ${{ steps.sha.outputs.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- Worker name (preview): nexapp-preview" >> $GITHUB_STEP_SUMMARY
           echo "- Worker name (production): nexapp" >> $GITHUB_STEP_SUMMARY

@@ -34,20 +34,40 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export const NEX_STRIPE_SYSTEM_ACTOR_ID =
   "00000000-0000-4000-8000-000000000000" as const;
 
+/**
+ * Shape of the `checkout.session.*` data.object we care about. Shared by
+ * `checkout.session.completed` and the two delayed-settlement variants
+ * (`async_payment_succeeded` + `async_payment_failed`). Owner directive
+ * 2026-11-23 · Stripe fires `async_payment_succeeded` when a bank-debit /
+ * BNPL settles AFTER the initial `completed` event · the webhook must
+ * handle it to flip the order to paid at that later moment.
+ */
+type StripeCheckoutSessionObject = {
+  readonly id: string;
+  readonly metadata?: Record<string, string | undefined> | null;
+  readonly client_reference_id?: string | null;
+  readonly payment_status?: string | null;
+};
+
 /** Narrow discriminated union · only events the NEX webhook route handles. */
 export type StripeWebhookEvent =
   | {
       readonly id: string;
       readonly type: "checkout.session.completed";
       readonly connectedAccountId: string | null;
-      readonly data: {
-        readonly object: {
-          readonly id: string;
-          readonly metadata?: Record<string, string | undefined> | null;
-          readonly client_reference_id?: string | null;
-          readonly payment_status?: string | null;
-        };
-      };
+      readonly data: { readonly object: StripeCheckoutSessionObject };
+    }
+  | {
+      readonly id: string;
+      readonly type: "checkout.session.async_payment_succeeded";
+      readonly connectedAccountId: string | null;
+      readonly data: { readonly object: StripeCheckoutSessionObject };
+    }
+  | {
+      readonly id: string;
+      readonly type: "checkout.session.async_payment_failed";
+      readonly connectedAccountId: string | null;
+      readonly data: { readonly object: StripeCheckoutSessionObject };
     }
   | {
       readonly id: string;
@@ -213,26 +233,29 @@ export function parseStripeWebhookEvent(
     : null;
   if (!id || !type || !dataObject) return null;
 
-  if (type === "checkout.session.completed") {
+  if (
+    type === "checkout.session.completed" ||
+    type === "checkout.session.async_payment_succeeded" ||
+    type === "checkout.session.async_payment_failed"
+  ) {
+    const sessionObject: StripeCheckoutSessionObject = {
+      id: typeof dataObject.id === "string" ? dataObject.id : "",
+      metadata: (dataObject.metadata as Record<string, string | undefined> | undefined) ?? null,
+      client_reference_id:
+        typeof dataObject.client_reference_id === "string"
+          ? dataObject.client_reference_id
+          : null,
+      payment_status:
+        typeof dataObject.payment_status === "string"
+          ? dataObject.payment_status
+          : null,
+    };
     return {
       id,
       type,
       connectedAccountId,
-      data: {
-        object: {
-          id: typeof dataObject.id === "string" ? dataObject.id : "",
-          metadata: (dataObject.metadata as Record<string, string | undefined> | undefined) ?? null,
-          client_reference_id:
-            typeof dataObject.client_reference_id === "string"
-              ? dataObject.client_reference_id
-              : null,
-          payment_status:
-            typeof dataObject.payment_status === "string"
-              ? dataObject.payment_status
-              : null,
-        },
-      },
-    };
+      data: { object: sessionObject },
+    } as StripeWebhookEvent;
   }
   if (type === "charge.refunded") {
     return {
@@ -260,10 +283,19 @@ export function parseStripeWebhookEvent(
   };
 }
 
+/** Checkout-session-shaped event union (completed + async variants). */
+export type StripeCheckoutSessionEvent = Extract<
+  StripeWebhookEvent,
+  {
+    type:
+      | "checkout.session.completed"
+      | "checkout.session.async_payment_succeeded"
+      | "checkout.session.async_payment_failed";
+  }
+>;
+
 /** Narrow accessor: extract the NEX order id from a verified checkout event. */
-export function extractNexOrderId(
-  event: Extract<StripeWebhookEvent, { type: "checkout.session.completed" }>,
-): string | null {
+export function extractNexOrderId(event: StripeCheckoutSessionEvent): string | null {
   const meta = event.data.object.metadata ?? null;
   const fromMeta = meta && typeof meta.nex_order_id === "string"
     ? meta.nex_order_id

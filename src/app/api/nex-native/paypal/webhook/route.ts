@@ -45,6 +45,10 @@ import {
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import {
+  ensureDurablePaidOrderRow,
+  notifySellerPaidOrder,
+} from "@/lib/nex-native/manage-orders/order-notification-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +86,7 @@ async function readSellerPaypalMerchantId(businessId: string): Promise<string | 
 
 async function dispatchEvent(
   event: PaypalWebhookEvent,
+  isReplay: boolean,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   if (event.type === "unhandled") {
     return {
@@ -134,26 +139,92 @@ async function dispatchEvent(
   };
 
   if (event.type === "PAYMENT.CAPTURE.COMPLETED") {
-    const result = await commerceService.markOrderPaid(
-      nexOrderId,
-      NEX_PAYPAL_SYSTEM_ACTOR_ID,
-    );
-    await orderService
-      .recordOrderEvent({
-        order_id: nexOrderId,
-        event: "paypal.capture.completed",
-        actor_account_id: NEX_PAYPAL_SYSTEM_ACTOR_ID,
-        metadata: {
-          ...baseMeta,
-          amount: event.amount,
-          ledger_entry_id: result.ledgerEntryId,
-        },
-      })
-      .catch(() => undefined);
-    return { status: 200, body: { ok: true, outcome: "order_paid" } };
+    // First-delivery runs the state transition + audit row. Replay
+    // skips both (they already ran on an earlier delivery) and goes
+    // straight to the idempotent reconciliation steps.
+    let orderForDispatch = order;
+    if (!isReplay) {
+      const result = await commerceService.markOrderPaid(
+        nexOrderId,
+        NEX_PAYPAL_SYSTEM_ACTOR_ID,
+      );
+      await orderService
+        .recordOrderEvent({
+          order_id: nexOrderId,
+          event: "paypal.capture.completed",
+          actor_account_id: NEX_PAYPAL_SYSTEM_ACTOR_ID,
+          metadata: {
+            ...baseMeta,
+            amount: event.amount,
+            ledger_entry_id: result.ledgerEntryId,
+          },
+        })
+        .catch(() => undefined);
+      orderForDispatch = result.order;
+    }
+
+    // Durable in-app row · exactly-once-created via preserve_read_state
+    // ON CONFLICT DO NOTHING. First-delivery inserts; replay no-ops
+    // safely without reviving a read alert as new activity.
+    try {
+      await ensureDurablePaidOrderRow(orderForDispatch);
+    } catch (ensureErr) {
+      console.error(
+        "[nex-paypal/webhook] ensureDurablePaidOrderRow failed:",
+        ensureErr instanceof Error ? ensureErr.message : String(ensureErr),
+      );
+    }
+
+    // Owner directive 2026-11-23 · seller-facing "paid order" push
+    // fires ONLY after verified settlement. Marker-gated · push is at-
+    // least-once, not exactly-once. Multiple PAYMENT.CAPTURE.COMPLETED
+    // events (e.g. multi-capture flows) will not re-notify.
+    try {
+      const priorEvents = await orderService.listOrderEvents(nexOrderId);
+      const alreadyNotifiedPaid = priorEvents.some(
+        (e) => e.event === "seller_notified_paid",
+      );
+      if (!alreadyNotifiedPaid) {
+        const dispatch = await notifySellerPaidOrder(orderForDispatch);
+        if (dispatch.attempted > 0) {
+          await orderService
+            .recordOrderEvent({
+              order_id: nexOrderId,
+              event: "seller_notified_paid",
+              actor_account_id: NEX_PAYPAL_SYSTEM_ACTOR_ID,
+              metadata: {
+                source: isReplay
+                  ? "paypal.capture.completed.replay_recovery"
+                  : "paypal.capture.completed",
+                paypal_event_id: event.id,
+                attempted: dispatch.attempted,
+                delivered: dispatch.delivered,
+                failed: dispatch.failed,
+                ...(dispatch.skipped_reason
+                  ? { skipped_reason: dispatch.skipped_reason }
+                  : {}),
+              },
+            })
+            .catch(() => undefined);
+        }
+      }
+    } catch (notifyErr) {
+      console.error(
+        "[nex-paypal/webhook] seller paid-order notify failed:",
+        notifyErr instanceof Error ? notifyErr.message : String(notifyErr),
+      );
+    }
+
+    return {
+      status: 200,
+      body: { ok: true, outcome: isReplay ? "order_paid_replay_recovered" : "order_paid" },
+    };
   }
 
   if (event.type === "PAYMENT.CAPTURE.REFUNDED") {
+    if (isReplay) {
+      return { status: 200, body: { ok: true, outcome: "replay_ignored_refund" } };
+    }
     const result = await commerceService.refundOrder(
       nexOrderId,
       NEX_PAYPAL_SYSTEM_ACTOR_ID,
@@ -175,6 +246,9 @@ async function dispatchEvent(
   }
 
   if (event.type === "PAYMENT.CAPTURE.DENIED") {
+    if (isReplay) {
+      return { status: 200, body: { ok: true, outcome: "replay_ignored_denied" } };
+    }
     await orderService
       .recordOrderEvent({
         order_id: nexOrderId,
@@ -187,6 +261,9 @@ async function dispatchEvent(
   }
 
   // CHECKOUT.ORDER.APPROVED · no state change · just log.
+  if (isReplay) {
+    return { status: 200, body: { ok: true, outcome: "replay_ignored_approval" } };
+  }
   await orderService
     .recordOrderEvent({
       order_id: nexOrderId,
@@ -247,14 +324,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Idempotency check
-  if (await alreadyProcessed(event.id)) {
-    return NextResponse.json(
-      { ok: true, outcome: "replay_ignored", paypal_event_id: event.id },
-      { status: 200 },
-    );
+  // Replay-with-recovery · owner directive 2026-11-23c. A prior
+  // nex_order_event carrying this paypal_event_id means we reached the
+  // record step on some earlier delivery. Rather than silently
+  // suppressing further work (which can leave the durable inbox row
+  // missing if the first delivery crashed between record + inbox write),
+  // we flag the replay and let dispatchEvent run its idempotent
+  // reconciliation path · ensureDurablePaidOrderRow + marker-check.
+  let isReplay = false;
+  try {
+    isReplay = await alreadyProcessed(event.id);
+  } catch {
+    // never block handling on dedup-probe failure
   }
 
-  const { status, body } = await dispatchEvent(event);
+  const { status, body } = await dispatchEvent(event, isReplay);
   return NextResponse.json(body, { status });
 }

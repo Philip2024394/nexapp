@@ -1,0 +1,81 @@
+# .github/workflows/perf-regression.yml
+#
+# Perf regression required check · owner-sealed 2026-11-23 (CLAUDE.md §10).
+# -----------------------------------------------------------------------------
+# Runs the asset-budget + preconnect regression tests against a
+# production Next.js build. This is the enforcement half of the
+# non-negotiable Definition of Done: no perf fix is complete until a
+# regression test exists AND a required CI check blocks merges that
+# regress it.
+#
+# Triggers:
+#   · pull_request against main or release-audit-v1-2026-11-14
+#   · push to the release branch (so the main deployment path is
+#     continuously verified)
+#   · workflow_dispatch (ad-hoc re-run)
+#
+# No continue-on-error. No unlimited retries. No `if: always()` passing.
+# If setup is broken, the check fails loud rather than silently passing.
+#
+# Secrets used
+# ------------
+# NEXT_PUBLIC_NEX_SUPABASE_URL (optional) · if present, the preconnect
+#   assertion runs; if absent, that test is marked skipped (and visible
+#   in the report). The asset-budget tests do NOT need any secret.
+#
+# PREVIEW_URL + EXPECTED_COMMIT_SHA (optional) · when set, the
+#   deployment-chain smoke test asserts that the preview Worker is
+#   serving the expected commit. Skipped when unset.
+
+name: Perf regression
+
+on:
+  pull_request:
+    branches:
+      - main
+      - release-audit-v1-2026-11-14
+  push:
+    branches:
+      - release-audit-v1-2026-11-14
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  perf-asset-budgets:
+    name: Playwright perf asset budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers (chromium only)
+        run: npx playwright install chromium --with-deps
+
+      - name: Run perf regression tests
+        env:
+          CI: 'true'
+          # The build inlines this into the client bundle so the
+          # preconnect hint resolves at render time.
+          NEXT_PUBLIC_NEX_SUPABASE_URL: ${{ secrets.NEX_SANDBOX_SUPABASE_URL }}
+          NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY: ${{ secrets.NEX_SANDBOX_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_ENV: 'preview'
+          NEX_GIT_COMMIT_SHA: ${{ github.sha }}
+        run: npx playwright test --config=playwright.perf-regression.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-perf
+          path: playwright-report-perf/
+          retention-days: 7

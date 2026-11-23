@@ -1,36 +1,28 @@
 // src/app/nex-native/__tests__/send-cart-order-e-notify-wire.test.ts
 //
-// Lane E · E-NOTIFY source-shape regression · round 17 · 2026-11-19.
+// Owner directive 2026-11-23 · rewritten from the Round-17 Lane-E
+// test. The original test enforced that `sendCartOrderAction`
+// notified the seller at order CREATE time. That behaviour is now
+// forbidden: a created order has not been settled yet, and firing a
+// push on create would mis-advertise unpaid orders (incl. after a
+// "payment sent" tap or a bank-detail share) as sales.
 //
-// Covers the owner-directed Round 17 part-1 wire-up: after a successful
-// `orderService.createOrder` return inside `sendCartOrderAction`, the
-// action MUST call `notifySellerNewOrder(createdOrder)` with three
-// retry/dedup safeguards:
+// New contract this test enforces:
+//   1. `_actions.ts` MUST NOT import notifySellerNewOrder.
+//   2. `_actions.ts` MUST NOT call notifySellerNewOrder anywhere
+//      (sendCartOrderAction OR placeOrderAction).
+//   3. The Stripe webhook route MUST import notifySellerPaidOrder.
+//   4. The Stripe webhook route MUST gate markOrderPaid on
+//      `payment_status === "paid"` before firing the seller push.
+//   5. The PayPal webhook route MUST import notifySellerPaidOrder
+//      and MUST call it inside the PAYMENT.CAPTURE.COMPLETED branch.
+//   6. Both webhooks MUST write a `seller_notified_paid` marker row
+//      for idempotency.
+//   7. The seller order-notifications feed MUST query `state = "paid"`,
+//      NOT `state = "created"`.
 //
-//   1. Only after a CONFIRMED order-row insert (inside the try-branch
-//      that captured a non-null `createdOrder`).
-//   2. Dedup-guarded by a prior-events check (`listOrderEvents` ·
-//      `.some(ev => ev.event === "seller_notified")`) so a retry that
-//      hits the idempotency_key dedup path does NOT double-notify.
-//   3. Fail-soft: the notify call is itself wrapped in try/catch so a
-//      push-dispatch failure never reverses the cart or order rows.
-//   4. On a fresh notify success, a `seller_notified` event marker row
-//      is written via `recordOrderEvent` so the next retry of this
-//      send_intent_id short-circuits.
-//
-// Why source-shape and not functional:
-//   The sister idempotency test (send-cart-order-idempotency.test.ts)
-//   already demonstrates how expensive it is to mock every boundary.
-//   This file is the honest low-ceiling check that the WIRING is
-//   present in the exact shape Round 17 part-1 names. Live behaviour
-//   still requires BROWSER + PERSISTENCE tier verification against the
-//   sandbox, which is separately gated.
-//
-// Negative assertions:
-//   · The call MUST NOT be outside the try-branch that captured the
-//     successful order row (otherwise we would emit on a failed order).
-//   · The call MUST be import-reachable from the same file (not from
-//     a transitive indirection that could be silently stubbed).
+// These are source-shape regressions · live settlement is verified
+// separately against the sandbox Stripe test mode + sandbox DB.
 
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -41,66 +33,112 @@ const ACTIONS_SRC = readFileSync(
   "utf8",
 );
 
-describe("Lane E · E-NOTIFY · sendCartOrderAction wire-up (§16.35)", () => {
-  it("imports notifySellerNewOrder from the supported service module", () => {
-    expect(ACTIONS_SRC).toMatch(
-      /import \{ notifySellerNewOrder \} from "@\/lib\/nex-native\/manage-orders\/order-notification-service"/,
+const STRIPE_WEBHOOK_SRC = readFileSync(
+  resolve(
+    __dirname,
+    "..",
+    "..",
+    "api",
+    "nex-native",
+    "stripe",
+    "webhook",
+    "route.ts",
+  ),
+  "utf8",
+);
+
+const PAYPAL_WEBHOOK_SRC = readFileSync(
+  resolve(
+    __dirname,
+    "..",
+    "..",
+    "api",
+    "nex-native",
+    "paypal",
+    "webhook",
+    "route.ts",
+  ),
+  "utf8",
+);
+
+const SELLER_ORDER_FEED_SRC = readFileSync(
+  resolve(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "lib",
+    "nex-native",
+    "notifications",
+    "seller-order-notifications.ts",
+  ),
+  "utf8",
+);
+
+describe("Owner directive 2026-11-23 · seller push fires only after verified settlement", () => {
+  it("_actions.ts does NOT import notifySellerNewOrder", () => {
+    expect(ACTIONS_SRC).not.toMatch(/import\s*\{\s*notifySellerNewOrder\s*\}/);
+  });
+
+  it("_actions.ts does NOT call notifySellerNewOrder anywhere", () => {
+    expect(ACTIONS_SRC).not.toMatch(/notifySellerNewOrder\s*\(/);
+  });
+
+  it("Stripe webhook imports notifySellerPaidOrder", () => {
+    expect(STRIPE_WEBHOOK_SRC).toMatch(
+      /import\s*\{\s*notifySellerPaidOrder\s*\}\s*from\s*"@\/lib\/nex-native\/manage-orders\/order-notification-service"/,
     );
   });
 
-  it("captures the createOrder return value as createdOrder (needed for recipient resolution)", () => {
-    const block = ACTIONS_SRC.match(
-      /sendCartOrderAction[\s\S]*?const createdOrder = await orderService\.createOrder/,
+  it("Stripe webhook gates markOrderPaid on payment_status === 'paid'", () => {
+    // The `payment_status !== "paid"` short-circuit MUST appear
+    // BEFORE the markOrderPaid CALL SITE (not the import) so a
+    // non-paid session cannot transition the order.
+    const idxGuard = STRIPE_WEBHOOK_SRC.indexOf(`paymentStatus !== "paid"`);
+    const idxMarkCall = STRIPE_WEBHOOK_SRC.indexOf(
+      "await markOrderPaid(",
     );
-    expect(block, "createdOrder capture not found inside sendCartOrderAction").not.toBeNull();
+    expect(idxGuard, "payment_status guard not found").toBeGreaterThan(-1);
+    expect(idxMarkCall, "markOrderPaid await call not found").toBeGreaterThan(-1);
+    expect(idxGuard).toBeLessThan(idxMarkCall);
   });
 
-  it("checks nex_order_event for prior seller_notified marker before firing", () => {
-    const check = ACTIONS_SRC.match(
-      /const priorEvents = await orderService\.listOrderEvents\(createdOrder\.id\)[\s\S]{0,400}?priorEvents\.some\(\s*\(ev\) => ev\.event === "seller_notified"/,
+  it("Stripe webhook fires notifySellerPaidOrder after markOrderPaid", () => {
+    const paidBlock = STRIPE_WEBHOOK_SRC.match(
+      /markOrderPaid\([\s\S]{0,2000}?notifySellerPaidOrder\(result\.order\)/,
     );
-    expect(check, "dedup check against seller_notified marker not found").not.toBeNull();
+    expect(
+      paidBlock,
+      "notifySellerPaidOrder not fired after markOrderPaid in Stripe webhook",
+    ).not.toBeNull();
   });
 
-  it("calls notifySellerNewOrder only when the marker is absent", () => {
-    const call = ACTIONS_SRC.match(
-      /if \(!alreadyNotified\) \{[\s\S]{0,400}?await notifySellerNewOrder\(createdOrder\)/,
-    );
-    expect(call, "notifySellerNewOrder is not gated by alreadyNotified check").not.toBeNull();
+  it("Stripe webhook writes seller_notified_paid marker for idempotency", () => {
+    expect(STRIPE_WEBHOOK_SRC).toMatch(/event:\s*"seller_notified_paid"/);
   });
 
-  it("records seller_notified event marker after a fresh notify", () => {
-    const marker = ACTIONS_SRC.match(
-      /await notifySellerNewOrder\(createdOrder\);[\s\S]{0,800}?orderService\.recordOrderEvent\(\{[\s\S]{0,300}?event: "seller_notified"/,
+  it("PayPal webhook imports notifySellerPaidOrder", () => {
+    expect(PAYPAL_WEBHOOK_SRC).toMatch(
+      /import\s*\{\s*notifySellerPaidOrder\s*\}\s*from\s*"@\/lib\/nex-native\/manage-orders\/order-notification-service"/,
     );
-    expect(marker, "recordOrderEvent seller_notified marker write not found after notify").not.toBeNull();
   });
 
-  it("wraps the notify branch in try/catch (fail-soft)", () => {
-    const failSoft = ACTIONS_SRC.match(
-      /try \{\s*const priorEvents = await orderService\.listOrderEvents[\s\S]{0,2000}?\} catch \(notifyErr\)/,
+  it("PayPal webhook fires notifySellerPaidOrder inside PAYMENT.CAPTURE.COMPLETED branch", () => {
+    const captureBlock = PAYPAL_WEBHOOK_SRC.match(
+      /PAYMENT\.CAPTURE\.COMPLETED[\s\S]{0,4000}?notifySellerPaidOrder\(result\.order\)/,
     );
-    expect(failSoft, "notify branch is not try-wrapped").not.toBeNull();
+    expect(
+      captureBlock,
+      "notifySellerPaidOrder not fired inside PAYMENT.CAPTURE.COMPLETED",
+    ).not.toBeNull();
   });
 
-  it("notify call lives INSIDE the createdOrder try-branch (never after a failed order)", () => {
-    // The createdOrder capture, the listOrderEvents call, and the
-    // notifySellerNewOrder invocation MUST all live between the same
-    // `try {` and `} catch (e)` that fail-softs the createOrder itself.
-    const outerBlock = ACTIONS_SRC.match(
-      /const createdOrder = await orderService\.createOrder[\s\S]+?\} catch \(e\) \{\s*console\.warn\(\s*"\[cart-order #14\] deterministic nex_order insert failed/,
-    );
-    expect(outerBlock, "notify branch escaped the createOrder try-catch").not.toBeNull();
-    const block = outerBlock![0];
-    expect(block).toMatch(/notifySellerNewOrder\(createdOrder\)/);
-    expect(block).toMatch(/orderService\.listOrderEvents/);
-    expect(block).toMatch(/event: "seller_notified"/);
+  it("PayPal webhook writes seller_notified_paid marker for idempotency", () => {
+    expect(PAYPAL_WEBHOOK_SRC).toMatch(/event:\s*"seller_notified_paid"/);
   });
 
-  it("marker-write failure logs but does NOT reverse the notify (defensive nested try/catch)", () => {
-    const nested = ACTIONS_SRC.match(
-      /await notifySellerNewOrder\(createdOrder\);\s*try \{[\s\S]{0,600}?event: "seller_notified"[\s\S]{0,400}?\} catch \(markErr\)/,
-    );
-    expect(nested, "marker-write nested try/catch not found").not.toBeNull();
+  it("seller order-notifications feed queries state='paid' (not 'created')", () => {
+    expect(SELLER_ORDER_FEED_SRC).toMatch(/\.eq\("state",\s*"paid"\)/);
+    expect(SELLER_ORDER_FEED_SRC).not.toMatch(/\.eq\("state",\s*"created"\)/);
   });
 });

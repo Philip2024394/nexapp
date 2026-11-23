@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# dependabot.yml — nexapp supply-chain safety
+# Sealed: 2026-11-23
+#
+# Purpose:
+#   Keep npm + GitHub Actions dependencies patched weekly, with minor/patch
+#   batched to reduce PR noise and major bumps isolated for manual review.
+#   Supports CLAUDE.md §4 (push is a separate gate) — Dependabot opens PRs
+#   but the owner still controls merge + push + deploy.
+#
+# Owner: Philip2024394
+# ─────────────────────────────────────────────────────────────────────────────
+version: 2
+updates:
+  # ── npm (application dependencies) ─────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Dublin"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "supply-chain-safety"
+    reviewers:
+      - "Philip2024394"
+    commit-message:
+      prefix: "chore(deps):"
+      include: "scope"
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+    # Majors are intentionally NOT grouped — one PR per major so breaking
+    # changes can be reviewed in isolation.
+    ignore: []
+
+  # ── GitHub Actions (CI workflow deps) ──────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Dublin"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "supply-chain-safety"
+    reviewers:
+      - "Philip2024394"
+    commit-message:
+      prefix: "chore(ci-deps):"
+      include: "scope"
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"

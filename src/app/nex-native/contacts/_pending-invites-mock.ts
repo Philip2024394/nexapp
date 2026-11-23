@@ -141,89 +141,18 @@ export interface PendingInviteSeed {
   readonly sticker?: string | null;
 }
 
-/** Outbound seeds · what the viewer SENT · 22h, 3h, and one that just
- *  expired (so the sender sees the "Invitation expired" chrome on
- *  first paint without having to wait a day). */
-export const MOCK_PENDING_INVITE_SEEDS: ReadonlyArray<PendingInviteSeed> = [
-  {
-    id: "out-1",
-    nexId: "nex-23451",
-    hoursSinceCreation: 2,
-    status: "pending",
-    direction: "outbound",
-  },
-  {
-    id: "out-2",
-    nexId: "nex-77281",
-    hoursSinceCreation: 21,
-    status: "pending",
-    direction: "outbound",
-  },
-  {
-    id: "out-3",
-    nexId: "nex-88104",
-    hoursSinceCreation: 25, // past the 24h · will be flipped to "expired" post-hydrate
-    status: "pending",
-    direction: "outbound",
-  },
-  // Inbound seeds · what the viewer RECEIVED · each one carries the
-  // sender's full identity (name + initials + profession + city +
-  // verified) so the recipient can see who's inviting them before
-  // tapping Confirm. Owner directive 2026-10-23 · "real contacts
-  // card with name".
-  {
-    id: "in-1",
-    nexId: "nex-91205",
-    hoursSinceCreation: 1,
-    status: "pending",
-    direction: "inbound",
-    senderIdentity: {
-      displayName: "Olivia Reyes",
-      initials: "OR",
-      profession: "Architect",
-      city: "Jakarta",
-      isVerified: true,
-      // Owner directive 2026-10-23 · "profile image · the person
-      // sending the invitation must displaying full card info and
-      // image for the user to confirm". pravatar.cc serves stable
-      // placeholder avatars seeded by the `u=` param (same URL →
-      // same face). When real nex_account_profile.avatar_url lands,
-      // swap these for live account photos.
-      avatarUrl: "https://i.pravatar.cc/96?u=nex-91205",
-      hasShop: false,
-      shopHref: null,
-    },
-    note: "👋 Hey! Nice meeting you at the UGM talk yesterday — let's keep in touch.",
-    sticker: null,
-  },
-  {
-    id: "in-2",
-    nexId: "nex-40011",
-    // Owner directive 2026-10-23 · urgency threshold tightened to
-    // 1h · seed bumped 22h → 23.5h so Mike's invite has ~30m left
-    // on first paint · demonstrates the pulsing dark-red heartbeat
-    // + minutes-only countdown immediately.
-    hoursSinceCreation: 23.5,
-    status: "pending",
-    direction: "inbound",
-    senderIdentity: {
-      displayName: "Mike's Delivery",
-      initials: "MD",
-      profession: "Logistics",
-      city: "Jakarta",
-      isVerified: false,
-      avatarUrl: "https://i.pravatar.cc/96?u=nex-40011",
-      // Mike's Delivery is a business account · the `hasShop` flag
-      // stays true but there is no preview destination today · wire a
-      // real business URL here when the mock sender maps to a seeded
-      // nex_business row.
-      hasShop: true,
-      shopHref: null,
-    },
-    note: "🤝 Delivery driver on your Jl Malioboro route — happy to help if you ever need rush delivery.",
-    sticker: null,
-  },
-];
+// Owner directive 2026-11-23 · hardcoded pending-invite fixtures
+// retired. The prototype seeded five fake invites (outbound
+// nex-23451 / nex-77281 / nex-88104, inbound Olivia Reyes nex-91205
+// / Mike's Delivery nex-40011) to demo the Contact Connect UX. The
+// app now distinguishes seeded demo accounts (Hammerex nex-99901,
+// Rosa nex-99903 — real Supabase rows) from manufactured activity.
+// Keeping an empty default means new accounts see an honest empty
+// state and only real invite rows (created via the Connect flow or
+// hydrated from server state) render. `reconcileWithSeeds` and
+// `hydrateSeedToInvite` remain intact so a future server-backed
+// seed list can be dropped in without re-wiring callers.
+export const MOCK_PENDING_INVITE_SEEDS: ReadonlyArray<PendingInviteSeed> = [];
 
 /** Owner directive 2026-10-23 · self-healing seed merge · if the
  *  persisted invite list was stored BEFORE a seed field was added

@@ -84,109 +84,16 @@ export const NOTIFICATION_SECTIONS: ReadonlyArray<NotificationSectionMeta> = [
   { key: "follows", label: "Follows", glyph: "follow" },
 ];
 
-// Phase 1 sample data · spans every section so the design validates
-// end-to-end. Times are anchored to "now" as a relative-time demo.
-// Owner-visible copy stays metadata-only for encrypted-chat rows.
-export const MOCK_NOTIFICATIONS: ReadonlyArray<NotificationItem> = [
-  {
-    id: "notif-chat-1",
-    section: "chats",
-    title: "Aoife",
-    subtitle: "1 new message",
-    href: "/nex-native/chat/peer/11111111-aaaa-4aaa-8aaa-111111111112",
-    createdAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-chat-2",
-    section: "chats",
-    title: "Rónán",
-    subtitle: "sent you a photo",
-    href: "/nex-native/chat/peer/11111111-aaaa-4aaa-8aaa-111111111114",
-    createdAt: new Date(Date.now() - 14 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-chat-3",
-    section: "chats",
-    title: "Cillian",
-    subtitle: "2 unread messages",
-    href: "/nex-native/chat/peer/11111111-aaaa-4aaa-8aaa-111111111115",
-    createdAt: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  // Owner directive 2026-11-11 · Live notification rows retired
-  // alongside the Live section (Live surface is removed from NEX).
-  {
-    id: "notif-shop-1",
-    section: "shop",
-    title: "Treaty Bar",
-    subtitle: "New stock · 6 items added",
-    href: "/nex-native/directory",
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-shop-2",
-    section: "shop",
-    title: "Cork Roastery",
-    subtitle: "Weekend brew · limited release",
-    href: "/nex-native/directory",
-    createdAt: new Date(
-      Date.now() - 1 * 24 * 60 * 60 * 1000,
-    ).toISOString(),
-    unread: false,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-order-1",
-    section: "orders",
-    title: "Order #NEX-1234",
-    subtitle: "Shipped · tracking available",
-    href: "/nex-native/settings/payments",
-    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-order-2",
-    section: "orders",
-    title: "Order #NEX-1198",
-    subtitle: "Delivered · leave a review",
-    href: "/nex-native/settings/payments",
-    createdAt: new Date(
-      Date.now() - 2 * 24 * 60 * 60 * 1000,
-    ).toISOString(),
-    unread: false,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-follow-1",
-    section: "follows",
-    title: "Cillian",
-    subtitle: "followed you back",
-    href: "/nex-native/profile/me",
-    createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-follow-2",
-    section: "follows",
-    title: "Eoin",
-    subtitle: "started following you",
-    href: "/nex-native/profile/me",
-    createdAt: new Date(
-      Date.now() - 3 * 24 * 60 * 60 * 1000,
-    ).toISOString(),
-    unread: false,
-    thumbnailUrl: null,
-  },
-];
+// Owner directive 2026-11-23 · hardcoded notification fixtures retired.
+// The Phase 1 prototype seeded eight fake rows (Aoife, Rónán, Cillian,
+// Treaty Bar, Cork Roastery, NEX-1234, NEX-1198, Eoin) to demo the UX.
+// The app is now past prototype and must distinguish seeded demo
+// contacts (Hammerex / Rosa — real Supabase accounts) from manufactured
+// activity. Keeping an empty default means new accounts see an honest
+// empty state ("You're all caught up") and real recipient-scoped
+// notifications from server sources (seller order feed, future
+// nex_notification inbox) are the only rows that render.
+export const MOCK_NOTIFICATIONS: ReadonlyArray<NotificationItem> = [];
 
 /** Relative-time formatter · small, inline, no deps. Returns strings
  *  like "just now", "2m", "14m", "3h", "yday", or an ISO date for items

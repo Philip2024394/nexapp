@@ -195,6 +195,30 @@ export interface NexPeerAttachmentMeta {
    *  set. aspect_ratio drives the ~140px-tall sticker footprint
    *  render so there's no layout shift while the image loads. */
   sticker?: NexPeerStickerSnapshot;
+  /** Owner directive 2026-11-23c · when the sender shares their
+   *  deliberately-configured receiving-bank details via the
+   *  notifications drawer's Bank quick-action, this snapshot carries
+   *  the readable fields so the recipient's renderer can show a
+   *  proper card instead of an inaccessible filename chip. The data
+   *  is owner-configured business content (not E2E message body) ·
+   *  consistent with existing product/menu snapshots that also live
+   *  in attachment_meta. */
+  bank_details?: NexPeerBankDetailsSnapshot;
+}
+
+/** Bridge BankShare · snapshot embedded in attachment_meta when a
+ *  seller shares their deliberately-configured receiving-bank details
+ *  into a peer chat via the notifications drawer. All fields are
+ *  owner-configured display text · never card credentials, PINs, or
+ *  passwords (validated server-side at save-time). */
+export interface NexPeerBankDetailsSnapshot {
+  /** Sender's handle at send-time · keeps the card self-identifying
+   *  even if the sender later renames. */
+  from_handle: string;
+  bank_name: string;
+  account_holder: string;
+  account_number: string;
+  extra: string;
 }
 
 /** Bridge ThemeSticker · snapshot embedded in attachment_meta when a

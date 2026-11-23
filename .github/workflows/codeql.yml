@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# codeql.yml — nexapp static security analysis
+# Sealed: 2026-11-23
+#
+# Purpose:
+#   Run GitHub CodeQL on every PR + push to protected branches, plus a weekly
+#   scheduled scan, so security regressions surface before merge. Scoped to
+#   JavaScript/TypeScript (the entire nexapp surface).
+#
+# Related: CLAUDE.md §4 (push is a separate gate), §10 (CI enforcement).
+# ─────────────────────────────────────────────────────────────────────────────
+name: CodeQL
+
+on:
+  push:
+    branches:
+      - main
+      - release-audit-v1-2026-11-14
+  pull_request:
+    branches:
+      - main
+      - release-audit-v1-2026-11-14
+  schedule:
+    # Weekly scan — Mondays 06:00 UTC
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ "javascript-typescript" ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

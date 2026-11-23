@@ -332,6 +332,7 @@ preservation-staging/
 tmp-live/
 .audit-generalisation/
 playwright-report/
+playwright-report-perf/
 test-results/
 tests/e2e-screenshots/
 # B2 Phase 2 · owner-generated Playwright storage state (session cookies +

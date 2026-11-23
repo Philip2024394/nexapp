@@ -45,10 +45,21 @@
 import "server-only";
 import { dispatchPushNotification } from "../notification-dispatch-service";
 import { nexSupabaseAdmin } from "../supabase-admin";
+import { writeOrderPaidNotification } from "../notifications/nex-notification-writer";
 import type { NexOrderRow, NexUuid } from "../types";
 
 export type OrderNotificationKind =
   | "new_order"
+  // Owner directive 2026-11-23 · seller-facing "a paid order has
+  // arrived" event. Fires ONLY after a verified provider confirmation
+  // (Stripe `checkout.session.completed` with `payment_status === 'paid'`
+  // OR a successful `payment_intent.*` settled event · PayPal
+  // `PAYMENT.CAPTURE.COMPLETED`). Never fires on order CREATE, never
+  // fires on `payment_sent` click, never fires on bank-detail share.
+  // Idempotency is enforced at the call site via a
+  // `seller_notified_paid` marker row in `nex_order_event` so a webhook
+  // retry does not double-fire.
+  | "paid_order"
   | "payment_confirmed"
   | "order_cancelled"
   // Dispatch-tracking preparation (2026-11-17). Fires only when the
@@ -98,6 +109,10 @@ const VISIBLE_COPY: Record<OrderNotificationKind, { title: string; body: string 
   new_order: {
     title: "NEX",
     body: "You have received a new order.",
+  },
+  paid_order: {
+    title: "NEX",
+    body: "You have received a paid order.",
   },
   payment_confirmed: {
     title: "NEX",
@@ -198,6 +213,166 @@ export async function notifySellerNewOrder(
   }
   const result = await fanOutToAccount(seller, order.id, "new_order");
   return { kind: "new_order", recipientAccountId: seller, ...result };
+}
+
+/**
+ * Owner directive 2026-11-23 · seller-facing "a PAID order has
+ * arrived". Call this ONLY from a provider webhook AFTER the payment
+ * is verified settled:
+ *   · Stripe `checkout.session.completed` where
+ *     `payment_status === 'paid'` (or a settled `payment_intent.*`)
+ *   · PayPal `PAYMENT.CAPTURE.COMPLETED`
+ *
+ * This replaces the former "notify on order create" pattern. The
+ * create-time path (sendCartOrderAction / placeOrderAction) no longer
+ * emits a seller push · an unpaid order is still visible in the
+ * seller's /manage/orders queue but is NOT advertised as a paid sale.
+ *
+ * The caller MUST write a `seller_notified_paid` marker row into
+ * `nex_order_event` AFTER a successful dispatch (attempted > 0) so a
+ * webhook retry can short-circuit before re-fanning out. A failed
+ * dispatch (attempted === 0 or all failed) MUST NOT write the marker ·
+ * recovery relies on the next retry trying again.
+ */
+/**
+ * Idempotent reconciliation · owner directive 2026-11-23c. Call from
+ * webhook replay paths to GUARANTEE the durable paid-order inbox row
+ * exists for this (seller, order), without firing any push. Safe to
+ * call repeatedly. First call inserts; later calls are no-ops because
+ * `writeOrderPaidNotification` uses `preserve_read_state`.
+ *
+ * Returns `ok=true, row_present=true` after a successful call
+ * (whether first-write or already-there), `ok=false` only when the
+ * seller can't be resolved or the writer errored. Never throws.
+ */
+export async function ensureDurablePaidOrderRow(
+  order: NexOrderRow,
+): Promise<{
+  readonly ok: boolean;
+  readonly row_present: boolean;
+  readonly was_insert: boolean;
+  readonly recipientAccountId: NexUuid | null;
+  readonly skipped_reason?: "disabled_by_env" | "no_recipient_resolved" | "db_error";
+}> {
+  if (isDisabled()) {
+    return {
+      ok: false,
+      row_present: false,
+      was_insert: false,
+      recipientAccountId: null,
+      skipped_reason: "disabled_by_env",
+    };
+  }
+  const seller = await resolveSellerAccountId(order.business_id);
+  if (!seller) {
+    return {
+      ok: false,
+      row_present: false,
+      was_insert: false,
+      recipientAccountId: null,
+      skipped_reason: "no_recipient_resolved",
+    };
+  }
+  try {
+    const priceLabel =
+      typeof order.price_pence === "number" && order.price_pence > 0
+        ? `${order.currency ?? "EUR"} ${(order.price_pence / 100).toFixed(2)}`
+        : "paid order";
+    const res = await writeOrderPaidNotification({
+      recipient_account_id: seller,
+      order_id: order.id,
+      short_price_label: priceLabel,
+      product_name_or_blank: "",
+    });
+    if (!res.ok) {
+      return {
+        ok: false,
+        row_present: false,
+        was_insert: false,
+        recipientAccountId: seller,
+        skipped_reason: "db_error",
+      };
+    }
+    // ok=true. was_insert=true → first write. was_insert=false → row
+    // already existed (preserve_read_state no-op). Either way the row
+    // is present after this call returns.
+    return {
+      ok: true,
+      row_present: true,
+      was_insert: res.was_insert,
+      recipientAccountId: seller,
+    };
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[order-notification] ensureDurablePaidOrderRow failed:",
+      e instanceof Error ? e.message : String(e),
+    );
+    return {
+      ok: false,
+      row_present: false,
+      was_insert: false,
+      recipientAccountId: seller,
+      skipped_reason: "db_error",
+    };
+  }
+}
+
+export async function notifySellerPaidOrder(
+  order: NexOrderRow,
+): Promise<OrderNotificationResult> {
+  if (isDisabled()) {
+    return {
+      kind: "paid_order",
+      recipientAccountId: null,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      skipped_reason: "disabled_by_env",
+    };
+  }
+  const seller = await resolveSellerAccountId(order.business_id);
+  if (!seller) {
+    return {
+      kind: "paid_order",
+      recipientAccountId: null,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      skipped_reason: "no_recipient_resolved",
+    };
+  }
+  // Durable in-app row FIRST · migration 366. The write is
+  // independent of push outcome · a push-disabled seller still gets
+  // the drawer row. UPSERT ON CONFLICT is the exactly-once-created
+  // guarantee against concurrent webhook retries. Best-effort · the
+  // push below still fires even if the row write fails, and a repeat
+  // webhook will try again.
+  try {
+    // Price label kept generic here · the webhook does not pass locale
+    // through, so we show the raw minor units as ISO. UI formatter in
+    // listSellerOrderNotifications (which reads from this same row
+    // at render time) produces the pretty Intl label.
+    const priceLabel =
+      typeof order.price_pence === "number" && order.price_pence > 0
+        ? `${order.currency ?? "EUR"} ${(order.price_pence / 100).toFixed(2)}`
+        : "paid order";
+    await writeOrderPaidNotification({
+      recipient_account_id: seller,
+      order_id: order.id,
+      short_price_label: priceLabel,
+      product_name_or_blank: "",
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[order-notification] durable row write failed (non-fatal):",
+      e instanceof Error ? e.message : String(e),
+    );
+  }
+
+  const result = await fanOutToAccount(seller, order.id, "paid_order");
+  return { kind: "paid_order", recipientAccountId: seller, ...result };
 }
 
 /**

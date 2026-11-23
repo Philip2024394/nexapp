@@ -1,0 +1,204 @@
+#!/usr/bin/env node
+// Sealed 2026-11-23 · nexapp blueprint map generator
+// Walks src/lib/nex-native/** and src/lib/nex/** (depth-limited).
+// Emits docs/map/libraries.md. Read-only.
+
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "..");
+const OUT_FILE = path.join(REPO_ROOT, "docs", "map", "libraries.md");
+
+const NEX_NATIVE_ROOT = path.join(REPO_ROOT, "src", "lib", "nex-native");
+const NEX_SHARED_ROOT = path.join(REPO_ROOT, "src", "lib", "nex");
+const NEX_SHARED_MAX_DEPTH = 3;
+
+/**
+ * @param {string} dir
+ * @param {RegExp} match
+ * @param {{maxDepth?:number,currentDepth?:number,deepFiles?:string[]}} opts
+ * @returns {Promise<string[]>}
+ */
+async function walk(dir, match, opts = {}) {
+  const maxDepth = opts.maxDepth ?? Infinity;
+  const currentDepth = opts.currentDepth ?? 0;
+  const deepFiles = opts.deepFiles ?? [];
+  /** @type {string[]} */
+  const out = [];
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch (err) {
+    if (err && err.code === "ENOENT") return out;
+    throw err;
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "__tests__" || entry.name === "node_modules") continue;
+      if (currentDepth + 1 > maxDepth) {
+        // Still scan, but flag these as deep
+        const nested = await walk(full, match, { maxDepth: Infinity, currentDepth: currentDepth + 1, deepFiles });
+        for (const n of nested) deepFiles.push(n);
+      } else {
+        out.push(...(await walk(full, match, { maxDepth, currentDepth: currentDepth + 1, deepFiles })));
+      }
+    } else if (entry.isFile() && match.test(entry.name)) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+/**
+ * Extract top-level exported identifiers from a TS/TSX source.
+ * Captures: export function/const/let/var/class/type/interface/enum/default
+ * @param {string} src
+ * @returns {string[]}
+ */
+function extractExports(src) {
+  const exports = new Set();
+  const lines = src.split(/\r?\n/);
+  const patterns = [
+    /^export\s+(?:async\s+)?function\s+([A-Za-z0-9_$]+)/,
+    /^export\s+(?:const|let|var)\s+([A-Za-z0-9_$]+)/,
+    /^export\s+class\s+([A-Za-z0-9_$]+)/,
+    /^export\s+type\s+([A-Za-z0-9_$]+)/,
+    /^export\s+interface\s+([A-Za-z0-9_$]+)/,
+    /^export\s+enum\s+([A-Za-z0-9_$]+)/,
+    /^export\s+default\s+(?:async\s+)?function\s+([A-Za-z0-9_$]+)?/,
+    /^export\s+default\s+class\s+([A-Za-z0-9_$]+)?/,
+  ];
+  for (const line of lines) {
+    for (const p of patterns) {
+      const m = line.match(p);
+      if (m) {
+        if (p.source.includes("default")) {
+          exports.add(m[1] ? `default (${m[1]})` : "default");
+        } else {
+          exports.add(m[1]);
+        }
+      }
+    }
+    // export { a, b as c }
+    const rexp = line.match(/^export\s*\{([^}]+)\}/);
+    if (rexp) {
+      const inner = rexp[1].split(",").map((s) => s.trim()).filter(Boolean);
+      for (const item of inner) {
+        const asMatch = item.match(/\s+as\s+([A-Za-z0-9_$]+)/);
+        exports.add(asMatch ? asMatch[1] : item.split(/\s+/)[0]);
+      }
+    }
+  }
+  return Array.from(exports).sort();
+}
+
+/**
+ * Group files by their immediate first-level directory under rootLabel.
+ * @param {string[]} files
+ * @param {string} root
+ * @param {string} rootLabel
+ */
+function groupByTopDir(files, root, rootLabel) {
+  /** @type {Record<string,string[]>} */
+  const grouped = {};
+  for (const f of files) {
+    const rel = path.relative(root, f);
+    const parts = rel.split(path.sep);
+    const top = parts.length > 1 ? `${rootLabel}/${parts[0]}` : rootLabel;
+    if (!grouped[top]) grouped[top] = [];
+    grouped[top].push(f);
+  }
+  return grouped;
+}
+
+async function processGroup(files, root) {
+  /** @type {Array<{file:string,exports:string[]}>} */
+  const rows = [];
+  for (const f of files) {
+    const src = await fs.readFile(f, "utf8");
+    rows.push({
+      file: path.relative(REPO_ROOT, f).replaceAll("\\", "/"),
+      exports: extractExports(src),
+    });
+  }
+  rows.sort((a, b) => a.file.localeCompare(b.file));
+  return rows;
+}
+
+async function main() {
+  await fs.mkdir(path.dirname(OUT_FILE), { recursive: true });
+
+  const nativeFiles = await walk(NEX_NATIVE_ROOT, /\.(ts|tsx)$/);
+  /** @type {string[]} */
+  const deepShared = [];
+  const sharedFiles = await walk(NEX_SHARED_ROOT, /\.ts$/, { maxDepth: NEX_SHARED_MAX_DEPTH, deepFiles: deepShared });
+
+  const nativeGroups = groupByTopDir(nativeFiles, NEX_NATIVE_ROOT, "src/lib/nex-native");
+  const sharedGroups = groupByTopDir(sharedFiles, NEX_SHARED_ROOT, "src/lib/nex");
+
+  const lines = [];
+  lines.push("# Library Map");
+  lines.push("");
+  lines.push("> Auto-generated by `npm run map:libraries` (or `node scripts/build-library-map.mjs`).");
+  lines.push("> Do not edit by hand — edits will be overwritten. Sealed 2026-11-23.");
+  lines.push("");
+  lines.push(`- \`src/lib/nex-native\` files scanned: **${nativeFiles.length}**`);
+  lines.push(`- \`src/lib/nex\` files scanned (depth ≤ ${NEX_SHARED_MAX_DEPTH}): **${sharedFiles.length}**`);
+  if (deepShared.length) {
+    lines.push(`- ⚠️ \`src/lib/nex\` files deeper than depth ${NEX_SHARED_MAX_DEPTH}: **${deepShared.length}** (listed at bottom)`);
+  }
+  lines.push("");
+
+  for (const group of Object.keys(nativeGroups).sort()) {
+    lines.push(`## ${group}`);
+    lines.push("");
+    const rows = await processGroup(nativeGroups[group], REPO_ROOT);
+    for (const r of rows) {
+      lines.push(`- \`${r.file}\``);
+      if (r.exports.length === 0) {
+        lines.push("  - (no top-level named exports detected)");
+      } else {
+        for (const e of r.exports) lines.push(`  - \`${e}\``);
+      }
+    }
+    lines.push("");
+  }
+
+  for (const group of Object.keys(sharedGroups).sort()) {
+    lines.push(`## ${group}`);
+    lines.push("");
+    const rows = await processGroup(sharedGroups[group], REPO_ROOT);
+    for (const r of rows) {
+      lines.push(`- \`${r.file}\``);
+      if (r.exports.length === 0) {
+        lines.push("  - (no top-level named exports detected)");
+      } else {
+        for (const e of r.exports) lines.push(`  - \`${e}\``);
+      }
+    }
+    lines.push("");
+  }
+
+  if (deepShared.length) {
+    lines.push(`## Files deeper than depth ${NEX_SHARED_MAX_DEPTH} under \`src/lib/nex\``);
+    lines.push("");
+    lines.push("> Flagged for review — deep nesting may indicate the legacy audience model mentioned in CLAUDE.md.");
+    lines.push("");
+    for (const f of deepShared.sort()) {
+      lines.push(`- \`${path.relative(REPO_ROOT, f).replaceAll("\\", "/")}\``);
+    }
+    lines.push("");
+  }
+
+  await fs.writeFile(OUT_FILE, lines.join("\n"), "utf8");
+  console.log(`libraries.md written · ${nativeFiles.length} native · ${sharedFiles.length} shared · ${deepShared.length} deep · ${lines.length} lines`);
+}
+
+main().catch((err) => {
+  console.error("build-library-map failed:", err);
+  process.exit(1);
+});
