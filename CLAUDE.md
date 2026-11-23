@@ -131,6 +131,103 @@ nexapp has **exactly one Supabase project**. This is the sole database of record
 ## End Safety Constitution
 ## ═══════════════════════════════════════════════════════════════
 
+## 10 · Non-negotiable Definition of Done for perf fixes
+
+Owner-sealed 2026-11-23. Applies to any change touching loading,
+navigation, caching, message rendering, hydration, asset payloads,
+or related infrastructure.
+
+**No perf fix is complete until ALL FOUR are in place:**
+
+1. **Verified improvement** — a measurement under stated conditions
+   (production build, specified network/CPU profile, repeated samples,
+   median AND tail reported). A single curl, a single dev-mode run,
+   or an eyeballed "feels faster" does not count.
+2. **Regression test** — automated test that reproduces the original
+   failure mode against observable behavior (network requests, DOM,
+   timing budgets), not a hard-coded filename grep. The test must
+   fail if the fix is reverted.
+3. **Required CI enforcement** — the test runs on every PR to
+   protected branches as a required status check that blocks
+   merging. A workflow file alone is not enough. If branch-protection
+   enforcement is blocked by access, the fix is INCOMPLETE and the
+   blocker must be reported, not papered over.
+4. **Updated project record** — blueprint entry (below) captures the
+   original problem, affected files, test name, budget, and how to
+   re-run.
+
+If any of the four is missing, the fix is incomplete. A local passing
+test, a written reminder, or an un-enforced workflow is not enough.
+Budget relaxation or test removal requires explicit owner approval
+with a documented reason. Never silently waive this rule.
+
+### 10.1 · Verified loading-fix blueprint
+
+Sessions touching perf must preserve these guarantees. Each entry is:
+
+**Original problem** · **Files** · **Test** · **Budget** · **Run command**
+
+#### 10.1.1 · Backdrop preload mobile skip + Supabase preconnect
+- **Original problem:** `src/app/nex-native/layout.tsx` unconditionally
+  preloaded a 2.1 MB country-specific backdrop PNG on every route,
+  including mobile viewports where the CSS backdrop rule is
+  `@media (min-width: 500px)` gated and the image is never painted.
+  No preconnect for Supabase, so every signed-in route paid a cold-
+  TLS round-trip before the first auth / data query.
+- **Files:** `src/app/nex-native/layout.tsx` (preload + preconnect
+  block ~lines 240-290).
+- **Test:** `tests/e2e/perf-regression-asset-budgets.spec.ts` ·
+  three assertions: (a) no unconditional image preload ≥ 600 KB on
+  desktop, (b) no large image preload is active for a Pixel 7
+  viewport, (c) Supabase origin has a preconnect/dns-prefetch hint
+  when `NEXT_PUBLIC_NEX_SUPABASE_URL` is set.
+- **Budget:** `PRELOAD_IMAGE_BUDGET_BYTES = 600 * 1024` (600 KB).
+  Any single image preload above the budget must carry a
+  `media="(min-width: Npx)"` attribute or the test fails.
+- **Run command:**
+  `npx playwright test --config=playwright.perf-regression.config.ts`
+- **CI enforcement:** `.github/workflows/perf-regression.yml` runs on
+  every PR to `main` and `release-audit-v1-2026-11-14`.
+
+#### 10.1.2 · Deployment chain verification endpoint
+- **Original problem:** no way to confirm which commit the live
+  Worker was actually serving. Wrangler OAuth lacked
+  `workers_scripts:read` scope so `wrangler versions list` failed;
+  the dashboard was the only source of truth and it is manual.
+- **Files:** `src/app/api/nex-native/version/route.ts`
+- **Test:** `tests/e2e/perf-regression-deployment-chain.spec.ts` ·
+  opt-in via `PREVIEW_URL` + `EXPECTED_COMMIT_SHA` env vars. When
+  unset, the test is skipped (visible in the report) rather than
+  silently passing.
+- **Budget:** N/A · exact match against expected commit SHA.
+- **Run command:**
+  `PREVIEW_URL=https://nexapp-preview.nex-sandbox.workers.dev EXPECTED_COMMIT_SHA=$(git rev-parse HEAD) npx playwright test --config=playwright.perf-regression.config.ts --grep "deployment chain"`
+
+### 10.2 · Adding new perf fixes
+
+When you fix a loading issue, before closing the task:
+
+1. Add a `perf-regression-*.spec.ts` that reproduces the original
+   failure mode. The test must cover observable behavior · network
+   requests, DOM contents, timing budgets · not source-code greps.
+2. Wire it into `playwright.perf-regression.config.ts` (the
+   `testMatch` already covers `perf-regression-*.spec.ts`).
+3. Verify the test fails against the un-fixed code (prove fail-then-pass).
+4. Add a new entry to §10.1 with the same five-field shape.
+5. Confirm the GitHub check is enforced on the protected branch
+   (branch-protection rulesets · see §10.3). If enforcement is not
+   active, the task is BLOCKED, not complete.
+
+### 10.3 · Enforcement status
+
+As of 2026-11-23 branch protection rulesets are NOT configured on
+`Philip2024394/nexapp`. The perf-regression workflow runs on every PR
+and push, but its result does not block merges until the owner adds
+a repository ruleset that requires the "Playwright perf asset
+budgets" check. Adding that ruleset is the remaining step to make
+this rule fully enforced · see `docs/doctrine/perf-regression-
+enforcement-2026-11-23.md` for the exact check names to require.
+
 ## 9 · Session-start reading (required before changing code)
 
 Before editing any file, read in this order:
