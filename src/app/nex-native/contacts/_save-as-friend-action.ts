@@ -23,6 +23,10 @@
 
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as friendService from "@/lib/nex-native/friend-service";
+// NEX-022 · install-promotion engagement gate · owner-sealed 2026-11-24.
+// Promoting a business contact to personal counts as a meaningful first
+// interaction and qualifies the user for the install promotion.
+import { markInstallEligible } from "@/lib/nex-native/engagement/install-eligibility";
 import { revalidatePath } from "next/cache";
 
 export type SaveAsFriendResult =
@@ -42,6 +46,7 @@ export async function saveAsFriendAction(
       session.account.id,
       contactAccountId,
     );
+    await markInstallEligible();
     revalidatePath("/nex-native/contacts");
     return {
       ok: true,

@@ -59,6 +59,13 @@ const tracked: string[] = [];
 
 beforeAll(async () => {
   if (!EXPECTED_PROJECT_REFS.some((__ref) => process.env.DATABASE_URL?.includes(__ref))) throw new Error("wrong project");
+  // P3 remediation · 2026-11-23 · §13 exercises the NEX1 welcome
+  // delivery path which still uses plaintext `sendPeerMessage` (code-
+  // owned fixed body · no user content). Opt out of the fail-closed
+  // freeze so the once-only + three-class acceptance assertions
+  // remain reachable while the welcome → sendGenericNotice refactor
+  // is listed as REMAINING in the P3 report.
+  vi.stubEnv("NEX_CHAT_PLAINTEXT_FREEZE", "0");
   pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
   const owner = await pg.query(
@@ -78,6 +85,7 @@ afterAll(async () => {
     }
   } finally {
     await pg.end();
+    vi.unstubAllEnvs();
   }
 }, 60_000);
 

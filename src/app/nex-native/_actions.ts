@@ -48,6 +48,11 @@ import {
 } from "@/lib/nex-native/notifications/nex-notification-writer";
 import { resolveAccountLocale, t as tI18n } from "@/lib/nex/i18n/server";
 import * as sellerResponsivenessService from "@/lib/nex-native/seller-responsiveness-service";
+// PWA install-promotion engagement gate · owner-sealed 2026-11-24
+// (Option A · B1-B4). Install promotion must only be eligible after
+// the user has completed at least one meaningful interaction (first
+// contact added OR first message sent, whichever happens first).
+import { markInstallEligible } from "@/lib/nex-native/engagement/install-eligibility";
 import { getThemeStickerBySlug } from "@/lib/nex-native/theme-sticker-service";
 import {
   joinAffiliate,
@@ -548,23 +553,21 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
                 NEX_OFFICIAL_ACCOUNT_ID,
                 acc.id,
               );
-            // Bridge 99 Stage 10 (2026-09-30) · body now rendered via
-            // the shared helper at src/lib/nex-native/nex-official-welcome.ts
-            // so Bridge 62 and Bridge 99 produce identical output. The
-            // helper is regression-pinned in
-            // src/lib/nex-native/__tests__/nex-official-welcome.test.ts.
-            const { renderNex1WelcomeBody } = await import(
-              "@/lib/nex-native/nex-official-welcome"
-            );
-            const body = renderNex1WelcomeBody({ first_name: fullName });
-            await peerMessageService.sendPeerMessage({
+            // P3-completion · 2026-11-23 · welcome message now ships
+            // through the approved sendGenericNotice bypass with the
+            // fixed `welcome` template. Direct sendPeerMessage calls are
+            // refused by NEX_CHAT_PLAINTEXT_FREEZE. See
+            // first-conversation/welcome-delivery.ts for the primary
+            // delivery path · this Bridge-62 inline fallback is kept so
+            // that synchronous signup still inserts the welcome before
+            // the first page load, but the free-form first_name-
+            // personalised body (renderNex1WelcomeBody) is retired here.
+            await peerMessageService.sendGenericNotice({
               conversation_id: conv.id,
               sender_account_id: NEX_OFFICIAL_ACCOUNT_ID,
-              body,
-              attachment_url: null,
-              attachment_type: null,
-              attachment_meta: null,
+              template: { kind: "welcome" },
             });
+            void fullName;
           }
         } catch (e) {
           console.warn(
@@ -871,12 +874,32 @@ export async function signInAction(formData: FormData): Promise<void> {
 // a user with no session · the redirect still fires but the user
 // won't be fully signed in until they click the confirmation link.
 // For dev that toggle should be OFF (Auth → Providers → Email).
-export async function devPassAction(_formData: FormData): Promise<never> {
+export async function devPassAction(formData: FormData): Promise<never> {
   if (process.env.NODE_ENV === "production") {
     redirect(
       "/nex-native/sign-in?e=dev_pass_disabled&m=Dev+Pass+is+disabled+in+production",
     );
   }
+  // Cycle 8 2026-11-24 · buyer-intent preservation. Honour the
+  // `next` form field so the Dev Pass path matches the sealed
+  // signInAction contract: a signed-out buyer who taps Add to Cart
+  // → auth-gate → Sign in → Dev Pass must land back on the
+  // originally intended product URL, not /free-chat. The validation
+  // is the same shape as safeNext in sign-in/page.tsx (prefix
+  // `/nex-native/`, no `//` / `\`, length ≤ 1024). Defence-in-depth
+  // on the server because the hidden input is user-controlled.
+  const nextRaw =
+    typeof formData.get("next") === "string"
+      ? String(formData.get("next"))
+      : "";
+  const nextParam =
+    nextRaw.length > 0 &&
+    nextRaw.startsWith("/nex-native/") &&
+    !nextRaw.includes("//") &&
+    !nextRaw.includes("\\") &&
+    nextRaw.length <= 1024
+      ? nextRaw
+      : null;
   const emailList = (process.env.NEX_ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim())
@@ -897,7 +920,7 @@ export async function devPassAction(_formData: FormData): Promise<never> {
   });
   if (!signInResult.error) {
     revalidatePath("/nex-native/free-chat");
-    redirect("/nex-native/free-chat?show-themes=1");
+    redirect(nextParam ?? "/nex-native/free-chat?show-themes=1");
   }
 
   // Attempt 2 · create account inline when the error reads as
@@ -929,7 +952,9 @@ export async function devPassAction(_formData: FormData): Promise<never> {
   // nex_account is auto-provisioned by resolveFromUser on the first
   // signed-in request · no explicit insert needed here.
   revalidatePath("/nex-native/free-chat");
-  redirect("/nex-native/free-chat?show-themes=1");
+  // Cycle 8 2026-11-24 · same intent-preservation as the sign-in
+  // branch above · also honour `next` on the inline-signup path.
+  redirect(nextParam ?? "/nex-native/free-chat?show-themes=1");
 }
 
 // `signInAsDevAdminAction` removed · owner directive 2026-10-16. The
@@ -1131,6 +1156,11 @@ export async function postMessageAction(
     body,
   });
 
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Legacy customer↔business conversation message
+  // also counts as a first interaction for engagement purposes.
+  await markInstallEligible();
+
   // Enqueue an NEX reply through the queue (Wave 10). Best-effort · never
   // fabricates a reply, never blocks the send on generation.
   try {
@@ -1319,19 +1349,37 @@ export async function sendPeerMessageAction(
     );
   }
 
-  const insertedRow = await peerMessageService.sendPeerMessage({
-    conversation_id: conversation.id,
-    sender_account_id: session.account.id,
-    body,
-    reply_to_id: replyToId,
-    attachment_url: attachmentUrl,
-    attachment_type: attachmentType,
-    // Stage A · owner-authorised 2026-11-03 · attachment_meta
-    // populated only for 'document' kinds so recipients see the
-    // chip with filename + size + MIME. image/video/audio continue
-    // to omit meta (sealed shape preserved).
-    attachment_meta: attachmentMeta,
-  });
+  // P3-completion Phase 2 · 2026-11-23 · explicit PlaintextFrozenError
+  // handling. If the freeze is active (fail-closed in every non-test
+  // environment) this call throws before touching the DB. Translate the
+  // typed refusal into a user-visible banner via query-param so the UI
+  // can show "Plaintext send unavailable · use the encrypted send path"
+  // rather than a generic server-action failure. Other errors propagate.
+  let insertedRow: Awaited<
+    ReturnType<typeof peerMessageService.sendPeerMessage>
+  >;
+  try {
+    insertedRow = await peerMessageService.sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: session.account.id,
+      body,
+      reply_to_id: replyToId,
+      attachment_url: attachmentUrl,
+      attachment_type: attachmentType,
+      // Stage A · owner-authorised 2026-11-03 · attachment_meta
+      // populated only for 'document' kinds so recipients see the
+      // chip with filename + size + MIME. image/video/audio continue
+      // to omit meta (sealed shape preserved).
+      attachment_meta: attachmentMeta,
+    });
+  } catch (e) {
+    if (e instanceof peerMessageService.PlaintextFrozenError) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?message_error=plaintext_frozen`,
+      );
+    }
+    throw e;
+  }
 
   // R1 · universal live-messaging arrival nudge. Plaintext send has no
   // Bridge 76 fan-out · the message_group_id for dedup purposes is
@@ -1422,6 +1470,11 @@ export async function sendPeerMessageAction(
   await sellerResponsivenessService
     .markBusinessOwnerActive(session.account.id)
     .catch(() => {});
+
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. First successfully sent peer message qualifies the
+  // user to see the install promotion (set-once, idempotent).
+  await markInstallEligible();
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -1654,29 +1707,48 @@ export async function sendPeerStickerAction(
     );
   }
 
-  // Snapshot built entirely from DB values · the browser never
-  // participated in setting image_url, label, type, or aspect.
-  await peerMessageService.sendPeerMessage({
-    conversation_id: conversation.id,
-    sender_account_id: session.account.id,
-    body: "",
-    attachment_url: sticker.image_url,
-    attachment_type: "sticker",
-    attachment_meta: {
-      sticker: {
-        theme_id: sticker.theme_id,
-        slug: sticker.slug,
-        label: sticker.label,
-        sticker_type: sticker.sticker_type,
-        aspect_ratio: sticker.aspect_ratio,
+  // P3-completion Phase 2 · 2026-11-23 · explicit PlaintextFrozenError
+  // handling. Sticker sends go through sendPeerMessage because they are
+  // attachment-only writes with body="" · the freeze refuses them too
+  // (see peer-message-service.sendPeerMessage body-length check runs
+  //  AFTER the freeze guard). Owner directive: stickers are NOT bypass-
+  // eligible (no user-content exception). Translate refusal to the
+  // existing sticker_error banner contract.
+  try {
+    await peerMessageService.sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: session.account.id,
+      body: "",
+      attachment_url: sticker.image_url,
+      attachment_type: "sticker",
+      attachment_meta: {
+        sticker: {
+          theme_id: sticker.theme_id,
+          slug: sticker.slug,
+          label: sticker.label,
+          sticker_type: sticker.sticker_type,
+          aspect_ratio: sticker.aspect_ratio,
+        },
       },
-    },
-  });
+    });
+  } catch (e) {
+    if (e instanceof peerMessageService.PlaintextFrozenError) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?sticker_error=plaintext_frozen`,
+      );
+    }
+    throw e;
+  }
 
   // Bridge 13 · bump sender's shop activity like every other send.
   await sellerResponsivenessService
     .markBusinessOwnerActive(session.account.id)
     .catch(() => {});
+
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Sticker send also qualifies as a meaningful first
+  // interaction.
+  await markInstallEligible();
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -2628,15 +2700,25 @@ export async function sendProductInquiryAction(
   // product bubbles (same way cart bubbles hydrate from
   // attachment_meta.cart.items[].image_url). Readers detect product
   // via attachment_meta.product presence · not via attachment_type.
-  await peerMessageService.sendPeerMessage({
-    conversation_id: conversation.id,
-    sender_account_id: session.account.id,
-    body,
-    attachment_url: null,
-    attachment_type: null,
-    attachment_meta: { product: snapshot },
-    send_intent_id: sendIntentId,
-  });
+  // P3-completion Phase 2 · 2026-11-23 · typed refusal → product_error banner.
+  try {
+    await peerMessageService.sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: session.account.id,
+      body,
+      attachment_url: null,
+      attachment_type: null,
+      attachment_meta: { product: snapshot },
+      send_intent_id: sendIntentId,
+    });
+  } catch (e) {
+    if (e instanceof peerMessageService.PlaintextFrozenError) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?product_error=plaintext_frozen`,
+      );
+    }
+    throw e;
+  }
 
   // Durable in-app row · owner directive 2026-11-23b. Writer is keyed
   // on (seller, product, buyer) so repeated inquiries about the same
@@ -2691,6 +2773,11 @@ export async function sendProductInquiryAction(
     // enquiry. The writer should not throw · this catch is pure
     // defence-in-depth.
   }
+
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Product inquiry message is a meaningful first
+  // interaction (first peer message carrying a product snapshot).
+  await markInstallEligible();
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -2809,15 +2896,25 @@ export async function sendMenuItemInquiryAction(
   }
 
   const hasImage = !!item.image_url;
-  await peerMessageService.sendPeerMessage({
-    conversation_id: conversation.id,
-    sender_account_id: session.account.id,
-    body,
-    attachment_url: hasImage ? item.image_url : null,
-    attachment_type: hasImage ? "menu_item" : null,
-    attachment_meta: hasImage ? { menu_item: snapshot } : null,
-    send_intent_id: sendIntentId,
-  });
+  // P3-completion Phase 2 · 2026-11-23 · typed refusal → menu_error banner.
+  try {
+    await peerMessageService.sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: session.account.id,
+      body,
+      attachment_url: hasImage ? item.image_url : null,
+      attachment_type: hasImage ? "menu_item" : null,
+      attachment_meta: hasImage ? { menu_item: snapshot } : null,
+      send_intent_id: sendIntentId,
+    });
+  } catch (e) {
+    if (e instanceof peerMessageService.PlaintextFrozenError) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?menu_error=plaintext_frozen`,
+      );
+    }
+    throw e;
+  }
 
   // Phase 1 · Slice 1D · emit enquiry_initiated for menu-item path.
   // Same posture as sendProductInquiryAction above · fire-and-await ·
@@ -2841,6 +2938,10 @@ export async function sendMenuItemInquiryAction(
   } catch {
     // Fail-open · signal failure must not corrupt a successful enquiry.
   }
+
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Menu-item inquiry is a meaningful first interaction.
+  await markInstallEligible();
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -3839,34 +3940,49 @@ export async function sendCartOrderAction(
   }
 
   if (!atomicTxHandled) {
-    await peerMessageService.sendPeerMessage({
-      conversation_id: conversation.id,
-      sender_account_id: session.account.id,
-      body,
-      // D2 fix · sealed 2026-11-15 · cart orders live ENTIRELY inside
-      // attachment_meta.cart. We MUST NOT stamp attachment_type='cart_order'
-      // because the sealed DB CHECK (nex_peer_message_attachment_type_check)
-      // only permits 'image'|'video'|'audio'|'call_invite' (plus other
-      // document/sticker/etc per later migrations · still never 'cart_order').
-      // Writing 'cart_order' here used to fail the insert outright when the
-      // lead item carried an image (CHECK violation) and silently dropped
-      // the snapshot off the seller's reader when it did not (both-or-neither
-      // pair check kept the row but downstream readers filtered on
-      // attachment_type='cart_order' and missed it). The snapshot already
-      // carries every item's image_url inside items[] · the bubble renderer
-      // hydrates the card from attachment_meta.cart, never from
-      // attachment_url. Readers now detect cart orders via attachment_meta
-      // -> 'cart' IS NOT NULL (see seller-insight-service, order detail
-      // page, peer chat page, portrait bloom shell).
-      attachment_url: null,
-      attachment_type: null,
-      attachment_meta: { cart: snapshot },
-      // Track C · owner-authorised 2026-10-20 · idempotency key.
-      // Undefined when the client did not supply a valid UUID · the
-      // service layer treats absent send_intent_id as "no idempotency
-      // requested" and uses the original insert path.
-      send_intent_id: sendIntentId,
-    });
+    // P3-completion Phase 2 · 2026-11-23 · typed refusal → cart_error banner.
+    // When the plaintext-freeze is on, the service throws PlaintextFrozenError.
+    // Surface that as a user-visible query param rather than a generic 500.
+    try {
+      await peerMessageService.sendPeerMessage({
+        conversation_id: conversation.id,
+        sender_account_id: session.account.id,
+        body,
+        // D2 fix · sealed 2026-11-15 · cart orders live ENTIRELY inside
+        // attachment_meta.cart. We MUST NOT stamp attachment_type='cart_order'
+        // because the sealed DB CHECK (nex_peer_message_attachment_type_check)
+        // only permits 'image'|'video'|'audio'|'call_invite' (plus other
+        // document/sticker/etc per later migrations · still never 'cart_order').
+        // Writing 'cart_order' here used to fail the insert outright when the
+        // lead item carried an image (CHECK violation) and silently dropped
+        // the snapshot off the seller's reader when it did not (both-or-neither
+        // pair check kept the row but downstream readers filtered on
+        // attachment_type='cart_order' and missed it). The snapshot already
+        // carries every item's image_url inside items[] · the bubble renderer
+        // hydrates the card from attachment_meta.cart, never from
+        // attachment_url. Readers now detect cart orders via attachment_meta
+        // -> 'cart' IS NOT NULL (see seller-insight-service, order detail
+        // page, peer chat page, portrait bloom shell).
+        attachment_url: null,
+        attachment_type: null,
+        attachment_meta: { cart: snapshot },
+        // Track C · owner-authorised 2026-10-20 · idempotency key.
+        // Undefined when the client did not supply a valid UUID · the
+        // service layer treats absent send_intent_id as "no idempotency
+        // requested" and uses the original insert path.
+        send_intent_id: sendIntentId,
+      });
+    } catch (e) {
+      if (e instanceof peerMessageService.PlaintextFrozenError) {
+        redirect(
+          "/nex-native/cart?send_error=" +
+            encodeURIComponent(
+              "Cart orders are temporarily unavailable · encrypted checkout path not yet live",
+            ),
+        );
+      }
+      throw e;
+    }
 
     // #14 real activation · sealed 2026-11-16 · owner-authorised fresh
     // word-trigger "Wire the cart snapshot order id into the actual
@@ -4005,6 +4121,11 @@ export async function sendCartOrderAction(
   } catch {
     // Non-blocking · the client's optimistic clear covers this device.
   }
+
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Cart order is a confirmed first commerce message
+  // (peer message carrying the order snapshot).
+  await markInstallEligible();
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}?cart_sent=1`);
@@ -4596,14 +4717,26 @@ export async function shareProductToContactAction(
   }
 
   const hasImage = !!product.image_url;
-  await peerMessageService.sendPeerMessage({
-    conversation_id: conversation.id,
-    sender_account_id: session.account.id,
-    body,
-    attachment_url: hasImage ? product.image_url : null,
-    attachment_type: hasImage ? "product" : null,
-    attachment_meta: hasImage ? { product: snapshot } : null,
-  });
+  // P3-completion Phase 2 · 2026-11-23 · typed refusal → share_error banner.
+  try {
+    await peerMessageService.sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: session.account.id,
+      body,
+      attachment_url: hasImage ? product.image_url : null,
+      attachment_type: hasImage ? "product" : null,
+      attachment_meta: hasImage ? { product: snapshot } : null,
+    });
+  } catch (e) {
+    if (e instanceof peerMessageService.PlaintextFrozenError) {
+      redirect(
+        safeBack +
+          (safeBack.includes("?") ? "&" : "?") +
+          "share_error=plaintext_frozen",
+      );
+    }
+    throw e;
+  }
 
   // Phase 1 · Slice 1D · emit enquiry_initiated for product-share
   // path. This is the live-aware action · live_session_id (if the
@@ -4636,6 +4769,11 @@ export async function shareProductToContactAction(
   } catch {
     // Fail-open · signal failure must not corrupt a successful share.
   }
+
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Product share to a contact is a first peer message
+  // from the sharer's perspective.
+  await markInstallEligible();
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -7527,6 +7665,11 @@ export async function shareBannerToChatAction(formData: FormData): Promise<never
     redirect(`/nex-native/${business.slug}?${qs.toString()}`);
   }
 
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Banner share reaches a business via the legacy
+  // conversation surface · still a first interaction.
+  await markInstallEligible();
+
   revalidatePath(`/nex-native/conversations`);
   revalidatePath(`/nex-native/conversations/${conversation.id}`);
   redirect(`/nex-native/conversations/${conversation.id}`);
@@ -7568,6 +7711,10 @@ export async function sendFriendInviteAction(formData: FormData): Promise<never>
     const msg = e instanceof Error ? e.message : String(e);
     redirectToFriendsWithBanner("invite_failed", msg);
   }
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Successfully adding a first contact (friend invite)
+  // qualifies the user to see the install promotion.
+  await markInstallEligible();
   revalidatePath("/nex-native/friends");
   revalidatePath("/nex-native/contacts");
   if (returnTo) {
@@ -7603,6 +7750,11 @@ export async function acceptFriendInviteAction(formData: FormData): Promise<neve
     const msg = e instanceof Error ? e.message : String(e);
     redirectToFriendsWithBanner("accept_failed", msg);
   }
+  // NEX-022 · install-promotion engagement gate. Owner-sealed
+  // 2026-11-24. Accepting a friend invite establishes a new contact
+  // and so qualifies as the "add contact" trigger just like
+  // sendFriendInviteAction does on the inviter side.
+  await markInstallEligible();
   revalidatePath("/nex-native/friends");
   if (returnTo) {
     revalidatePath(returnTo);
@@ -8351,6 +8503,15 @@ export async function adminSetAccountTierAction(formData: FormData): Promise<nev
   // Bridge 57c · drop a confirmation message from NEX1 into the
   // buyer's peer chat so they see the activation land in-app. Best-
   // effort · a failure here doesn't undo the tier update.
+  //
+  // P3 Phase 3 · owner-authorised 2026-11-23 · now routes through the
+  // approved `plan_activation` GenericNoticeTemplate. The admin does
+  // NOT supply any text · `plan` is narrowed to the closed enum
+  // ("ringan" | "custom" | "buy" | "bisnis"; unknown values fall to
+  // "bisnis" as the lifetime-admin-comp default) and `expires_on` is
+  // the ISO calendar date (YYYY-MM-DD) extracted from the validated
+  // bisnisExpiresAt computed above · or null for lifetime. The
+  // template renderer owns the full user-visible string.
   if (tier !== "gratis") {
     try {
       const { NEX_OFFICIAL_ACCOUNT_ID } = await import(
@@ -8361,31 +8522,55 @@ export async function adminSetAccountTierAction(formData: FormData): Promise<nev
           NEX_OFFICIAL_ACCOUNT_ID,
           target.id,
         );
-      const planLabel =
-        subscriptionPlan === "ringan"
-          ? "Themes Ringan"
-          : subscriptionPlan === "custom"
-            ? "Own Theme Request"
-            : subscriptionPlan === "buy"
-              ? "Buy a theme"
-              : "NEX Bisnis";
-      const expiresLine = bisnisExpiresAt
-        ? `Renews on ${bisnisExpiresAt.slice(0, 10)}.`
-        : "Lifetime access · no expiry.";
-      const body = `🎉 Your ${planLabel} plan is now active. ${expiresLine} Head to /nex-native/chat-themes-library to pick your look. Any questions, message us right here.`;
-      await peerMessageService.sendPeerMessage({
+      // Narrow subscriptionPlan to the template's closed enum. Any
+      // unknown value (should not reach here after planRaw validation
+      // above, but defence in depth) falls to "bisnis" · matches the
+      // previous fall-through label "NEX Bisnis".
+      const templatePlan: "ringan" | "custom" | "buy" | "bisnis" =
+        subscriptionPlan === "ringan" ||
+        subscriptionPlan === "custom" ||
+        subscriptionPlan === "buy" ||
+        subscriptionPlan === "bisnis"
+          ? subscriptionPlan
+          : "bisnis";
+      // Extract the calendar-date portion of the ISO timestamp. The
+      // template renderer re-validates this against /^\d{4}-\d{2}-\d{2}$/
+      // and will throw if the shape is wrong · a fresh-defence against
+      // a future upstream change that changes bisnisExpiresAt format.
+      const templateExpiresOn =
+        bisnisExpiresAt && /^\d{4}-\d{2}-\d{2}/.test(bisnisExpiresAt)
+          ? bisnisExpiresAt.slice(0, 10)
+          : null;
+      await peerMessageService.sendGenericNotice({
         conversation_id: conv.id,
         sender_account_id: NEX_OFFICIAL_ACCOUNT_ID,
-        body,
-        attachment_url: null,
-        attachment_type: null,
-        attachment_meta: null,
+        template: {
+          kind: "plan_activation",
+          plan: templatePlan,
+          expires_on: templateExpiresOn,
+        },
       });
     } catch (e) {
-      console.warn(
-        "[admin-set-tier] activation confirmation message failed",
-        e instanceof Error ? e.message : e,
-      );
+      // sendGenericNotice can still fail for infrastructure reasons
+      // (participant lookup, conversation creation). Log distinctly so
+      // ops can tell a template-validation error from a transient DB
+      // problem · tier update already committed above, so we never
+      // unwind here.
+      if (e instanceof peerMessageService.PlaintextFrozenError) {
+        // Should not happen on this path · sendGenericNotice supplies
+        // the module-private bypass. If this fires, it indicates a
+        // logic regression (bypass symbol lost or renamed) that ops
+        // must investigate.
+        console.warn(
+          "[admin-set-tier] plan_activation unexpectedly refused by plaintext_frozen · bypass may have regressed",
+          { account_id: target.id, plan: subscriptionPlan },
+        );
+      } else {
+        console.warn(
+          "[admin-set-tier] activation confirmation message failed",
+          e instanceof Error ? e.message : e,
+        );
+      }
     }
   }
 

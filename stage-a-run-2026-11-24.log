@@ -1,0 +1,535 @@
+
+Running 63 tests using 1 worker
+
+  ✘   1 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin (22.4s)
+  -   2 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/sign-in · body occupies full viewport with zero margin
+  -   3 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin
+  -   4 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:96:7 › T-5.1 · full-viewport rule · Pixel 7 › sealed viewport meta is present on the root layout
+  -   5 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:36:7 › T-2.5 · buyer checkout + price validation › directory → product · add-to-cart affordance surfaces
+  -   6 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:61:7 › T-2.5 · buyer checkout + price validation › checkout · cart JSONB snapshot shape persisted in nex_order
+  -   7 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:71:7 › T-2.5 · buyer checkout + price validation › price-tamper rejection · modified unit_price must be refused server-side
+  ✘   8 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-document.spec.ts:21:7 › T-1.2 · encrypted document attachment › POST /api/nex-native/attachment/encrypted · pdf extension accepted (1.2s)
+  ✘   9 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:35:7 › T-1.2 · encrypted image attachment › POST /api/nex-native/attachment/encrypted · returns private bucket path (123ms)
+  -  10 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:81:7 › T-1.2 · encrypted image attachment › round-trip decrypt · BLOCKED-PENDING-SECOND-TEST-ACCOUNT
+  -  11 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-fail-safe-503.spec.ts:34:7 › T-1.2 · fail-safe 503 · observable only when private bucket absent › encrypted route: when 503 is returned, body + Retry-After match sealed contract
+  ✓  12 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-fail-safe-503.spec.ts:64:7 › T-1.2 · fail-safe 503 · observable only when private bucket absent › standard route: default 410 Gone under NEX_CHAT_PLAINTEXT_FREEZE (default ON) (341ms)
+  -  13 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-legacy-public-envelope-resolve.spec.ts:31:7 › T-1.2 · legacy public-envelope resolve › resolver returns a playback URL for a legacy row · BLOCKED-PENDING-SEED
+  -  14 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-legacy-public-envelope-resolve.spec.ts:40:7 › T-1.2 · legacy public-envelope resolve › resolver does NOT silently fall back to plaintext for encrypted envelopes
+  ✘  15 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-non-participant-404.spec.ts:32:7 › T-1.2 · signed-URL mint non-participant 404 (non-leaking) › GET with a fabricated storage_path responds 404 · body does not disclose state (404ms)
+  ✓  16 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:36:7 › T-1.1 · chat send end-to-end › sanity · /chat landing reachable (4.7s)
+  ✘  17 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:43:7 › T-1.1 · chat send end-to-end › composer renders on at least one conversation route (3.6s)
+  -  18 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:69:7 › T-1.1 · chat send end-to-end › offline outbox · send under forced-offline reflects pending state
+  -  19 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:83:7 › T-1.1 · chat send end-to-end › retract · sender-side retract affordance renders in the message menu
+  -  20 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:91:7 › T-1.1 · chat send end-to-end › delete-for-me · distinct label from retract
+  ✘  21 [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:23:7 › T-3.1 · apply free chat theme › theme library responds and renders at least one card (4.4s)
+  -  22 [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:36:7 › T-3.1 · apply free chat theme › applying a free theme does not surface a paywall
+  -  23 [stage-a-pixel7] › tests\e2e\journey-chat-theme-first-free-apply.spec.ts:27:7 › T-3.1 · first-free apply › first paid-theme apply · completes without paywall
+  -  24 [stage-a-pixel7] › tests\e2e\journey-chat-theme-first-free-apply.spec.ts:37:7 › T-3.1 · first-free apply › second paid-theme apply · triggers Themes+ subscribe prompt
+  -  25 [stage-a-pixel7] › tests\e2e\journey-chat-theme-region-unsupported-waitlist.spec.ts:29:7 › T-3.3 · unsupported region · waitlist, never USD fallback › unsupported region CTA shows WAITLIST + no USD amount
+  -  26 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:32:7 › T-2.2 · create shop journey › baseline · /manage redirects to setup dispatcher iff the account has no business
+  -  27 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:55:7 › T-2.2 · create shop journey › setup dispatcher routes an empty account to business-details first
+  -  28 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:77:7 › T-2.2 · create shop journey › business-details form · submitting required fields creates a nex_business row
+  ✘  29 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:32:7 › T-4.6 · directory browse + filter (signed-out) › directory landing responds 200 and renders a list surface (20.5s)
+  -  30 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:59:7 › T-4.6 · directory browse + filter (signed-out) › search / filter affordance is present and interactive
+  -  31 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:87:7 › T-4.6 · directory browse + filter (signed-out) › tapping a business card navigates to a [businessSlug] route (no sign-in bounce)
+  ✘  32 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:28:7 › T-4.1 · first-user A → contacts → first thread › sanity · signed-in /home reachable (8.2s)
+  -  33 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:36:7 › T-4.1 · first-user A → contacts → first thread › home · first-visit invitation renders iff conversationCount === 0
+  -  34 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:50:7 › T-4.1 · first-user A → contacts → first thread › contacts · list surface responds and renders a list region
+  -  35 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:63:7 › T-4.1 · first-user A → contacts → first thread › contacts · add-contact affordance is reachable (does not auto-persist)
+  -  36 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:78:7 › T-4.1 · first-user A → contacts → first thread › first-thread · opening a conversation route responds (no new row inserted)
+  -  37 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:90:7 › T-4.1 · first-user A → contacts → first thread › outbound first message · BLOCKED pending second test account
+  ✓  38 [stage-a-pixel7] › tests\e2e\journey-mid-checkout-session-expired.spec.ts:31:7 › T-4.5 · mid-checkout session-expired recovery › manage orders surface responds under a signed-in merchant account (3.3s)
+  -  39 [stage-a-pixel7] › tests\e2e\journey-mid-checkout-session-expired.spec.ts:41:7 › T-4.5 · mid-checkout session-expired recovery › Finish-payment affordance renders for an awaiting_payment order
+  ✘  40 [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:28:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps (3.2s)
+  -  41 [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:43:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details
+  ✓  42 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:54:7 › T-4.3 · State-D returning signed-out user → sign-in › entry · signed-out user hitting the app root lands on welcome, not /home (764ms)
+  ✘  43 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:66:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 · Enter NEX anchor works without JS (real <a href>) (5.4s)
+  -  44 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:90:7 › T-4.3 · State-D returning signed-out user → sign-in › destination · /sign-in renders and is interactive (unknown device branch)
+  -  45 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:118:7 › T-4.3 · State-D returning signed-out user → sign-in › known-device branch · face/WebAuthn affordance surfaces when the device-known marker is present
+  ✘  46 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:33:7 › T-4.6 · signed-out buy intent → auth-gate › auth-gate banner renders when a signed-out user taps Buy on a product (20.5s)
+  -  47 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:93:7 › T-4.6 · signed-out buy intent → auth-gate › close dismisses the auth-gate without navigating off the product page
+  -  48 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:102:7 › T-4.6 · signed-out buy intent → auth-gate › sign-in CTA preserves intent via ?next=
+  ✓  49 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:46:7 › T-5.3 · location permission explanation card › Emergency Help landing does NOT auto-request geolocation on load (6.4s)
+  ✘  50 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:79:7 › T-5.3 · location permission explanation card › sealed explanation copy renders somewhere in the Emergency Help setup surface (11.6s)
+  -  51 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:100:7 › T-5.3 · location permission explanation card › denial branch · user denying location does NOT block SOS setup progression
+  ✘  52 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating (21.4s)
+  -  53 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/sign-in · every discovered anchor responds <500 and respects gating
+  -  54 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/directory · every discovered anchor responds <500 and respects gating
+  -  55 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/install · every discovered anchor responds <500 and respects gating
+  -  56 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/emergency-help · every discovered anchor responds <500 and respects gating
+  -  57 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:100:7 › T-5.5 · owner-corrected NAV reachability crawl › documented direct-URL-only routes are NOT orphaned by the allowlist
+  ✘  58 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (21.3s)
+  -  59 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render
+  -  60 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render
+  -  61 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render
+  -  62 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:65:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for all 3 platforms
+  -  63 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:81:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+
+
+  1) [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native", waiting until "networkidle"
+
+
+      45 |       page,
+      46 |     }) => {
+    > 47 |       const response = await page.goto(route, { waitUntil: "networkidle" });
+         |                                   ^
+      48 |       expect(response?.status(), `${route} responds 200`).toBe(200);
+      49 |
+      50 |       const metrics = await page.evaluate(() => {
+        at C:\Users\Victus\nexapp\tests\e2e\full-viewport-chrome.spec.ts:47:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\full-viewport-chrome-T-5-1-a968a-l-viewport-with-zero-margin-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\full-viewport-chrome-T-5-1-a968a-l-viewport-with-zero-margin-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\full-viewport-chrome-T-5-1-a968a-l-viewport-with-zero-margin-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\full-viewport-chrome-T-5-1-a968a-l-viewport-with-zero-margin-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-document.spec.ts:21:7 › T-1.2 · encrypted document attachment › POST /api/nex-native/attachment/encrypted · pdf extension accepted 
+
+    Error: pdf upload succeeds when private bucket ready
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      47 |     }
+      48 |
+    > 49 |     expect(status, "pdf upload succeeds when private bucket ready").toBe(200);
+         |                                                                     ^
+      50 |     const body = await response.json();
+      51 |     expect(body.ok).toBe(true);
+      52 |     expect(body.bucket).toBe(EXPECTED_BUCKET);
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-attachment-encrypted-document.spec.ts:49:69
+
+    Error Context: test-results\journey-chat-attachment-en-086ea-ed-·-pdf-extension-accepted-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-attachment-en-086ea-ed-·-pdf-extension-accepted-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-attachment-en-086ea-ed-·-pdf-extension-accepted-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:35:7 › T-1.2 · encrypted image attachment › POST /api/nex-native/attachment/encrypted · returns private bucket path 
+
+    Error: upload succeeds when private bucket is ready
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      68 |     }
+      69 |
+    > 70 |     expect(status, "upload succeeds when private bucket is ready").toBe(200);
+         |                                                                    ^
+      71 |     const body = await response.json();
+      72 |     expect(body.ok).toBe(true);
+      73 |     expect(body.bucket).toBe(EXPECTED_BUCKET);
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:70:68
+
+    Error Context: test-results\journey-chat-attachment-en-87942-returns-private-bucket-path-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-attachment-en-87942-returns-private-bucket-path-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-attachment-en-87942-returns-private-bucket-path-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [stage-a-pixel7] › tests\e2e\journey-chat-attachment-non-participant-404.spec.ts:32:7 › T-1.2 · signed-URL mint non-participant 404 (non-leaking) › GET with a fabricated storage_path responds 404 · body does not disclose state 
+
+    Error: non-participant receives 404
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      43 |     });
+      44 |
+    > 45 |     expect(response.status(), "non-participant receives 404").toBe(404);
+         |                                                               ^
+      46 |
+      47 |     const textBody = await response.text();
+      48 |     // Non-leaking assertions.
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-attachment-non-participant-404.spec.ts:45:63
+
+    Error Context: test-results\journey-chat-attachment-no-7f34c-ody-does-not-disclose-state-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-attachment-no-7f34c-ody-does-not-disclose-state-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-attachment-no-7f34c-ody-does-not-disclose-state-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:43:7 › T-1.1 · chat send end-to-end › composer renders on at least one conversation route 
+
+    Error: either a composer OR a start-conversation CTA is reachable from /chat
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |       (hasInput && hasSend) || hasStart,
+      65 |       "either a composer OR a start-conversation CTA is reachable from /chat",
+    > 66 |     ).toBe(true);
+         |       ^
+      67 |   });
+      68 |
+      69 |   test("offline outbox · send under forced-offline reflects pending state", async ({
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-send-e2e.spec.ts:66:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-chat-send-e2e-T-1--a4494-east-one-conversation-route-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-chat-send-e2e-T-1--a4494-east-one-conversation-route-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-send-e2e-T-1--a4494-east-one-conversation-route-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-send-e2e-T-1--a4494-east-one-conversation-route-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:23:7 › T-3.1 · apply free chat theme › theme library responds and renders at least one card 
+
+    Error: at least one theme card renders
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      31 |     );
+      32 |     const count = await cards.count();
+    > 33 |     expect(count, "at least one theme card renders").toBeGreaterThan(0);
+         |                                                      ^
+      34 |   });
+      35 |
+      36 |   test("applying a free theme does not surface a paywall", async ({ page }) => {
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-theme-apply-free.spec.ts:33:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-chat-theme-apply-f-5c2b3-d-renders-at-least-one-card-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-chat-theme-apply-f-5c2b3-d-renders-at-least-one-card-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-theme-apply-f-5c2b3-d-renders-at-least-one-card-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-theme-apply-f-5c2b3-d-renders-at-least-one-card-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:32:7 › T-4.6 · directory browse + filter (signed-out) › directory landing responds 200 and renders a list surface 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native/directory", waiting until "networkidle"
+
+
+      31 |
+      32 |   test("directory landing responds 200 and renders a list surface", async ({ page }) => {
+    > 33 |     const response = await page.goto("/nex-native/directory", {
+         |                                 ^
+      34 |       waitUntil: "networkidle",
+      35 |     });
+      36 |     expect(response?.status(), "/directory responds 200").toBe(200);
+        at C:\Users\Victus\nexapp\tests\e2e\journey-directory-browse-and-filter.spec.ts:33:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-directory-browse-a-5f14a--and-renders-a-list-surface-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-directory-browse-a-5f14a--and-renders-a-list-surface-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-directory-browse-a-5f14a--and-renders-a-list-surface-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-directory-browse-a-5f14a--and-renders-a-list-surface-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:28:7 › T-4.1 · first-user A → contacts → first thread › sanity · signed-in /home reachable 
+
+    Error: expect(page).toHaveURL(expected) failed
+
+    Expected pattern: /\/nex-native\/home(?:[/?#]|$)/
+    Received string:  "http://localhost:3008/nex-native/sign-in"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toHaveURL" with timeout 5000ms
+        14 × locator resolved to <html lang="en">…</html>
+           - unexpected value "http://localhost:3008/nex-native/sign-in"
+
+
+      31 |     });
+      32 |     expect(response?.status(), "signed-in home responds 200").toBe(200);
+    > 33 |     await expect(page).toHaveURL(/\/nex-native\/home(?:[/?#]|$)/);
+         |                        ^
+      34 |   });
+      35 |
+      36 |   test("home · first-visit invitation renders iff conversationCount === 0", async ({
+        at C:\Users\Victus\nexapp\tests\e2e\journey-first-user-A-to-contacts.spec.ts:33:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-first-user-A-to-co-b165f--·-signed-in-home-reachable-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-first-user-A-to-co-b165f--·-signed-in-home-reachable-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-first-user-A-to-co-b165f--·-signed-in-home-reachable-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-first-user-A-to-co-b165f--·-signed-in-home-reachable-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:28:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps 
+
+    Error: dispatcher lands on one of the four sealed resume steps
+
+    expect(received).toMatch(expected)
+
+    Expected pattern: /\/nex-native\/manage\/shop\/setup\/(business-details|appearance|first-product|review)/
+    Received string:  "http://localhost:3008/nex-native/sign-in?next=/nex-native/manage/shop/setup"
+
+      36 |       url,
+      37 |       "dispatcher lands on one of the four sealed resume steps",
+    > 38 |     ).toMatch(
+         |       ^
+      39 |       /\/nex-native\/manage\/shop\/setup\/(business-details|appearance|first-product|review)/,
+      40 |     );
+      41 |   });
+        at C:\Users\Victus\nexapp\tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:38:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-mid-shop-setup-int-a128b-ONE-of-the-four-known-steps-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-mid-shop-setup-int-a128b-ONE-of-the-four-known-steps-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-mid-shop-setup-int-a128b-ONE-of-the-four-known-steps-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-mid-shop-setup-int-a128b-ONE-of-the-four-known-steps-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:66:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 · Enter NEX anchor works without JS (real <a href>) 
+
+    Error: at least one real <a> to /sign-in renders without JavaScript
+
+    expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/sign-in"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - at least one real <a> to /sign-in renders without JavaScript locator('a[href*="/nex-native/sign-in"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/sign-in"]').first()
+
+
+      83 |       anchor,
+      84 |       "at least one real <a> to /sign-in renders without JavaScript",
+    > 85 |     ).toBeVisible({ timeout: 5_000 });
+         |       ^
+      86 |
+      87 |     await context.close();
+      88 |   });
+        at C:\Users\Victus\nexapp\tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:85:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-returning-signed-o-0f659-rks-without-JS-real-a-href--stage-a-pixel7\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-returning-signed-o-0f659-rks-without-JS-real-a-href--stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-returning-signed-o-0f659-rks-without-JS-real-a-href--stage-a-pixel7\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-returning-signed-o-0f659-rks-without-JS-real-a-href--stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-returning-signed-o-0f659-rks-without-JS-real-a-href--stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:33:7 › T-4.6 · signed-out buy intent → auth-gate › auth-gate banner renders when a signed-out user taps Buy on a product 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native/directory", waiting until "networkidle"
+
+
+      35 |   }) => {
+      36 |     // Step 1 · locate a product via directory.
+    > 37 |     await page.goto("/nex-native/directory", { waitUntil: "networkidle" });
+         |                ^
+      38 |     const businessCard = page
+      39 |       .locator("a[href*='/nex-native/']:not([href*='/directory']):not([href*='/sign-in'])")
+      40 |       .first();
+        at C:\Users\Victus\nexapp\tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:37:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-signed-out-browse--fda0f--user-taps-Buy-on-a-product-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-signed-out-browse--fda0f--user-taps-Buy-on-a-product-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-signed-out-browse--fda0f--user-taps-Buy-on-a-product-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-signed-out-browse--fda0f--user-taps-Buy-on-a-product-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:79:7 › T-5.3 · location permission explanation card › sealed explanation copy renders somewhere in the Emergency Help setup surface 
+
+    Error: sealed explanation copy present on emergency-help OR activate
+
+    expect(locator).toBeVisible() failed
+
+    Locator: getByText(/designated emergency contacts can receive your last known location/i)
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - sealed explanation copy present on emergency-help OR activate getByText(/designated emergency contacts can receive your last known location/i) with timeout 5000ms
+      - waiting for getByText(/designated emergency contacts can receive your last known location/i)
+
+
+       95 |       explanationCard,
+       96 |       "sealed explanation copy present on emergency-help OR activate",
+    >  97 |     ).toBeVisible({ timeout: 5_000 });
+          |       ^
+       98 |   });
+       99 |
+      100 |   test("denial branch · user denying location does NOT block SOS setup progression", async ({
+        at C:\Users\Victus\nexapp\tests\e2e\location-permission-explanation-card.spec.ts:97:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\location-permission-explan-e553e-mergency-Help-setup-surface-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\location-permission-explan-e553e-mergency-Help-setup-surface-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\location-permission-explan-e553e-mergency-Help-setup-surface-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\location-permission-explan-e553e-mergency-Help-setup-surface-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native", waiting until "networkidle"
+
+
+      72 |       request,
+      73 |     }) => {
+    > 74 |       const seedResponse = await page.goto(seed, { waitUntil: "networkidle" });
+         |                                       ^
+      75 |       expect(seedResponse?.status(), `${seed} responds <500`).toBeLessThan(500);
+      76 |
+      77 |       const anchors = await collectAnchors(page);
+        at C:\Users\Victus\nexapp\tests\e2e\nav-dead-link-crawl.spec.ts:74:39
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nav-dead-link-crawl-T-5-5--2a8c6-nds-500-and-respects-gating-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nav-dead-link-crawl-T-5-5--2a8c6-nds-500-and-respects-gating-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nav-dead-link-crawl-T-5-5--2a8c6-nds-500-and-respects-gating-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nav-dead-link-crawl-T-5-5--2a8c6-nds-500-and-respects-gating-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14) [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native", waiting until "networkidle"
+
+
+      46 |   for (const route of FORBIDDEN_WINDOWS) {
+      47 |     test(`${route} · install prompt banner MUST NOT render`, async ({ page }) => {
+    > 48 |       const response = await page.goto(route, { waitUntil: "networkidle" });
+         |                                   ^
+      49 |       expect(response?.status(), `${route} responds`).toBeLessThan(500);
+      50 |
+      51 |       // The sealed install promotion component is expected to carry a
+        at C:\Users\Victus\nexapp\tests\e2e\pwa-install-cadence.spec.ts:48:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pwa-install-cadence-T-5-2--7f285-ompt-banner-MUST-NOT-render-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pwa-install-cadence-T-5-2--7f285-ompt-banner-MUST-NOT-render-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pwa-install-cadence-T-5-2--7f285-ompt-banner-MUST-NOT-render-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pwa-install-cadence-T-5-2--7f285-ompt-banner-MUST-NOT-render-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14 failed
+    [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin 
+    [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-document.spec.ts:21:7 › T-1.2 · encrypted document attachment › POST /api/nex-native/attachment/encrypted · pdf extension accepted 
+    [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:35:7 › T-1.2 · encrypted image attachment › POST /api/nex-native/attachment/encrypted · returns private bucket path 
+    [stage-a-pixel7] › tests\e2e\journey-chat-attachment-non-participant-404.spec.ts:32:7 › T-1.2 · signed-URL mint non-participant 404 (non-leaking) › GET with a fabricated storage_path responds 404 · body does not disclose state 
+    [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:43:7 › T-1.1 · chat send end-to-end › composer renders on at least one conversation route 
+    [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:23:7 › T-3.1 · apply free chat theme › theme library responds and renders at least one card 
+    [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:32:7 › T-4.6 · directory browse + filter (signed-out) › directory landing responds 200 and renders a list surface 
+    [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:28:7 › T-4.1 · first-user A → contacts → first thread › sanity · signed-in /home reachable 
+    [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:28:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps 
+    [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:66:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 · Enter NEX anchor works without JS (real <a href>) 
+    [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:33:7 › T-4.6 · signed-out buy intent → auth-gate › auth-gate banner renders when a signed-out user taps Buy on a product 
+    [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:79:7 › T-5.3 · location permission explanation card › sealed explanation copy renders somewhere in the Emergency Help setup surface 
+    [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:70:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating 
+    [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render 
+  13 skipped
+  31 did not run
+  5 passed (3.5m)

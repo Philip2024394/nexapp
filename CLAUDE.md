@@ -232,12 +232,15 @@ enforcement-2026-11-23.md` for the exact check names to require.
 
 Before editing any file, read in this order:
 
-1. `docs/engineering/session-handoff.md` — the one record of where we are.
-2. `docs/product/feature-ledger.md` — authoritative feature status.
-3. `docs/architecture/decisions/README.md` — index of ADRs.
-4. Any requirement in `docs/product/requirements/` matching your task.
+1. `docs/product/nex-blueprint.md` — **MANDATORY FIRST READ.** The complete NEX app structure, every user journey, every side-drawer row, every settings page, every sealed decision, every known gap. Owner-sealed 2026-11-23: *"blueprint and mapping must be rule that before any future edits must read to understand complete app structure."*
+2. `docs/engineering/session-handoff.md` — the one record of where we are.
+3. `docs/product/feature-ledger.md` — authoritative feature status.
+4. `docs/architecture/decisions/README.md` — index of ADRs.
+5. Any requirement in `docs/product/requirements/` matching your task.
 
 **These docs win over any conversational memory or prior-session summary.**
+
+**Delta-only rule.** If the blueprint says a journey is MAPPED or a decision is SEALED, do not re-audit it. If a feature is NOT VERIFIED in `feature-ledger.md`, that is the only work queue. Sub-agents spawned from any session must be briefed with the relevant blueprint sections and instructed: "delta only · do not re-inspect VERIFIED items."
 If memory and the ledger disagree, the ledger is correct until updated with
 evidence. Never claim VERIFIED without recording the evidence in the ledger
 and the handoff.

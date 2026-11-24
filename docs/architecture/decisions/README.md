@@ -10,7 +10,7 @@ accepted ADRs.
 | ID | Title | Status | Decision date | File |
 |---|---|---|---|---|
 | ADR-0001 | Data export architecture | DECISION-READY · implementation NOT YET AUTHORISED | 2026-10-15 | [../data-export-phase-2.md](../data-export-phase-2.md) |
-| ADR-0002 | (reserved) `nex_peer_message.body` schema reconciliation under device-only E2E doctrine | DRAFT · to be authored | — | pending |
+| ADR-0002 | `nex_peer_message.body` schema reconciliation under device-only E2E doctrine | DECISION-READY · implementation NOT YET AUTHORISED | 2026-11-24 (filed) · owner selection pending | [0002-nex-peer-message-body-schema-reconciliation.md](0002-nex-peer-message-body-schema-reconciliation.md) |
 | ADR-0003 | (reserved) P2P fallback feasibility for peer messaging | DRAFT · to be authored | — | pending |
 
 ## Historical context

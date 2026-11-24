@@ -54,6 +54,9 @@ relying on anyone's conversational memory.
 | [NEX-018](#nex-018--hq-incidentalerts-system) | HQ incident/alerts system | **CODE PRESENT · MIGRATIONS NOT APPLIED TO PROD** · mig 300 "AUTHORED NOT APPLIED to production" · mig 304 "APPLIED TO SANDBOX ONLY" | TBD | — | Verify sandbox DB state |
 | [NEX-019](#nex-019--support-tickets) | Support tickets | **CONFIRMED NOT APPLIED** · mig 315/316/317 all say "AUTHORED FOR REVIEW ONLY · NOT APPLIED". Code exists under `/nex-native/support/` + `/hq/support-tickets/` | TBD | — | Verify sandbox DB state |
 | [NEX-020](#nex-020--emergency-help) | Emergency help | **CODE PRESENT · MIGRATIONS NOT APPLIED** · mig 224/225 "AUTHORED FOR REVIEW ONLY · NOT YET APPLIED" · code at `/nex-native/emergency-help/` + contacts + incident-service | sealed 2026-11-09 memory | — | Verify sandbox DB state |
+| [NEX-021](#nex-021--full-viewport-rule-no-mobile-browser-chrome) | Full-viewport rule / no mobile browser chrome | **RULE SEALED · NOT VERIFIED** · splash is reference impl; other pages unaudited; no Playwright test yet | Blueprint § 11A (2026-11-24) | — | Write `full-viewport-chrome.spec.ts`; audit every nex-native route |
+| [NEX-022](#nex-022--pwa-install-promotion-engagement-gated) | PWA install promotion (engagement-gated, Option A) | **RULE SEALED · NOT STARTED** · no card/modal, no beforeinstallprompt capture, no side-drawer row, manifest state unaudited | Blueprint § 11B (2026-11-24) | — | Audit manifest + existing install code; design card; wire platform-aware behaviour |
+| [NEX-023](#nex-023--location-permission-timing-feature-gated) | Location permission timing (feature-gated) | **RULE SEALED · NOT VERIFIED** · no explanation card, no SOS-time explicit gate audited, no retry/settings UI | Blueprint § 11B (2026-11-24) | — | Audit current geolocation call-sites in SOS and elsewhere; add explanation card before browser prompt |
 
 ---
 
@@ -392,6 +395,162 @@ Memory notes personal-contacts-only + pure device-local location sealed
 
 ---
 
+### NEX-021 · Full-viewport rule / no mobile browser chrome
+
+**User problem**: nexapp must feel like the splash screen — one undivided,
+full-bleed canvas. The Android/iPhone browser URL/search bar must not
+steal vertical pixels or break the branded first impression.
+
+**Owner words (2026-11-24, verbatim)**: *"all pages on nexapp must open
+full height of screen and width like splash screen does . we never want
+on andriod or iphone header search bar showing"*.
+
+**Spec**: Blueprint § 11A (full-viewport rule, sealed 2026-11-24).
+
+**Reference implementation**:
+- `src/app/nex-native/page.tsx` (splash branch, auto-divert and SOS decision)
+- `src/app/nex-native/_splash-decision-screen.tsx` (SOS decision)
+
+Both use `<main style={{position:"fixed", inset:0, margin:0, padding:0,
+overflow:"hidden"}}>` and sit under the root viewport meta
+(`src/app/nex-native/layout.tsx:104-110`: `viewportFit:"cover"` +
+`themeColor:"#020914"`).
+
+**Required pattern on every nexapp page**: outermost element fixed/absolute
+at inset 0, or sized with `100dvh`/`100svh`. Never bare `100vh`. Scroll
+lives in inner containers, never on `<body>`.
+
+**Zero-chrome caveat**: in a regular Safari/Chrome tab the URL bar is
+OS-owned; no CSS removes it. True zero-chrome steady state needs PWA
+standalone (home-screen install). Awaiting owner clarification on
+whether to force an install prompt before relying on PWA-only behaviour.
+
+**State**: **RULE SEALED · NOT VERIFIED**. The rule is captured in the
+blueprint and here. No automated test exists yet. No comprehensive audit
+of existing `src/app/nex-native/**` pages has been run.
+
+**Required tests (NOT YET WRITTEN)**:
+- `tests/e2e/full-viewport-chrome.spec.ts` · Pixel 7 + iPhone 14 Pro
+  viewports · for every public nexapp route: `<main>` `boundingBox`
+  matches viewport exactly · no bar appears after `scrollBy(0,1)` +
+  `scrollTo(0,0)` · opt-in standalone-mode variant via Chromium `--app=`
+
+**Next action**: audit existing pages for compliance (list which pages
+pass the pattern today, which don't); write the Playwright spec;
+decide PWA-standalone question with owner.
+
+**Non-negotiables** (from blueprint § 11A):
+- No scrollable `<body>` sized to document height
+- No `position: static` outermost element
+- No bare `100vh`
+- Do not remove `viewportFit:"cover"` or `themeColor` from
+  `src/app/nex-native/layout.tsx`
+
+---
+
+### NEX-022 · PWA install promotion (engagement-gated)
+
+**User problem**: NEX must feel like an installable mobile app — the
+installed PWA is the only way to get a true zero-chrome experience
+on iOS/Android. But forcing install on first visit annoys users and
+risks drop-off before they understand the benefit.
+
+**Owner decision (2026-11-24)**: **Option A** — polished install
+promotion, introduced ONLY after the user has reached Contacts and
+completed one meaningful interaction (add contact OR send first
+message). Never force; always dismissible; permanent side-drawer row
+for later install.
+
+**Spec**: Blueprint § 11B (sealed 2026-11-24). Full directive in
+sealed memory `project_nexapp_pwa_install_and_location_timing_sealed_2026_11_24.md`.
+
+**Required behaviour**:
+- Register → reach Contacts → first meaningful interaction →
+  show card
+- Dismiss → remember + cooldown before next offer
+- Android: capture `beforeinstallprompt`, trigger native prompt only
+  on user press, handle `userChoice`, listen for `appinstalled`
+- iOS Safari: instructional UI (Share → Add to Home Screen → Add)
+- Desktop: platform-appropriate install action
+- Already-installed detection: `window.matchMedia('(display-mode:
+  standalone)')` + `navigator.standalone` (iOS) — hide offer
+
+**State**: **RULE SEALED · NOT STARTED**.
+- No manifest state verified this cycle
+- No `beforeinstallprompt` capture code audited
+- No install-promotion card component exists (unverified)
+- No side-drawer "Install NEX" row (see § 6.3 blueprint — currently
+  missing)
+
+**Required tests** (NOT YET WRITTEN, per directive § 9):
+- H · Android installable browser · offer at approved engagement
+  point, native prompt follows user press
+- I · iPhone Safari · correct instructions
+- J · Already-installed PWA · no promotion
+- K · Dismissed · cooldown respected
+- L · Side drawer "Install NEX" reachable where applicable
+
+**Boundaries**: sandbox-only · no commit/push/merge/deploy ·
+inspect first.
+
+**Next action**: audit current manifest + install code + drawer; then
+design the card component and the engagement-detection hook.
+
+---
+
+### NEX-023 · Location permission timing (feature-gated)
+
+**User problem**: W3C and Chrome both guide against requesting
+location on page load. Prompting on first visit scares users and
+burns the trust budget. NEX must only ask when a feature genuinely
+needs location, after a clear explanation.
+
+**Owner decision (2026-11-24)**: Location permission is ALWAYS
+feature-gated. Never on first load / splash / theme / post-register /
+every open. Always via explanation card → user action → browser
+prompt.
+
+**Spec**: Blueprint § 11B.1 (sealed 2026-11-24). Full directive in
+sealed memory `project_nexapp_pwa_install_and_location_timing_sealed_2026_11_24.md`.
+
+**Required behaviour (SOS path)**:
+- During SOS setup, show explanation card BEFORE browser prompt
+  (suggested wording in blueprint)
+- Buttons: Allow Location Access · Not Now
+- Browser prompt only after user presses Allow
+- Denial: continue with rest of SOS setup, explain limitation,
+  provide retry/settings instructions, never pretend location works
+- Activation: obtain fresh fix where possible; if none, distinguish
+  last-known from current; never invent coordinates
+
+**Related sealed decisions**: 2026-11-09 Emergency Help
+(personal-contacts-only, pure device-local location, no server-side
+coordinate persistence) — **UNCHANGED**.
+
+**State**: **RULE SEALED · NOT VERIFIED**.
+- Existing geolocation call-sites not audited this cycle
+- No explanation-card component exists (unverified)
+- No retry/settings UI for denied permission (unverified)
+
+**Required tests** (per directive § 9):
+- A · First-time visitor · no unexpected location prompt
+- B · New account · no auto-request after registration
+- C · SOS setup · explanation appears BEFORE browser prompt
+- D · Allowed · correct flow
+- E · Denied · safe fallback + retry
+- F · Activated · approved emergency flow
+- G · Returning user · no repeated prompt without feature-specific
+  reason
+
+**Boundaries**: sandbox-only · no persistent server-side location ·
+no live Emergency Help activation · no commit/push.
+
+**Next action**: audit every `navigator.geolocation.*` call-site and
+every reference to lat/lng columns; design the explanation card;
+integrate at SOS setup entry.
+
+---
+
 ## ADR index
 
 | ID | Title | Status | File |
@@ -409,6 +568,23 @@ Memory notes personal-contacts-only + pure device-local location sealed
   directive. Honest NOT VERIFIED for everything not personally proved this
   session. Three inventory agents dispatched to establish per-feature evidence
   on code existence; results update feature entries NEX-004 through NEX-020.
+- **2026-11-24**: Added **NEX-021 · Full-viewport rule / no mobile browser
+  chrome** per owner directive 2026-11-24 (*"all pages on nexapp must open
+  full height of screen and width like splash screen does"*). Rule captured
+  in Blueprint § 11A. Splash is the reference implementation; no automated
+  verification exists yet. No existing-page audit performed in this cycle —
+  only the splash is proven to follow the pattern.
+- **2026-11-24**: Added **NEX-022 · PWA install promotion
+  (engagement-gated)** + **NEX-023 · Location permission timing
+  (feature-gated)** per owner Option A directive 2026-11-24. Rules
+  captured in Blueprint § 11B. Install promotion introduced only after
+  register → Contacts → first meaningful interaction; platform-aware
+  (Android `beforeinstallprompt`, iOS Safari instructions, desktop).
+  Location permission always feature-gated via explanation card →
+  user action → browser prompt; never on first load. Preserves
+  2026-11-09 Emergency Help seal (personal-contacts-only, device-local,
+  no server coords). Sandbox-only. Inspect first; implementation NOT
+  yet started this cycle.
 
 ---
 

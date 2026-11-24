@@ -462,6 +462,19 @@ export type GenericNoticeTemplate =
   | {
       readonly kind: "call_ended";
       readonly reason: "hung_up" | "network" | "unanswered";
+    }
+  // P3 Phase 3 · 2026-11-23 · admin-authorised plan-activation notice.
+  // Strict discriminated union · `plan` is a closed enum tied to the
+  // validated subscription-plan registry; `expires_on` is either null
+  // (lifetime access) or an ISO date (YYYY-MM-DD). The renderer below
+  // runtime-validates the date shape so a tampered caller cannot
+  // smuggle arbitrary text through the date slot. No "label" field,
+  // no "body" field, no admin-supplied prose · the renderer owns the
+  // full user-visible string.
+  | {
+      readonly kind: "plan_activation";
+      readonly plan: "ringan" | "custom" | "buy" | "bisnis";
+      readonly expires_on: string | null;
     };
 
 // Per-kind renderer map · adding a new union variant above forces a
@@ -493,6 +506,58 @@ const GENERIC_NOTICE_BODY_RENDERERS: {
       case "unanswered":
         return "Unanswered call";
     }
+  },
+  // P3 Phase 3 · 2026-11-23 · see type comment above. Validates the
+  // optional date shape inline · rejects anything that is not either
+  // null or a strict ISO calendar date (no time, no timezone suffix,
+  // no free-form text). A validation failure throws · callers must
+  // not pretend the notice succeeded.
+  plan_activation: (t) => {
+    if (t.expires_on !== null) {
+      if (typeof t.expires_on !== "string") {
+        throw new Error(
+          "renderGenericNoticeBody.plan_activation: expires_on must be null or a string",
+        );
+      }
+      // P4 §6 · 2026-11-23 · reject impossible calendar dates in addition
+      // to format violations. Previously `/^\d{4}-\d{2}-\d{2}$/` alone
+      // accepted strings like "2026-13-45" or "2025-02-29" because it
+      // only validated shape. The parse-and-round-trip below ensures the
+      // string names a real UTC calendar date (correct month length,
+      // correct leap-year handling for February).
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t.expires_on);
+      if (!match) {
+        throw new Error(
+          "renderGenericNoticeBody.plan_activation: expires_on must be ISO calendar date YYYY-MM-DD",
+        );
+      }
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      const dt = new Date(Date.UTC(year, month - 1, day));
+      if (
+        Number.isNaN(dt.getTime()) ||
+        dt.getUTCFullYear() !== year ||
+        dt.getUTCMonth() + 1 !== month ||
+        dt.getUTCDate() !== day
+      ) {
+        throw new Error(
+          "renderGenericNoticeBody.plan_activation: expires_on must be ISO calendar date YYYY-MM-DD",
+        );
+      }
+    }
+    const label =
+      t.plan === "ringan"
+        ? "Themes Ringan"
+        : t.plan === "custom"
+          ? "Own Theme Request"
+          : t.plan === "buy"
+            ? "Buy a theme"
+            : "NEX Bisnis";
+    const expiresLine = t.expires_on
+      ? `Renews on ${t.expires_on}.`
+      : "Lifetime access · no expiry.";
+    return `🎉 Your ${label} plan is now active. ${expiresLine} Head to /nex-native/chat-themes-library to pick your look. Any questions, message us right here.`;
   },
 };
 
@@ -529,8 +594,79 @@ export class PlaintextFrozenError extends Error {
   }
 }
 
-function isPlaintextFreezeOn(): boolean {
-  return process.env.NEX_CHAT_PLAINTEXT_FREEZE === "1";
+/**
+ * P3 remediation · owner-authorised 2026-11-23 · fail-closed default.
+ * P3-completion · owner-authorised 2026-11-23 · prod-immune hardening.
+ *
+ * History:
+ *   · Prompt-7 (2026-11-18) installed the guard with a FAIL-OPEN
+ *     default: unset env → freeze OFF → plaintext allowed. That
+ *     posture meant a missing env var silently re-enabled plaintext
+ *     persistence, which the owner identified as a privacy regression
+ *     path in the Phase 1 report.
+ *   · P3 (2026-11-23, earlier) flipped the default to FAIL-CLOSED:
+ *     any value other than the literal string "0" left the freeze
+ *     ACTIVE. The env variable was still honoured in every
+ *     environment, so a production misconfiguration
+ *     (NEX_CHAT_PLAINTEXT_FREEZE=0) could silently re-enable the
+ *     plaintext path.
+ *   · P3-completion (2026-11-23, this) removes any production-env
+ *     path to disable the freeze. In NODE_ENV !== "test" the freeze
+ *     is UNCONDITIONALLY ACTIVE · no env var and no caller can turn
+ *     it off. Tests retain two narrow opt-out paths that are no-ops
+ *     outside `NODE_ENV === "test"`:
+ *       (a) the `__setPlaintextFreezeForTest` dependency-injection
+ *           surface exported below (preferred · explicit per-test),
+ *       (b) `NEX_CHAT_PLAINTEXT_FREEZE=0` for backward compat with
+ *           the earlier P3 test suite that uses `vi.stubEnv`.
+ *     Both are gated on `process.env.NODE_ENV === "test"`. Vitest
+ *     sets NODE_ENV=test by default; a production build sets it to
+ *     "production" (Next.js) so neither path can be reached.
+ *
+ * Exported so the sibling entry points (editPeerMessage, the guest
+ * chat server action, the standard-attachment route, the public-
+ * bucket uploadPeerAttachment helper, and the nex_message
+ * conversation-service writer) can consult the same policy without
+ * re-reading the env variable at each site.
+ */
+
+// Module-private test-only override. `null` means "no override, use
+// the default". Only readable in a test environment · see guard in
+// `isPlaintextFreezeOn` below.
+let __testFreezeOverride: boolean | null = null;
+
+export function isPlaintextFreezeOn(): boolean {
+  // Production / development / staging / any build that is NOT
+  // explicitly NODE_ENV=test: freeze is unconditionally ACTIVE. No
+  // env var, no setter, no caller can disable it. This is deliberate
+  // defence against the "operator accidentally sets FREEZE=0 in
+  // prod" scenario the owner flagged in the P3 review.
+  if (process.env.NODE_ENV !== "test") return true;
+
+  // Test environment only.
+  // (a) Preferred: explicit dependency-injection setter. Tests opt
+  //     out in beforeEach and restore in afterEach.
+  if (__testFreezeOverride !== null) return __testFreezeOverride;
+  // (b) Backward-compat env path · still honoured in NODE_ENV=test
+  //     so the earlier P3 suites that use `vi.stubEnv` keep working.
+  //     Any value other than the literal "0" leaves the freeze ON.
+  return process.env.NEX_CHAT_PLAINTEXT_FREEZE !== "0";
+}
+
+/** TEST-ONLY dependency-injection surface. Tests call this in a
+ *  `beforeEach` to temporarily opt out of the freeze (false) or
+ *  force it on (true); passing `null` clears the override. The
+ *  setter is a NO-OP outside `NODE_ENV === "test"` so production
+ *  code (and a compromised prod dependency) has no code path to
+ *  disable the freeze at runtime. Export name is deliberately
+ *  prefixed with `__` to signal internal/test-only status; linters
+ *  and reviewers should treat an import of this name from
+ *  production code as a bug. */
+export function __setPlaintextFreezeForTest(
+  enabled: boolean | null,
+): void {
+  if (process.env.NODE_ENV !== "test") return;
+  __testFreezeOverride = enabled;
 }
 
 export interface SendPeerMessageInput {
@@ -553,6 +689,17 @@ export interface SendPeerMessageInput {
    *  interpret as "already delivered". Callers without an idempotency
    *  requirement should leave this undefined. */
   send_intent_id?: NexUuid | null;
+  /** P3-completion Phase 2 · 2026-11-23 · opt-in for callers that need
+   *  to DISTINGUISH "insert succeeded on this attempt" from "row was
+   *  already present under this send_intent_id". When false/undefined
+   *  (the default · preserves Track C cart-order behavior) a
+   *  duplicate-key hit on (sender_account_id, send_intent_id) is
+   *  silenced · the existing row is SELECTed and returned. When true,
+   *  the duplicate-key error is re-thrown so the caller can catch it
+   *  and report an idempotent "already delivered" effect distinct from
+   *  a first-time insert (e.g., welcome-outbox worker effect labels).
+   *  Narrow scope · does not change behavior for any other error. */
+  signal_duplicate_send_intent?: boolean;
   /** @internal · private freeze-bypass used ONLY by sendGenericNotice
    *  inside this module. External callers cannot set this to a value
    *  that passes the runtime check (the Symbol identity is private).
@@ -680,7 +827,20 @@ export async function sendPeerMessage(
   // This matches the Bridge 99 doctrine on send_intent_id and makes
   // double-tapped cart sends (and any other caller supplying
   // send_intent_id) safe without a schema change.
-  if (error && input.send_intent_id) {
+  //
+  // P3-completion Phase 2 · 2026-11-23 · callers that NEED to
+  // distinguish "insert happened on this attempt" from "row already
+  // existed" (welcome-outbox worker, future idempotent delivery
+  // adapters) can opt out of the silent cache-hit behavior via
+  // `signal_duplicate_send_intent: true` · in that mode the 23505 is
+  // re-thrown so the caller's own catch can report "already
+  // delivered". Default behavior (undefined/false) is unchanged ·
+  // cart-order double-tap idempotency preserved.
+  if (
+    error &&
+    input.send_intent_id &&
+    !input.signal_duplicate_send_intent
+  ) {
     const code = (error as { code?: string }).code ?? "";
     const msg = (error.message ?? "").toLowerCase();
     const isUniqueViolation =
@@ -754,6 +914,11 @@ export async function sendGenericNotice(input: {
   /** Optional idempotency key · a duplicate welcome insert is benign
    *  but callers that want strict-once semantics can supply one. */
   readonly send_intent_id?: NexUuid | null;
+  /** P3-completion Phase 2 · 2026-11-23 · forwards to sendPeerMessage ·
+   *  opt in to re-throw the duplicate-key error (23505) instead of
+   *  returning the existing row silently. Welcome-outbox worker opts
+   *  in so its adapter can report "already delivered" on retry. */
+  readonly signal_duplicate_send_intent?: boolean;
 }): Promise<NexPeerMessageRow> {
   const body = renderGenericNoticeBody(input.template);
   return sendPeerMessage({
@@ -761,6 +926,7 @@ export async function sendGenericNotice(input: {
     sender_account_id: input.sender_account_id,
     body,
     send_intent_id: input.send_intent_id ?? null,
+    signal_duplicate_send_intent: input.signal_duplicate_send_intent,
     __internal_bypass: INTERNAL_GENERIC_NOTICE_BYPASS,
   });
 }
@@ -1013,7 +1179,12 @@ export type EditPeerMessageResult =
         | "window-expired"
         | "empty-body"
         | "schema-unapplied"
-        | "db-error";
+        | "db-error"
+        // P3 remediation · 2026-11-23 · body UPDATE refused because
+        // NEX_CHAT_PLAINTEXT_FREEZE is active (default ON). Callers
+        // surface this as a clear "editing disabled · plaintext path
+        // frozen" message instead of silently writing plaintext.
+        | "plaintext-frozen";
       readonly detail?: string;
     };
 
@@ -1022,6 +1193,16 @@ export async function editPeerMessage(args: {
   readonly senderAccountId: NexUuid;
   readonly newBody: string;
 }): Promise<EditPeerMessageResult> {
+  // P3 remediation · 2026-11-23 · owner-authorised. The original
+  // editPeerMessage implementation UPDATEd nex_peer_message.body with
+  // user-supplied plaintext unconditionally, bypassing the Prompt-7
+  // freeze guard that `sendPeerMessage` already enforces. Fail-closed
+  // at the top so no DB lookup or row write leaks user content while
+  // the freeze is active. The refusal is a typed result rather than a
+  // throw so existing `_edit-actions.ts` callers surface it cleanly.
+  if (isPlaintextFreezeOn()) {
+    return { ok: false, reason: "plaintext-frozen" };
+  }
   const trimmed = args.newBody.trim();
   if (trimmed.length === 0) return { ok: false, reason: "empty-body" };
 
@@ -1509,6 +1690,22 @@ export async function uploadPeerAttachment(
   kind: NexPeerAttachmentKind;
   meta: NexPeerAttachmentMeta;
 }> {
+  // P3 remediation · 2026-11-23 · owner-authorised. This helper
+  // uploads USER-PROVIDED PLAINTEXT bytes into the PUBLIC bucket
+  // `nex-peer-chat-attachments` (mig 055, public read). Under the
+  // sealed device-only chat doctrine (2026-11-09) that path must not
+  // be reachable while NEX_CHAT_PLAINTEXT_FREEZE is active. Fail-
+  // closed at the top so no bytes are buffered, hashed, or staged if
+  // the freeze blocks them. The error is a plain Error (not
+  // PlaintextFrozenError) because callers already treat throws here
+  // as "upload refused" surface errors; introducing a new typed error
+  // would ripple into every caller without upside.
+  if (isPlaintextFreezeOn()) {
+    throw new Error(
+      "peer-message-service.uploadPeerAttachment: NEX_CHAT_PLAINTEXT_FREEZE active · " +
+        "plaintext chat attachments are not accepted · use the encrypted attachment flow",
+    );
+  }
   if (file.size > NEX_PEER_ATTACHMENT_MAX_BYTES) {
     throw new Error(
       `attachment exceeds ${NEX_PEER_ATTACHMENT_MAX_BYTES / (1024 * 1024)}MB cap`,

@@ -3,13 +3,19 @@
 // src/app/nex-native/emergency-help/_emergency-help-client.tsx
 //
 // Device-local emergency location share. Owner-authorised 2026-11-09.
+// Pre-prompt explanation card added 2026-11-24 per NEX-023 (owner
+// Option A · location permission is feature-gated with an
+// explanation card BEFORE the browser prompt).
 //
 // Flow:
 //   1. User enters a trusted contact's phone number
-//   2. "Share location" button requests geolocation permission
-//   3. Builds an `sms:` deep link with the exact coordinates in the body
-//   4. Taps native SMS app with the pre-filled message
-//   5. No server call · no stored history
+//   2. Taps "Enable location + prepare SMS"
+//   3. (NEX-023) explanation card appears explaining why NEX needs
+//      location permission · Allow Location Access + Not Now buttons
+//   4. Only after Allow Location Access does the browser prompt fire
+//   5. Builds an `sms:` deep link with coordinates in the body
+//   6. Taps native SMS app with the pre-filled message
+//   7. No server call · no stored history
 //
 // Fallback if geolocation denied / unavailable:
 //   · SMS body falls back to "I need help · please contact me" with a
@@ -24,7 +30,17 @@
 
 import * as React from "react";
 
-type ShareState = "idle" | "requesting" | "ready" | "denied" | "unsupported";
+// `explanation` added 2026-11-24 per NEX-023: user must see WHY NEX
+// wants location before the browser prompt is triggered. The browser
+// permission request itself only fires when the user actively
+// chooses "Allow Location Access" on that card.
+type ShareState =
+  | "idle"
+  | "explanation"
+  | "requesting"
+  | "ready"
+  | "denied"
+  | "unsupported";
 
 const PALETTE = {
   secondary: "#C6A15B",
@@ -133,9 +149,9 @@ export function EmergencyHelpClient(): React.ReactElement {
       {state === "idle" ? (
         <button
           type="button"
-          onClick={requestLocation}
+          onClick={() => setState("explanation")}
           disabled={!phoneLooksValid}
-          aria-label="Request location permission"
+          aria-label="Begin location permission flow"
           style={{
             width: "100%",
             padding: "12px 16px",
@@ -152,6 +168,77 @@ export function EmergencyHelpClient(): React.ReactElement {
         >
           Enable location + prepare SMS
         </button>
+      ) : null}
+
+      {/* NEX-023 · owner-sealed 2026-11-24. Explanation card appears
+          BEFORE the browser location prompt. The owner's directive
+          requires that the permission request follow a user action
+          on this card (Allow Location Access) — never immediately. */}
+      {state === "explanation" ? (
+        <div
+          role="group"
+          aria-label="Location permission explanation"
+          style={{
+            padding: 14,
+            borderRadius: 10,
+            background: "rgba(0,0,0,0.3)",
+            border: `1px solid ${PALETTE.secondary}`,
+            lineHeight: 1.5,
+          }}
+        >
+          <p
+            style={{
+              margin: "0 0 12px",
+              color: PALETTE.textPrimary,
+              fontSize: 13,
+            }}
+          >
+            Allow NEX to access your location so your designated emergency
+            contacts can receive your last known location if you activate
+            SOS.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={requestLocation}
+              aria-label="Allow NEX location access"
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: PALETTE.secondary,
+                color: PALETTE.drawerBg,
+                border: "none",
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: "0.03em",
+                cursor: "pointer",
+                minHeight: 40,
+              }}
+            >
+              Allow Location Access
+            </button>
+            <button
+              type="button"
+              onClick={() => setState("idle")}
+              aria-label="Decline location access for now"
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "transparent",
+                color: PALETTE.textPrimary,
+                border: `1px solid ${PALETTE.secondary}`,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                minHeight: 40,
+              }}
+            >
+              Not Now
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {state === "requesting" ? (
@@ -224,8 +311,39 @@ export function EmergencyHelpClient(): React.ReactElement {
               lineHeight: 1.5,
             }}
           >
-            Location permission denied. SMS will be sent without
+            {/* NEX-023 · owner-sealed 2026-11-24 · never pretend
+                location is working when it isn't. Honest denial +
+                retry + settings instructions. */}
+            Location permission is not enabled. NEX cannot automatically
+            share your coordinates until it is enabled.
+            <br />
+            <br />
+            To enable location: open your browser settings → Site
+            settings → Location, allow NEX, then tap <strong>Try
+            again</strong>. The SMS below can still be sent now without
             coordinates.
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <button
+              type="button"
+              onClick={() => setState("explanation")}
+              aria-label="Retry location permission"
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: PALETTE.secondary,
+                color: PALETTE.drawerBg,
+                border: "none",
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: "0.03em",
+                cursor: "pointer",
+                minHeight: 40,
+              }}
+            >
+              Try again
+            </button>
           </div>
           <a
             href={smsHref}

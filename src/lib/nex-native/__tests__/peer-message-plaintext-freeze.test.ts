@@ -2,21 +2,27 @@
 //
 // Prompt-7 · 2026-11-18 · regression suite for the chat plaintext
 // freeze guard + code-owned generic-notice templates.
+// P3 remediation · 2026-11-23 · default flipped to FAIL-CLOSED.
 // -----------------------------------------------------------------------------
-// Covers four behavioural contracts the owner sealed in prompt-6 §4 /
-// prompt-7 §4:
+// Covers five behavioural contracts the owner sealed in prompt-6 §4 /
+// prompt-7 §4 / P3 remediation 2026-11-23 §4:
 //
 //   (a) When NEX_CHAT_PLAINTEXT_FREEZE=1, sendPeerMessage throws
 //       PlaintextFrozenError BEFORE any DB interaction. This is a
 //       fail-closed guard · callers cannot pretend success.
-//   (b) When NEX_CHAT_PLAINTEXT_FREEZE=0 (default), sendPeerMessage
-//       is NOT altered (regression-pin · no behaviour change until
-//       rollout flips the env).
-//   (c) sendGenericNotice renders bodies from a code-owned template
+//   (b) When NEX_CHAT_PLAINTEXT_FREEZE=0 (explicit opt-out),
+//       sendPeerMessage proceeds past the guard · the DB path runs
+//       as before. This is the ONLY way to re-enable plaintext for
+//       legacy / migration compatibility.
+//   (c) When NEX_CHAT_PLAINTEXT_FREEZE is unset (or set to anything
+//       other than "0"), the guard is ACTIVE. P3 2026-11-23 default
+//       is fail-closed · unset env must NOT silently re-enable
+//       plaintext persistence.
+//   (d) sendGenericNotice renders bodies from a code-owned template
 //       with validated enum arguments only · snapshot the exact
 //       outputs so a future drive-by that smuggles private content
 //       into a template render fails loudly.
-//   (d) A caller attempting to forge the __internal_bypass field
+//   (e) A caller attempting to forge the __internal_bypass field
 //       with a lookalike Symbol is still rejected · Symbol identity
 //       is per-instance.
 //
@@ -133,9 +139,11 @@ describe("renderGenericNoticeBody · code-owned templates (prompt-7 2026-11-18)"
   });
 });
 
-describe("sendPeerMessage · NEX_CHAT_PLAINTEXT_FREEZE guard (prompt-7 2026-11-18)", () => {
+describe("sendPeerMessage · NEX_CHAT_PLAINTEXT_FREEZE guard (prompt-7 2026-11-18 · P3 2026-11-23)", () => {
   beforeEach(() => {
-    // No env stub by default · tests opt in.
+    // No env stub by default. After the P3 2026-11-23 flip, this is
+    // the fail-closed state (guard ACTIVE) · tests that need the
+    // guard disabled call `disableFreeze()` explicitly.
   });
 
   it("throws PlaintextFrozenError when freeze is ON and no bypass is present", async () => {
@@ -192,14 +200,14 @@ describe("sendPeerMessage · NEX_CHAT_PLAINTEXT_FREEZE guard (prompt-7 2026-11-1
     ).rejects.toBeInstanceOf(PlaintextFrozenError);
   });
 
-  it("when freeze is OFF (default) the guard does NOT intercept · the call reaches the DB layer", async () => {
+  it("when freeze is EXPLICITLY OFF (NEX_CHAT_PLAINTEXT_FREEZE=0) the guard does NOT intercept · the call reaches the DB layer", async () => {
     disableFreeze();
-    // No env freeze · the function proceeds past the guard. We don't
-    // mock the DB here · we just assert that whatever error surfaces
-    // is NOT PlaintextFrozenError (ie the guard did not fire). The
-    // DB call will fail because the test has no sandbox connection,
-    // but failure cause will be a conversation-lookup error or a
-    // Supabase connectivity error, not a freeze.
+    // Explicit opt-out · the function proceeds past the guard. We
+    // don't mock the DB here · we just assert that whatever error
+    // surfaces is NOT PlaintextFrozenError (ie the guard did not
+    // fire). The DB call will fail because the test has no sandbox
+    // connection, but failure cause will be a conversation-lookup
+    // error or a Supabase connectivity error, not a freeze.
     await expect(
       sendPeerMessage({
         conversation_id: "11111111-1111-4111-8111-111111111111",
@@ -207,6 +215,43 @@ describe("sendPeerMessage · NEX_CHAT_PLAINTEXT_FREEZE guard (prompt-7 2026-11-1
         body: "hello world",
       }),
     ).rejects.not.toBeInstanceOf(PlaintextFrozenError);
+  });
+
+  // P3 remediation · 2026-11-23 · fail-closed default.
+  // The whole point of the P3 remediation is that a MISSING env var
+  // must leave the guard ACTIVE. Before this change, unset env →
+  // guard OFF → plaintext allowed (fail-open). After: unset env →
+  // guard ON → plaintext refused. The test explicitly deletes any
+  // stub to prove the "unset" behaviour (not merely "set to 0").
+  it("fail-closed default · when NEX_CHAT_PLAINTEXT_FREEZE is UNSET the guard is ACTIVE", async () => {
+    // Strip any prior stub · we want the env literally missing, not
+    // set to the empty string or "0". `vi.stubEnv("key", undefined)`
+    // is not supported, so we clear everything.
+    vi.unstubAllEnvs();
+    // Belt-and-braces · make sure the env really is absent.
+    delete process.env.NEX_CHAT_PLAINTEXT_FREEZE;
+    await expect(
+      sendPeerMessage({
+        conversation_id: "11111111-1111-4111-8111-111111111111",
+        sender_account_id: "22222222-2222-4222-8222-222222222222",
+        body: "hello world",
+      }),
+    ).rejects.toBeInstanceOf(PlaintextFrozenError);
+  });
+
+  it("fail-closed default · any value other than the literal '0' keeps the guard ACTIVE", async () => {
+    // Belt-and-braces: typos, "true", "yes", and empty string all
+    // keep the freeze ON. Only the exact string "0" opts out.
+    for (const value of ["", "1", "true", "yes", "on", "frozen", "0 "]) {
+      vi.stubEnv("NEX_CHAT_PLAINTEXT_FREEZE", value);
+      await expect(
+        sendPeerMessage({
+          conversation_id: "11111111-1111-4111-8111-111111111111",
+          sender_account_id: "22222222-2222-4222-8222-222222222222",
+          body: "hello world",
+        }),
+      ).rejects.toBeInstanceOf(PlaintextFrozenError);
+    }
   });
 });
 

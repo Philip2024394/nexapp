@@ -181,6 +181,17 @@ const CONV_AB = "00000000-0000-4000-8000-00000000000c";
 
 beforeEach(() => {
   resetState();
+  // P3 remediation · 2026-11-23 · this suite was written against the
+  // pre-remediation fail-OPEN freeze default. It intentionally
+  // exercises the LEGACY plaintext document / image / voice / video
+  // paths through `sendPeerMessage` + `uploadPeerAttachment` to pin
+  // Bridge 88 "plaintext posture preserved" behaviour. Under the new
+  // fail-closed default those calls would throw PlaintextFrozenError
+  // / Error("...FREEZE active...") without the explicit opt-out
+  // below. Setting NEX_CHAT_PLAINTEXT_FREEZE=0 is the sealed
+  // legacy-compatibility escape hatch · the suite therefore continues
+  // to measure exactly what it was designed to measure.
+  vi.stubEnv("NEX_CHAT_PLAINTEXT_FREEZE", "0");
 });
 
 describe("Stage A · classifyPeerAttachmentMime", () => {

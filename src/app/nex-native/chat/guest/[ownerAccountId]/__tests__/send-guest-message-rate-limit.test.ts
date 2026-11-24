@@ -51,7 +51,14 @@ const H = vi.hoisted(() => ({
   recordIfAllowed: vi.fn(),
   resolveSession: vi.fn(),
   getOrCreateConversation: vi.fn(),
-  insert: vi.fn(),
+  // P3 remediation · 2026-11-23 · the guest-chat action no longer
+  // performs an inline `.from("nex_peer_message").insert(...)`. It
+  // now routes through `sendPeerMessage` so the sealed plaintext-
+  // freeze guard is enforced at the service-layer choke point. The
+  // behavioural tests below mock `sendPeerMessage` instead of the
+  // raw Supabase insert so the rate-limit branches can still be
+  // exercised without hitting the real guard.
+  sendPeerMessage: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -67,13 +74,26 @@ vi.mock("@/lib/nex-native/peer-conversation-service", () => ({
   getOrCreatePeerConversation: H.getOrCreateConversation,
 }));
 
-vi.mock("@/lib/nex-native/supabase-admin", () => ({
-  nexSupabaseAdmin: {
-    from: (_tableName: string) => ({
-      insert: H.insert,
-    }),
-  },
-}));
+// P3 remediation · 2026-11-23 · supply `sendPeerMessage` AND the
+// `PlaintextFrozenError` class the action imports. The real freeze
+// guard is covered by p3-plaintext-remediation.test.ts in the
+// sibling library suite · this file preserves the rate-limit
+// behavioural tests by mocking the service to a simple resolver.
+// The class is declared inside the mock factory so it's available
+// at hoist time (vitest hoists vi.mock above module-top class
+// declarations).
+vi.mock("@/lib/nex-native/peer-message-service", () => {
+  class MockPlaintextFrozenError extends Error {
+    constructor(msg: string) {
+      super(msg);
+      this.name = "PlaintextFrozenError";
+    }
+  }
+  return {
+    sendPeerMessage: H.sendPeerMessage,
+    PlaintextFrozenError: MockPlaintextFrozenError,
+  };
+});
 
 vi.mock("next/cache", () => ({
   revalidatePath: H.revalidatePath,
@@ -220,14 +240,19 @@ describe("Stage 1.1 · guest-chat action · source-shape invariants", () => {
     );
   });
 
-  it("rate-limit call sits BEFORE the DB insert · an over-cap sender never writes a nex_peer_message row", () => {
+  it("rate-limit call sits BEFORE the service-layer send · an over-cap sender never dispatches a message", () => {
+    // P3 remediation · 2026-11-23 · the action no longer performs an
+    // inline `.from("nex_peer_message").insert(...)`. It routes
+    // through `sendPeerMessage` so the sealed plaintext-freeze guard
+    // is enforced at the service-layer choke point. The ordering
+    // invariant is preserved: rate-limit must still sit BEFORE the
+    // dispatch call, so an over-cap sender never reaches the send
+    // path (whether that path is inline or service-routed).
     const rateIdx = SOURCE.indexOf("recordIfAllowed(guestAccount.id");
-    const insertIdx = SOURCE.indexOf(
-      'from("nex_peer_message").insert',
-    );
+    const sendIdx = SOURCE.indexOf("sendPeerMessage({");
     expect(rateIdx).toBeGreaterThan(-1);
-    expect(insertIdx).toBeGreaterThan(-1);
-    expect(rateIdx).toBeLessThan(insertIdx);
+    expect(sendIdx).toBeGreaterThan(-1);
+    expect(rateIdx).toBeLessThan(sendIdx);
   });
 
   it("translates NexCommunityRateLimitError into { ok: false, reason: 'rate_limited' } with window + cap surfaced", () => {
@@ -298,22 +323,33 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
     H.recordIfAllowed.mockReset();
     H.resolveSession.mockReset();
     H.getOrCreateConversation.mockReset();
-    H.insert.mockReset();
+    H.sendPeerMessage.mockReset();
     H.revalidatePath.mockReset();
+    // P3 remediation · 2026-11-23 · these behavioural tests exercise
+    // the rate-limit dispatch logic along the plaintext-allowed path.
+    // The fail-closed behaviour is covered by the dedicated
+    // p3-plaintext-remediation.test.ts / p3-plaintext-refused.test.ts
+    // suites. Explicitly opt out of the freeze here so sendPeerMessage
+    // doesn't short-circuit on every test · otherwise the rate-limit
+    // allow/reject/fail-open assertions can't be reached.
+    vi.stubEnv("NEX_CHAT_PLAINTEXT_FREEZE", "0");
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
-  it("allowed request · proceeds to nex_peer_message.insert and returns { ok: true }", async () => {
+  it("allowed request · proceeds to sendPeerMessage and returns { ok: true }", async () => {
     H.resolveSession.mockResolvedValue({
       kind: "provisional",
       account: { id: GUEST_ID },
     });
     H.recordIfAllowed.mockResolvedValue(undefined);
     H.getOrCreateConversation.mockResolvedValue(CONVERSATION_ROW);
-    H.insert.mockResolvedValue({ error: null });
+    H.sendPeerMessage.mockResolvedValue({
+      id: "55555555-5555-4555-8555-555555555555",
+    });
 
     const result = await sendGuestMessageAction(OWNER_ID, "hello");
 
@@ -329,23 +365,24 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
       "peer_message_guest",
     );
 
-    // DB insert reached · evidence the allowed branch dispatches to
-    // the message-send path.
-    expect(H.insert).toHaveBeenCalledTimes(1);
-    const insertArg = H.insert.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(insertArg).toMatchObject({
+    // Service-layer send reached · evidence the allowed branch
+    // dispatches to the message-send path (now routed via
+    // peer-message-service so the sealed freeze guard sits in one
+    // place rather than inline).
+    expect(H.sendPeerMessage).toHaveBeenCalledTimes(1);
+    const sendArg = H.sendPeerMessage.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(sendArg).toMatchObject({
       conversation_id: CONVERSATION_ROW.id,
       sender_account_id: GUEST_ID,
       body: "hello",
-      encrypted: false,
     });
 
-    // Ordering · primitive invoked strictly before insert.
+    // Ordering · primitive invoked strictly before send.
     const rateCallOrder = H.recordIfAllowed.mock.invocationCallOrder[0];
-    const insertCallOrder = H.insert.mock.invocationCallOrder[0];
+    const sendCallOrder = H.sendPeerMessage.mock.invocationCallOrder[0];
     expect(rateCallOrder).toBeDefined();
-    expect(insertCallOrder).toBeDefined();
-    expect(rateCallOrder!).toBeLessThan(insertCallOrder!);
+    expect(sendCallOrder).toBeDefined();
+    expect(rateCallOrder!).toBeLessThan(sendCallOrder!);
   });
 
   it("rate-limit rejection · returns { ok: false, reason: 'rate_limited' } · NO DB write, NO revalidate", async () => {
@@ -368,9 +405,9 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
       rate_limited_max_per_window: 10,
     });
 
-    // Hard proof that no message was written and no cache nudged.
+    // Hard proof that no message was dispatched and no cache nudged.
     expect(H.getOrCreateConversation).not.toHaveBeenCalled();
-    expect(H.insert).not.toHaveBeenCalled();
+    expect(H.sendPeerMessage).not.toHaveBeenCalled();
     expect(H.revalidatePath).not.toHaveBeenCalled();
   });
 
@@ -390,7 +427,9 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
     );
     H.recordIfAllowed.mockRejectedValueOnce(infraErr);
     H.getOrCreateConversation.mockResolvedValue(CONVERSATION_ROW);
-    H.insert.mockResolvedValue({ error: null });
+    H.sendPeerMessage.mockResolvedValue({
+      id: "55555555-5555-4555-8555-555555555555",
+    });
 
     const warnSpy = vi
       .spyOn(console, "warn")
@@ -398,13 +437,13 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
 
     const result = await sendGuestMessageAction(OWNER_ID, "hello");
 
-    // Current policy: non-rate-limit error → fall-through → insert
+    // Current policy: non-rate-limit error → fall-through → send
     // happens. This is the BYPASS the review flagged. A green test
     // here is NOT evidence that the bypass is acceptable; it is
     // evidence that the behaviour matches the documented policy.
     expect(result.ok).toBe(true);
     expect(result.reason).toBeUndefined();
-    expect(H.insert).toHaveBeenCalledTimes(1);
+    expect(H.sendPeerMessage).toHaveBeenCalledTimes(1);
 
     // Observability check · the fail-open path at least logs a warn
     // containing the primitive-failure phrase so an operator grep can
@@ -429,7 +468,7 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
     expect(result).toEqual({ ok: false, reason: "unauthenticated" });
     expect(H.recordIfAllowed).not.toHaveBeenCalled();
     expect(H.getOrCreateConversation).not.toHaveBeenCalled();
-    expect(H.insert).not.toHaveBeenCalled();
+    expect(H.sendPeerMessage).not.toHaveBeenCalled();
   });
 
   it("empty message short-circuits · rate-limit primitive NOT called · no budget consumed on empty submits", async () => {
@@ -446,6 +485,6 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
     expect(result).toEqual({ ok: false, reason: "empty" });
     expect(H.recordIfAllowed).not.toHaveBeenCalled();
     expect(H.getOrCreateConversation).not.toHaveBeenCalled();
-    expect(H.insert).not.toHaveBeenCalled();
+    expect(H.sendPeerMessage).not.toHaveBeenCalled();
   });
 });

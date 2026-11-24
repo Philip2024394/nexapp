@@ -26,12 +26,40 @@ import {
 } from "../_customize-actions";
 
 const PAGE_BG_FALLBACK = "var(--nex-world-drawer-bg, #020914)";
+// D1a · owner-approved bubble-customize upgrade. The OUTER page
+// background is a warm cream so the selected theme reads inside the
+// preview panel without competing for attention across the whole
+// surface. Inner preview continues to paint the full theme wallpaper
+// (see `previewContainerStyle` below). This supersedes the earlier
+// 2026-11-03 "wallpaper on the full page" treatment for this route
+// only · theme tiles on /free-chat still paint full-bleed.
+const PAGE_BG_CREAM = "#F6EFDF";
+// Dark ink for use ON the cream background · the preview bubbles
+// keep their own auto-ink via pickInkForBubble().
+const TEXT_ON_CREAM = "#1A1308";
+const TEXT_ON_CREAM_DIM = "#4A3E2C";
 const TEXT_INK = "#F2F5F8";
 const TEXT_DIM = "#B5C3D6";
 const TEXT_MUTE = "#7D9BC0";
 const ACCENT_RING = "var(--nex-world-secondary, #00AFFF)";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+// D1a · realistic conversation sample for the preview panel. Four
+// turns · peer first · plain social small-talk so the preview is
+// obviously a chat, not a UI mock. Not translated / not localised
+// because this surface is a preview of the *user's own* colour
+// choices · the content is incidental scaffolding.
+interface PreviewTurn {
+  readonly side: "peer" | "self";
+  readonly text: string;
+}
+const PREVIEW_CONVERSATION: readonly PreviewTurn[] = [
+  { side: "peer", text: "Hey · you around? Fancy a chat?" },
+  { side: "self", text: "Grand · just got in. What's the plan?" },
+  { side: "peer", text: "Pub down the road · live music tonight." },
+  { side: "self", text: "Perfect · see you in 20." },
+];
 
 export interface CustomizeClientProps {
   readonly themeId: string;
@@ -167,23 +195,20 @@ export function CustomizeClient({
           : PAGE_BG_FALLBACK,
       };
 
-  // Owner directive 2026-11-03 · "must show the theme back ground
-   // from the chat home free page" · the SAME wallpaper the user picked
-   // on /free-chat?show-themes=1 paints the full-page background here.
-   // For the plain `nex-default` tile (no wallpaper · supportsBackgroundPicker)
-   // the user's picked containerColor fills the page instead. Fallback
-   // to the sealed drawer-bg while the image loads.
-   const pageBg: React.CSSProperties = wallpaperUrl
-     ? {
-         backgroundImage: `url("${wallpaperUrl}")`,
-         backgroundSize: "cover",
-         backgroundPosition: "center",
-         backgroundRepeat: "no-repeat",
-         backgroundColor: PAGE_BG_FALLBACK,
-       }
-     : {
-         backgroundColor: supportsBackgroundPicker ? backgroundColor : PAGE_BG_FALLBACK,
-       };
+  // D1a · owner-approved 2026-11-24 · the OUTER page background is
+  // a warm cream (`PAGE_BG_CREAM`) regardless of the chosen theme.
+  // The theme wallpaper paints INSIDE the preview panel only (see
+  // `previewContainerStyle`), so the user sees a true "preview card"
+  // against a neutral page · not the wallpaper competing with itself
+  // between page and panel. This supersedes the earlier 2026-11-03
+  // directive that put the wallpaper on the full page.
+  //
+  // The plain `nex-default` tile (no wallpaper) keeps its user-picked
+  // chat background inside the preview panel · the outer page still
+  // stays cream so the control area reads cleanly.
+  const pageBg: React.CSSProperties = {
+    backgroundColor: PAGE_BG_CREAM,
+  };
 
   return (
     <div
@@ -192,7 +217,11 @@ export function CustomizeClient({
         maxHeight: "100vh",
         overflow: "hidden",
         ...pageBg,
-        color: TEXT_INK,
+        // D1a · dark ink on cream for the theme label + feedback line.
+        // Dark panels inside (back-to-themes pill, controls, preview)
+        // keep their own explicit `color` so their white text reads
+        // against the dark panel background.
+        color: TEXT_ON_CREAM,
         fontFamily: SANS,
         padding:
           "calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px)",
@@ -260,16 +289,20 @@ export function CustomizeClient({
         </div>
 
         {/* ── Preview panel · theme-aware ──────────────────────────
-            Owner directive 2026-11-02 (revision 6) · preview height
-            CAPPED so the controls panel + Reset/Save action bar never
-            clip on short viewports. Prior `flex: 1` ate all remaining
-            space and squeezed the buttons off-screen on color-only
-            tiles (3-column controls take more height than 2-column). */}
+            D1a · realistic conversation preview. Four bubbles in
+            peer → self → peer → self order so the user sees how a
+            real back-and-forth reads with their chosen colours.
+            Prior revision showed two isolated bubbles · the owner
+            asked for an honest preview of a live chat.
+            Height cap raised from 220px to 300px so four bubbles
+            fit without crowding; still CAPPED (not flex:1) so the
+            controls panel + Reset/Save action bar do not clip on
+            short viewports. */}
         <section
           data-nex-bubble-customize-preview
           style={{
             flex: "0 1 auto",
-            height: "clamp(140px, 32vh, 220px)",
+            height: "clamp(200px, 42vh, 300px)",
             borderRadius: 16,
             overflow: "hidden",
             border: `1px solid rgba(198, 161, 91, 0.22)`,
@@ -281,57 +314,50 @@ export function CustomizeClient({
               ...previewContainerStyle,
               width: "100%",
               height: "100%",
-              padding: "20px 14px",
+              padding: "14px 12px",
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: 6,
               justifyContent: "center",
+              overflowY: "auto",
             }}
           >
-            {/* Peer bubble · left */}
-            <div style={{ display: "flex", justifyContent: "flex-start" }}>
-              <div
-                data-nex-bubble-customize-preview-peer
-                style={{
-                  maxWidth: "78%",
-                  padding: "10px 14px",
-                  borderRadius: 18,
-                  borderBottomLeftRadius: 6,
-                  background: bubbleStyle.peerFill,
-                  border: `1px solid ${bubbleStyle.peerRim}`,
-                  color: peerInk,
-                  fontSize: 14,
-                  lineHeight: 1.4,
-                  backdropFilter: "blur(10px) saturate(140%)",
-                  WebkitBackdropFilter: "blur(10px) saturate(140%)",
-                  boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
-                }}
-              >
-                Hey, you around? Fancy a chat?
-              </div>
-            </div>
-            {/* Owner bubble · right */}
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <div
-                data-nex-bubble-customize-preview-self
-                style={{
-                  maxWidth: "78%",
-                  padding: "10px 14px",
-                  borderRadius: 18,
-                  borderBottomRightRadius: 6,
-                  background: bubbleStyle.selfFill,
-                  border: `1px solid ${bubbleStyle.selfRim}`,
-                  color: selfInk,
-                  fontSize: 14,
-                  lineHeight: 1.4,
-                  backdropFilter: "blur(10px) saturate(140%)",
-                  WebkitBackdropFilter: "blur(10px) saturate(140%)",
-                  boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
-                }}
-              >
-                Grand · I just got in. What&apos;s the plan?
-              </div>
-            </div>
+            {PREVIEW_CONVERSATION.map((msg, idx) => {
+              const isSelf = msg.side === "self";
+              const fill = isSelf ? bubbleStyle.selfFill : bubbleStyle.peerFill;
+              const rim = isSelf ? bubbleStyle.selfRim : bubbleStyle.peerRim;
+              const ink = isSelf ? selfInk : peerInk;
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    justifyContent: isSelf ? "flex-end" : "flex-start",
+                  }}
+                >
+                  <div
+                    data-nex-bubble-customize-preview-bubble={msg.side}
+                    style={{
+                      maxWidth: "78%",
+                      padding: "8px 12px",
+                      borderRadius: 18,
+                      borderBottomLeftRadius: isSelf ? 18 : 6,
+                      borderBottomRightRadius: isSelf ? 6 : 18,
+                      background: fill,
+                      border: `1px solid ${rim}`,
+                      color: ink,
+                      fontSize: 13,
+                      lineHeight: 1.35,
+                      backdropFilter: "blur(10px) saturate(140%)",
+                      WebkitBackdropFilter: "blur(10px) saturate(140%)",
+                      boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -440,7 +466,9 @@ export function CustomizeClient({
             style={{
               margin: 0,
               fontSize: 11,
-              color: TEXT_DIM,
+              // D1a · dark-on-cream · feedback line is OUTSIDE any
+              // dark panel so it inherits the cream surface.
+              color: TEXT_ON_CREAM_DIM,
               textAlign: "center",
             }}
           >

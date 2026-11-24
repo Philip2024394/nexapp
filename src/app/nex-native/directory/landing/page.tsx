@@ -44,6 +44,11 @@ import {
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { InstallHomeButtonClient } from "../../_install-home-button-client";
+// NEX-022 · install promotion engagement gate · owner-sealed 2026-11-24.
+// The installer UI must not mount for first-time / unengaged visitors.
+// Only after a qualifying success event (first contact added or first
+// message sent) does `isInstallEligible()` flip to true.
+import { isInstallEligible } from "@/lib/nex-native/engagement/install-eligibility";
 
 // Force dynamic render · a fresh landing visit should mint a fresh
 // seed and pull a fresh random pair for Featured Deals. Caching would
@@ -122,6 +127,12 @@ export default async function DirectoryLandingPage({
     // first paint.
   }
 
+  // NEX-022 · install promotion must not render until the user has
+  // completed at least one meaningful interaction. First-time visitors
+  // never see the install button here · it is marked eligible by the
+  // first successful contact-add or message-send server action.
+  const installEligible = await isInstallEligible();
+
   return (
     <main
       style={pageStyle}
@@ -140,7 +151,7 @@ export default async function DirectoryLandingPage({
         <HeroSection seed={seed} />
         <CategorySection seed={seed} />
         <FeaturedDealsSection cards={feed.cards} seed={seed} />
-        <PrimaryCta seed={seed} />
+        <PrimaryCta seed={seed} installEligible={installEligible} />
       </div>
     </main>
   );
@@ -433,7 +444,13 @@ function FeaturedDealsEmpty({ seed }: { readonly seed: string }) {
 
 // ─── Primary CTA ───────────────────────────────────────────────────
 
-function PrimaryCta({ seed }: { readonly seed: string }) {
+function PrimaryCta({
+  seed,
+  installEligible,
+}: {
+  readonly seed: string;
+  readonly installEligible: boolean;
+}) {
   return (
     <section style={primaryCtaSectionStyle}>
       <Link
@@ -451,19 +468,25 @@ function PrimaryCta({ seed }: { readonly seed: string }) {
         </Link>
       </p>
       {/* Home-screen install prompt · owner directive 2026-10-16.
-          Hidden when NEX is already installed; iOS falls back to a
-          Share → "Add to Home Screen" tooltip. Second of two
-          authorised placements (the other is /nex-native/welcome). */}
-      <div
-        style={{
-          marginTop: 18,
-          display: "flex",
-          justifyContent: "center",
-        }}
-        data-nex-landing-install-slot
-      >
-        <InstallHomeButtonClient />
-      </div>
+          NEX-022 · owner-sealed 2026-11-24 · the install button is
+          gated behind `installEligible` (true only after first
+          successful contact-add or message-send). Hidden when NEX is
+          already installed; iOS falls back to a Share → "Add to Home
+          Screen" tooltip. The `InstallHomeButtonClient` import is
+          retained at module scope so string-grep gating in tests
+          continues to match even when the mount is conditional. */}
+      {installEligible ? (
+        <div
+          style={{
+            marginTop: 18,
+            display: "flex",
+            justifyContent: "center",
+          }}
+          data-nex-landing-install-slot
+        >
+          <InstallHomeButtonClient />
+        </div>
+      ) : null}
     </section>
   );
 }
