@@ -49,6 +49,15 @@ vi.mock("@/lib/nex-native/attachment/bucket-config", () => ({
 }));
 vi.mock("@/lib/nex-native/peer-message-service", () => ({
   NEX_PEER_ATTACHMENT_MAX_BYTES: 25 * 1024 * 1024,
+  // P3 remediation · 2026-11-23 · the route now consults the plaintext
+  // freeze guard before accepting a body. This suite exercises the
+  // pre-freeze legacy upload semantics (happy path, MIME allowlist,
+  // size cap, bucket fail-safe, rate limiting) · return false here so
+  // those branches are still reachable. The fail-closed semantics
+  // themselves are covered by p3-plaintext-refused.test.ts in this
+  // directory, which does NOT mock peer-message-service and reads the
+  // real guard from the env.
+  isPlaintextFreezeOn: () => false,
 }));
 // Stage 6 · P0 item 3 · 2026-11-14 · rate-limit path mocks. The route
 // now calls `recordIfAllowed` twice (account + IP keys). Tests set the

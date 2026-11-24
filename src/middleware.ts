@@ -44,6 +44,15 @@ import {
   isPrelaunchModeOn,
   isValidFounderBypassCookie,
 } from "@/lib/nex-native/prelaunch/feature-flag";
+// G-2 fix (NEX blueprint § 10 · 2026-11-23) · persist a durable
+// "known device" marker whenever auth refresh resolves a real user, so
+// the splash page can route State D/E to sign-in instead of the theme
+// picker. See src/lib/nex-native/app/known-device-cookie.ts for rationale.
+import {
+  KNOWN_DEVICE_COOKIE,
+  KNOWN_DEVICE_MAX_AGE_SECONDS,
+  KNOWN_DEVICE_VALUE,
+} from "@/lib/nex-native/app/known-device-cookie";
 
 // ── CID injection ──────────────────────────────────────────────────
 // Edge runtime cannot resolve node:async_hooks even transitively, so
@@ -145,7 +154,24 @@ async function refreshNexAuthSession(
         },
       },
     });
-    await supabase.auth.getUser();
+    const { data } = await supabase.auth.getUser();
+    // G-2 (NEX blueprint § 10 · 2026-11-23) · refresh the known-device
+    // marker on every request that resolves to a real user. The cookie
+    // is durable (1 year) and intentionally NOT cleared on sign-out ·
+    // the owner's rule is that a signed-out returning user must see
+    // sign-in, not the theme picker. Behaviour unchanged for anonymous
+    // users (cookie is never set).
+    if (data.user) {
+      res.cookies.set({
+        name: KNOWN_DEVICE_COOKIE,
+        value: KNOWN_DEVICE_VALUE,
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        maxAge: KNOWN_DEVICE_MAX_AGE_SECONDS,
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
   } catch {
     /* never block a page render on auth-refresh failure */
   }
@@ -237,6 +263,28 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     const target = req.nextUrl.clone();
     target.pathname = "/nex-native/home";
     return attachCid(NextResponse.redirect(target, 302), cid);
+  }
+
+  // Owner directive 2026-11-24 (Stage A Remediation Cycle 3) · retired
+  // chat hub. `src/app/nex-native/chat/page.tsx` already calls
+  // `redirect("/nex-native/contacts")`, but Next.js 16's parent-layout
+  // RSC streaming commits response headers before the page's
+  // `redirect()` resolves, so Next falls back to an HTML 200 with a
+  // `<meta http-equiv="refresh">` payload rather than emitting a true
+  // HTTP 307. Founder prefers a genuine server-side 307, so we emit
+  // it here at the edge before any streaming begins. Exact match only:
+  //   ·  /nex-native/chat/peer/[accountId]  — unchanged
+  //   ·  /nex-native/chat/inbox             — unchanged
+  //   ·  /nex-native/chat/preview/*         — unchanged
+  //   ·  /nex-native/chat/prototypes/*      — unchanged
+  //   ·  /nex-native/chat/guest/*           — unchanged
+  //   ·  /nex-native/chat/first-visit/*     — unchanged
+  // Legitimate query parameters on the hub URL are preserved via the
+  // nextUrl clone.
+  if (pathname === "/nex-native/chat") {
+    const target = req.nextUrl.clone();
+    target.pathname = "/nex-native/contacts";
+    return attachCid(NextResponse.redirect(target, 307), cid);
   }
 
   const base = NextResponse.next();

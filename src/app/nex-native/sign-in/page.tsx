@@ -665,6 +665,16 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 exactly like the main form · identical server path. */}
           {!isSignup && devPassEmail && (
             <form action={devPassAction} data-nex-dev-pass-form>
+              {/* Cycle 8 2026-11-24 · buyer-intent preservation.
+                  Dev Pass previously ignored ?next= and always landed
+                  on /free-chat, losing the signed-out buyer's purchase
+                  intent when auth-gate → sign-in → Dev Pass → return
+                  was tested. Carry the sanitised `next` into the dev
+                  pass action so the server can honour it via the same
+                  safeNext contract as the main sign-in form. */}
+              {nextParam ? (
+                <input type="hidden" name="next" value={nextParam} />
+              ) : null}
               <button
                 type="submit"
                 data-nex-dev-pass-button

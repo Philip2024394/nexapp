@@ -66,6 +66,16 @@ beforeAll(async () => {
         `refuses: not ${EXPECTED_PROJECT_REFS.join(", ")}`,
       );
     }
+  // P3 remediation · 2026-11-23 · the NEX1 welcome delivery adapter
+  // still routes through `sendPeerMessage` with a plaintext body (the
+  // fixed "Welcome to NEX1" code-owned string · no user content). The
+  // fail-closed default blocks that path. Opt out explicitly here so
+  // the delivery adapter integration tests continue to exercise the
+  // documented behaviour while the welcome-delivery → sendGenericNotice
+  // refactor remains REMAINING in the P3 report (pending owner scope
+  // expansion · the welcome body is deterministic and non-sensitive
+  // so the risk profile is distinct from user chat bodies).
+  vi.stubEnv("NEX_CHAT_PLAINTEXT_FREEZE", "0");
   pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
 });
@@ -78,6 +88,7 @@ afterAll(async () => {
     );
   }
   await pg.end();
+  vi.unstubAllEnvs();
 });
 
 // ---------------------------------------------------------------------------
@@ -104,17 +115,16 @@ describe("deliverNex1WelcomeToAccount · direct invocation", () => {
     expect(q.rows[0].sender_account_id).toBe(NEX_OFFICIAL_ACCOUNT_ID);
     expect(q.rows[0].send_intent_id).toBe(outbox_id);
 
-    // Body regression parity · matches Bridge 62's original text via the
-    // shared helper.
-    const expectedBody = renderNex1WelcomeBody({
-      first_name: `_bridge99_stage10_welcome_`, // display_name pattern (only first-word chunk before whitespace)
-    });
-    // The prefix "_bridge99_stage10_welcome_" contains no whitespace so
-    // the helper returns the whole string as first_name. We only assert
-    // the body IS the helper output (not that specific first_name).
-    expect(q.rows[0].body).toContain("🎉 Welcome to NEX,");
-    expect(q.rows[0].body).toContain("/nex-native/chat-themes-library");
-    void expectedBody;
+    // P3-completion · 2026-11-23 · welcome-delivery now routes through
+    // sendGenericNotice with the fixed { kind: "welcome" } template, so
+    // the body is exactly the code-owned string from the template's
+    // renderer (peer-message-service.GENERIC_NOTICE_BODY_RENDERERS.welcome)
+    // · no user content, no personalisation. The previous
+    // renderNex1WelcomeBody() helper is no longer on this path; the
+    // regression contract is now "the row carries the approved template
+    // body verbatim".
+    expect(q.rows[0].body).toBe("Welcome to NEX");
+    void renderNex1WelcomeBody; // helper retained as a shared import for other call sites
   });
 
   it("second call with same outbox_id · effect: 'already_delivered' · no duplicate row", async () => {

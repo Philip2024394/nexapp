@@ -39,7 +39,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
-import { NEX_PEER_ATTACHMENT_MAX_BYTES } from "@/lib/nex-native/peer-message-service";
+import {
+  isPlaintextFreezeOn,
+  NEX_PEER_ATTACHMENT_MAX_BYTES,
+} from "@/lib/nex-native/peer-message-service";
 import {
   PRIVATE_CIPHERTEXT_BUCKET,
   ensurePrivateBucketReady,
@@ -112,6 +115,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       { ok: false, error: "not_signed_in" },
       { status: 401 },
+    );
+  }
+
+  // P3 remediation · 2026-11-23 · owner-authorised fail-closed.
+  // The entire purpose of this route is to persist USER-PROVIDED
+  // PLAINTEXT bytes server-side. Under the sealed device-only chat
+  // doctrine (2026-11-09) that path is prohibited whenever the
+  // NEX_CHAT_PLAINTEXT_FREEZE guard is active (default ON · only an
+  // explicit NEX_CHAT_PLAINTEXT_FREEZE=0 opt-out re-enables legacy
+  // behaviour). 410 Gone is the right semantic: the endpoint still
+  // exists in code, but the operation is no longer available ·
+  // clients that still hit it receive a clear, non-retriable error.
+  // The check runs BEFORE buffering 25 MB of body so a frozen server
+  // doesn't consume bandwidth either.
+  if (isPlaintextFreezeOn()) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "plaintext_attachment_refused",
+        detail:
+          "server does not accept plaintext chat attachment uploads · " +
+          "the sender must use the encrypted attachment flow · if you are " +
+          "testing a legacy migration path, set NEX_CHAT_PLAINTEXT_FREEZE=0 " +
+          "explicitly on the server and retry",
+      },
+      { status: 410 },
     );
   }
 

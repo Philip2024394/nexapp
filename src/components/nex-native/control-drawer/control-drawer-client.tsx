@@ -422,6 +422,21 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/directory",
     locked: false,
   },
+  // NEX-022 · owner-sealed 2026-11-24 (decision B2) · permanent
+  // "Install NEX" row. Always reachable from the drawer so a user
+  // who dismissed the install card (Maybe Later) can still install
+  // later. The destination page at /nex-native/install detects
+  // whether the app is already installed and renders platform-
+  // appropriate instructions (Android native prompt · iOS Safari
+  // Share → Add to Home Screen · desktop install). Narrow-scope
+  // addition — no other row in this array changed in the same seal.
+  {
+    key: "install-nex",
+    label: "Install NEX",
+    subtitle: "Add NEX to your home screen",
+    href: "/nex-native/install",
+    locked: false,
+  },
 ];
 
 // Owner directive 2026-11-05 · YOUR_BUSINESS_ROWS, BUSINESS_VAULT_ROW,

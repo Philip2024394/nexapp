@@ -6,12 +6,14 @@
 
 "use server";
 
-import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveNexAppOrProvisionalSession } from "@/lib/nex-native/first-conversation/provisional-session";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import { recordIfAllowed } from "@/lib/nex-native/community/rate-limit";
 import { NexCommunityRateLimitError } from "@/lib/nex-native/community/types";
-import { randomUUID } from "node:crypto";
+import {
+  PlaintextFrozenError,
+  sendPeerMessage,
+} from "@/lib/nex-native/peer-message-service";
 import { revalidatePath } from "next/cache";
 
 export interface SendGuestMessageResult {
@@ -22,7 +24,14 @@ export interface SendGuestMessageResult {
     | "empty"
     | "too_long"
     | "rate_limited"
-    | "db_error";
+    | "db_error"
+    // P3 remediation · 2026-11-23 · guest plaintext insert is now
+    // routed through sendPeerMessage, which refuses when the sealed
+    // NEX_CHAT_PLAINTEXT_FREEZE guard is active (default ON). The
+    // guest-chat surface renders this as a clear "guest chat not
+    // available · please sign in" banner · it never silently
+    // persists plaintext.
+    | "plaintext_frozen";
   message_id?: string;
   /** When the rate-limit kicks in, the service-layer error carries the
    *  configured window/cap · surfaced here so an honest "try again in
@@ -118,24 +127,36 @@ export async function sendGuestMessageAction(
     conversation.participant_b_id === guestAccount.id;
   if (!isParticipant) return { ok: false, reason: "not_participant" };
 
-  // Insert plaintext message · encrypted=false means `body` carries
-  // the content (nex_peer_message.body is NOT NULL · we fulfil it).
-  const messageId = randomUUID();
-  const { error } = await nexSupabaseAdmin.from("nex_peer_message").insert({
-    id: messageId,
-    conversation_id: conversation.id,
-    sender_account_id: guestAccount.id,
-    body: trimmed,
-    encrypted: false,
-    sent_at: new Date().toISOString(),
-    reactions: {},
-    reactions_order: [],
-    deleted_for_everyone: false,
-  });
-  if (error) return { ok: false, reason: "db_error" };
-
-  // Nudge RSC to re-fetch the message list.
-  revalidatePath(`/nex-native/chat/guest/${ownerAccountId}`);
-
-  return { ok: true, message_id: messageId };
+  // P3 remediation · 2026-11-23 · owner-authorised. Previously this
+  // action performed a direct `nex_peer_message.insert({ body, ... })`
+  // which bypassed the Prompt-7 freeze guard entirely · plaintext
+  // guest messages were persisted on the server unconditionally.
+  //
+  // Route through `sendPeerMessage` so the sealed freeze policy is
+  // enforced at a single choke point. Under the fail-closed default
+  // (`NEX_CHAT_PLAINTEXT_FREEZE` unset), `sendPeerMessage` throws
+  // `PlaintextFrozenError` BEFORE any DB write, and we surface a
+  // typed reason so the surface shows a clear error instead of a
+  // silent success.
+  //
+  // `sendPeerMessage` also re-fetches the conversation and re-runs
+  // the participant check, which strictly subsumes the belt-and-
+  // braces check above. The old `encrypted: false`, `reactions: {}`,
+  // and `reactions_order: []` fields have DB defaults so they no
+  // longer need to be set at insert time.
+  try {
+    const row = await sendPeerMessage({
+      conversation_id: conversation.id,
+      sender_account_id: guestAccount.id,
+      body: trimmed,
+    });
+    // Nudge RSC to re-fetch the message list.
+    revalidatePath(`/nex-native/chat/guest/${ownerAccountId}`);
+    return { ok: true, message_id: row.id };
+  } catch (err) {
+    if (err instanceof PlaintextFrozenError) {
+      return { ok: false, reason: "plaintext_frozen" };
+    }
+    return { ok: false, reason: "db_error" };
+  }
 }

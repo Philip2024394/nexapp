@@ -31,6 +31,13 @@ import type { NexProductSpec } from "@/lib/nex-native/types";
 import { AddToCartButton, type AddToCartItemInit } from "../../_add-to-cart-button";
 import { openShopChatAction } from "../../[businessSlug]/_open-shop-chat-action";
 import { CartHeaderButton } from "@/components/nex-native/cart-header-button/cart-header-button-client";
+// Cycle 7 2026-11-24 · Launch Gap A · signed-out click-time gate on
+// the product purchase affordances. Reuses the sealed 2026-11-21
+// NexAuthGateBanner visual so a guest tapping Ask Seller / Add to Cart
+// meets the owner-sealed sign-in banner with a correct `?next=` that
+// resumes the intended action after authentication.
+import { NexAuthGateBanner } from "@/components/nex-native/auth-gate/_nex-auth-gate-banner-client";
+import { buildSignedOutNextPath } from "@/lib/nex-native/business-chat/anon-next-path";
 // Owner-authorised 2026-11-16 · MOCK-ONLY review-demo integration.
 // Reviews state is read via a hook · when the explicit demo flag is
 // off the hook returns a zero-count summary and the rating row stays
@@ -77,6 +84,13 @@ export interface ProductPageClientProps {
   readonly priceLabel: string;
   readonly viewerIsOwner: boolean;
   readonly outOfStock: boolean;
+  /** Cycle 7 2026-11-24 · true when the server-resolved session is
+   *  null. Signed-out visitors are allowed to BROWSE the product
+   *  page (sealed signed-out-browse rule) but must authenticate
+   *  before Ask Seller or Add to Cart produce real side-effects.
+   *  Defaulting to `false` keeps the preview / demo routes (which
+   *  never render on the auth-protected buyer journey) unchanged. */
+  readonly isGuest?: boolean;
   /** Owner-authorised 2026-11-16 · preview / demo mode. When true, Ask
    *  Seller + Add to Cart become no-op buttons that surface a small
    *  "preview" notice instead of posting to the real server action /
@@ -106,9 +120,23 @@ export function ProductPageClient({
   outOfStock,
   demoMode = false,
   rating = null,
+  isGuest = false,
 }: ProductPageClientProps): React.JSX.Element {
   const router = useRouter();
   const [demoNotice, setDemoNotice] = React.useState<string | null>(null);
+  // Cycle 7 2026-11-24 · click-time auth gate state. When a signed-out
+  // visitor taps Ask Seller / Add to Cart, we render the sealed
+  // NexAuthGateBanner over the page instead of invoking the real
+  // action · `returnTo` is the sign-in `?next=` so authentication
+  // deposits the buyer back on the correct resumed surface:
+  //   · Add to Cart → the product page itself
+  //   · Ask Seller  → the shop opener path with the product carried
+  //     through (?open-chat=1&product=<id>) so the chat opens with
+  //     the product chip painted.
+  const [authGate, setAuthGate] = React.useState<{
+    featureName: string;
+    returnTo: string;
+  } | null>(null);
   // Owner-authorised 2026-11-16 · MOCK-ONLY review-demo wiring. The
   // demo store is sealed off in production via `useIsReviewDemoOn` ·
   // when off, `summary.count === 0` and the live rating gate below
@@ -750,6 +778,43 @@ export function ProductPageClient({
                 <span aria-hidden>💬</span>
                 Ask Seller
               </button>
+            ) : isGuest ? (
+              <button
+                type="button"
+                data-nex-product-ask-seller
+                data-nex-product-ask-seller-guest
+                aria-label="Ask seller about this product · sign in required"
+                onClick={() =>
+                  setAuthGate({
+                    featureName: "Ask Seller",
+                    returnTo: buildSignedOutNextPath(
+                      business.slug,
+                      product.id,
+                    ),
+                  })
+                }
+                style={{
+                  width: "100%",
+                  minHeight: 52,
+                  padding: "14px 18px",
+                  borderRadius: 999,
+                  background: ORANGE,
+                  color: "#fff",
+                  border: "none",
+                  fontSize: 16,
+                  fontWeight: 900,
+                  letterSpacing: "0.01em",
+                  cursor: "pointer",
+                  boxShadow: `0 10px 24px ${ORANGE}55`,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span aria-hidden>💬</span>
+                Ask Seller
+              </button>
             ) : (
               <form action={askSellerAction} style={{ margin: 0 }}>
                 <input type="hidden" name="product_id" value={product.id} />
@@ -836,6 +901,44 @@ export function ProductPageClient({
                 <span aria-hidden>🛒</span>
                 Add to Cart
               </button>
+            ) : isGuest ? (
+              // Cycle 7 2026-11-24 · signed-out click-time gate. Local
+              // cart writes are suppressed for guests · tapping this
+              // button raises the sealed NexAuthGate banner so the
+              // customer signs in first and resumes the purchase on
+              // the same product page.
+              <button
+                type="button"
+                data-nex-product-add-to-cart-guest
+                aria-label="Add to Cart · sign in required"
+                onClick={() =>
+                  setAuthGate({
+                    featureName: "Add to Cart",
+                    returnTo: `/nex-native/product/${product.id}`,
+                  })
+                }
+                style={{
+                  width: "100%",
+                  minHeight: 52,
+                  padding: "14px 18px",
+                  borderRadius: 999,
+                  background: "#EDEEF1",
+                  color: INK,
+                  border: `1.5px solid ${ORANGE}`,
+                  fontSize: 16,
+                  fontWeight: 900,
+                  letterSpacing: "0.01em",
+                  cursor: "pointer",
+                  boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span aria-hidden>🛒</span>
+                Add to Cart
+              </button>
             ) : (
               <AddToCartButton
                 item={cartItem}
@@ -885,6 +988,38 @@ export function ProductPageClient({
         }}
         onClose={() => setReviewsOpen(false)}
       />
+
+      {/* Cycle 7 2026-11-24 · Launch Gap A · signed-out click-time
+          auth gate. Mounted only when a guest tapped Ask Seller /
+          Add to Cart · the sealed 2026-11-21 NexAuthGateBanner shows
+          the "Sign in required" alertdialog with the correct `next=`
+          so authentication returns the buyer to a resumed state. The
+          banner is `position:fixed; inset:0;` so it overlays the
+          product page without disturbing layout. */}
+      {authGate ? (
+        // Cycle 7 2026-11-24 · the sealed NexAuthGateBanner is itself
+        // `position:fixed; inset:0`. We mirror those dimensions on the
+        // wrapper so Playwright's visibility heuristic treats
+        // `[data-nex-auth-gate-banner]` as a visible, click-target-
+        // sized element rather than a zero-box container. The attr
+        // is the stable hook the T-4.6 spec locates.
+        <div
+          data-nex-auth-gate-banner
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            pointerEvents: "none",
+          }}
+        >
+          <div style={{ pointerEvents: "auto" }}>
+            <NexAuthGateBanner
+              featureName={authGate.featureName}
+              returnTo={authGate.returnTo}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

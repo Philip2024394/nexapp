@@ -29,6 +29,17 @@
 //   · Requires mig 345 (nex_message E2E crypto columns) applied. Until
 //     then this service's writes fail with the CHECK constraint
 //     violation · that's correct · guards against plaintext slipping in.
+//
+//   · P3-completion · 2026-11-23 · this service exposes NO plaintext
+//     writer. The only write path is sendEncryptedBusinessMessages which
+//     (a) takes an input type (EncryptedBusinessMessageInsert) with no
+//     `body` field, (b) hardcodes `body: null` on every row, and
+//     (c) hardcodes `encrypted: true`. Type-safety + literal nulls make
+//     the plaintext-freeze guard structurally unnecessary here · but the
+//     invariant is doctrine, not incidental. DO NOT add a plaintext
+//     write path to this file. For plaintext-business-chat routes that
+//     today still call conversation-service.postMessage, migrate them
+//     onto this encrypted path rather than relaxing this invariant.
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";

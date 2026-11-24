@@ -9,6 +9,10 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import {
+  PlaintextFrozenError,
+  isPlaintextFreezeOn,
+} from "./peer-message-service";
 import type {
   NexConversationInsert,
   NexConversationParticipantInsert,
@@ -85,8 +89,24 @@ export async function listParticipants(
   return (data as NexConversationParticipantRow[]) ?? [];
 }
 
-/** Post an immutable message. */
+/**
+ * Post an immutable message.
+ *
+ * P3-completion · 2026-11-23 · nex_message is a separate persistence path
+ * from nex_peer_message and must enforce the plaintext freeze on its own.
+ * Doctrine (device-only E2E chat · sealed 2026-11-09) forbids persisting
+ * user-originated plaintext. When the freeze is active (unconditionally
+ * true in non-test environments · see peer-message-service.isPlaintextFreezeOn)
+ * refuse the write before touching the database. There is no symbol-bypass
+ * here: nex_message has no approved system-generated template writers
+ * routed through this function at present, so a blanket refusal is correct.
+ */
 export async function postMessage(input: NexMessageInsert): Promise<NexMessageRow> {
+  if (isPlaintextFreezeOn()) {
+    throw new PlaintextFrozenError(
+      "conversation-service.postMessage: plaintext message persistence is frozen; use the encrypted business-message path (business-message-service.sendEncryptedBusinessMessages)",
+    );
+  }
   const { data, error } = await nexSupabaseAdmin
     .from("nex_message")
     .insert({

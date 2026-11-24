@@ -66,6 +66,14 @@ export default async function Page({
   const viewer = await resolveSessionWithDevOverride();
   const viewerIsOwner =
     !!viewer && viewer.account.id === business.owner_account_id;
+  // Cycle 7 2026-11-24 · Launch Gap A fix · the product page remains
+  // browseable signed-out so visitors can discover the product, but
+  // the purchase affordances (Ask Seller + Add to Cart) require a
+  // signed-in account. Expose the viewer's guest state to the client
+  // so each affordance can surface the sealed NexAuthGate banner at
+  // click-time with a preserved returnTo that resumes the intended
+  // action post-sign-in.
+  const isGuest = !viewer;
 
   const outOfStock = product.stock_status === "sold_out";
   const priceLabel = formatPriceLabel(product.price_pence, product.currency);
@@ -122,6 +130,7 @@ export default async function Page({
           }}
           priceLabel={priceLabel}
           viewerIsOwner={viewerIsOwner}
+          isGuest={isGuest}
           outOfStock={outOfStock}
         />
       </main>

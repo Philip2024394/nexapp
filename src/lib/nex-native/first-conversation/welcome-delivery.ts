@@ -5,19 +5,34 @@
 // Wires the runtime-independent worker CORE (runWelcomeOutboxOnce) to
 // the authoritative NEX1 peer-message delivery mechanism.
 //
+// P3-completion · 2026-11-23 · now routes through sendGenericNotice
+// ({ template: { kind: "welcome" } }) rather than calling sendPeerMessage
+// directly with a free-form plaintext body. Rationale:
+//   · When NEX_CHAT_PLAINTEXT_FREEZE is active (fail-closed default in
+//     every non-test environment · see peer-message-service.
+//     isPlaintextFreezeOn), sendPeerMessage refuses any plaintext insert.
+//   · sendGenericNotice is the ONLY approved plaintext writer and renders
+//     the body from a code-owned enum (GenericNoticeTemplate) with no
+//     user-supplied content · the module-private
+//     INTERNAL_GENERIC_NOTICE_BYPASS symbol it uses cannot be forged.
+//   · Trade-off: the welcome body is now the fixed "Welcome to NEX" string
+//     from the template renderer instead of the previous first-name
+//     personalised version produced by renderNex1WelcomeBody. The owner
+//     directive 2026-11-23 §2 explicitly chose this path to keep the
+//     bypass narrow to approved, fixed system-generated templates (no
+//     user-provided message, attachment, edited message, or forwarded
+//     message may use this bypass).
+//
 // Reuses:
-//   · nex-official-welcome.ts       · shared welcome-body renderer
-//     (same helper Bridge 62 uses)
 //   · peer-conversation-service.ts  · Bridge 3 canonical pair get-or-create
-//   · peer-message-service.ts       · Bridge 3 send (with Bridge 99
-//     send_intent_id extension for UNIQUE idempotency)
+//   · peer-message-service.ts       · sendGenericNotice (Bridge 3 send with
+//     Bridge 99 send_intent_id extension for UNIQUE idempotency)
 //   · nex-official.ts               · NEX1 constants
 //
-// Does NOT create a second encryption implementation. Bridge 62's inline
-// welcome sends via sendPeerMessage (plaintext body column · NEX1 is a
-// system account that owns its own messages, so E2E encryption between
-// user and NEX1 is not applicable). This adapter follows the same
-// pattern for parity.
+// Does NOT create a second encryption implementation. NEX1 is a system
+// account that owns its own messages, so E2E encryption between user and
+// NEX1 is not applicable; the generic-notice body is doctrinally allowed
+// plaintext because its content is code-owned, not user-supplied.
 //
 // Exactly-once message-insert effect:
 //   The adapter passes outbox.id as send_intent_id. Migration 102 Part C's
@@ -45,9 +60,8 @@
 
 import "server-only";
 import { NEX_OFFICIAL_ACCOUNT_ID } from "../nex-official";
-import { renderNex1WelcomeBody } from "../nex-official-welcome";
 import { getOrCreatePeerConversation } from "../peer-conversation-service";
-import { sendPeerMessage } from "../peer-message-service";
+import { sendGenericNotice } from "../peer-message-service";
 import * as accountService from "../account-service";
 import type {
   DeliverWelcomeFn,
@@ -93,15 +107,27 @@ export const deliverNex1WelcomeToAccount: DeliverWelcomeFn = async (
     account_id,
   );
 
-  // Shared body helper · Bridge 62 uses the same one.
-  const body = renderNex1WelcomeBody({ first_name: account.display_name });
+  // P3-completion 2026-11-23 · body is now rendered inside sendGenericNotice
+  // from the fixed "welcome" template. account.display_name is no longer
+  // threaded through · the account lookup still runs above as a correctness
+  // gate (missing account = permanent failure). No user content enters this
+  // send path.
+  void account;
 
   try {
-    await sendPeerMessage({
+    await sendGenericNotice({
       conversation_id: conv.id,
       sender_account_id: NEX_OFFICIAL_ACCOUNT_ID,
-      body,
+      template: { kind: "welcome" },
       send_intent_id: outbox_id, // Bridge 99 idempotency (Migration 102 Part C)
+      // P3-completion Phase 2 · 2026-11-23 · opt out of Track C's silent
+      // cache-hit behavior so a retry hits the 23505 error path below
+      // (isUniqueSendIntentViolation) and we can report
+      // effect: "already_delivered". Without this, Track C silently
+      // returns the existing row and the adapter would report
+      // effect: "inserted" on a crash-window retry, which breaks the
+      // outbox worker's at-most-once visibility contract.
+      signal_duplicate_send_intent: true,
     });
     return { effect: "inserted" };
   } catch (e) {

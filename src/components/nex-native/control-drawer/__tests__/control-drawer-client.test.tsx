@@ -275,6 +275,10 @@ describe("ControlDrawer · architectural guards", () => {
     // ("chat-appearance" was folded into Chat Settings on 2026-11-13
     // and "profile" moved below "chats-contacts" on 2026-11-12). This
     // list enforces the exact post-11-18 ordering.
+    // NEX-022 · owner-sealed 2026-11-24 (decision B2) · permanent
+    // "Install NEX" row appended to YOUR_NEX_ROWS so a user who
+    // dismissed the install card can still install later. Narrow-
+    // scope addition · no other row changed in the same seal.
     expect(__internal.YOUR_NEX_ROWS.map((r) => r.key)).toEqual([
       "chats-contacts",
       "profile",
@@ -287,6 +291,7 @@ describe("ControlDrawer · architectural guards", () => {
       "wholesale",
       "nex-store",
       "discovery",
+      "install-nex",
     ]);
     // PREFERENCES_ROWS · sealed 2026-11-04 trim retained only "help";
     // 2026-11-11 Cycle 36 reinstated "settings"; 2026-11-09 revision 4

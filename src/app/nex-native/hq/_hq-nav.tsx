@@ -81,6 +81,23 @@ const NAV: readonly NavItem[] = [
   },
   {
     kind: "section",
+    key: "founder-engineering",
+    label: "Founder Engineering",
+    glyph: "🧭",
+    homeHref: "/nex-native/hq/founder-engineering/mapping-audit",
+    match: (p) => p.startsWith("/nex-native/hq/founder-engineering"),
+    children: [
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/founder-engineering/mapping-audit",
+        label: "Mapping Audit",
+        match: (p) =>
+          p.startsWith("/nex-native/hq/founder-engineering/mapping-audit"),
+      },
+    ],
+  },
+  {
+    kind: "section",
     key: "members",
     label: "Members",
     glyph: "👤",
