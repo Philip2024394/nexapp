@@ -941,8 +941,25 @@ export function BusinessConversationClient({
               }}
             >
               {(() => {
+                // Owner directive 2026-11-24 (Cycle 10 · root cause) ·
+                // PIN the locale. Previously this passed `undefined`,
+                // which resolves to the Node OS locale on the server
+                // and the browser locale on the client. On the Indonesia-
+                // based dev host that produced "Rp 4.500" (id-ID) server-
+                // side vs "IDR 4,500" (en-US) client-side · a text-level
+                // HYDRATION MISMATCH inside the pending-product chip.
+                // React 19 regenerates the mismatched subtree on the
+                // client, which detaches the originally-hydrated Send
+                // button from its React fiber · Playwright's click lands
+                // on the detached DOM node, the onClick never fires, no
+                // network POST is issued, and the chip appears to hang
+                // with no observable terminal state. Pinning the locale
+                // to "en-US" (matches Playwright's default and is the
+                // stable fallback Node.js ships with) eliminates the
+                // mismatch so React can hydrate the subtree once and
+                // keep the Send handler attached.
                 try {
-                  return new Intl.NumberFormat(undefined, {
+                  return new Intl.NumberFormat("en-US", {
                     style: "currency",
                     currency: pendingProduct.currency,
                     maximumFractionDigits: 0,
