@@ -1,0 +1,7 @@
+
+Running 3 tests using 1 worker
+
+[1/3] [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json
+[2/3] [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:36:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps
+[3/3] [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:66:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details
+  3 passed (43.5s)

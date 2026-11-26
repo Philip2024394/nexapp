@@ -590,17 +590,37 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   }
   // Account-wall continuation · if the user arrived at signup via a
   // guest-mode wall (e.g. "Use this theme"), carry their intended
-  // action through the auth boundary. The intercept route consumes
-  // the cookie, applies safe preferences, and forwards to the
-  // original destination with a success banner.
+  // action through the auth boundary.
+  //
+  // CYCLE 14 · GAP-C14-002 · 2026-11-25. Previously this branch
+  // redirected to `/nex-native/post-signup-apply` (a Route Handler).
+  // The Next.js 16 client router processed that as an RSC
+  // navigation; the middleware rewrote the request to
+  // `?_rsc=…` and the client-side router could not resolve the
+  // route-handler response to an RSC payload, so the browser never
+  // followed through to the themes viewer. Owner-approved Fix A
+  // 2026-11-25: consume the pending action INLINE inside the
+  // authenticated server-action flow and redirect directly to the
+  // validated destination · exactly ONE place implements the apply
+  // logic (`consumeAndApplyPendingAccountWall`) so this code path
+  // and the retained Route Handler cannot drift. The Route Handler
+  // stays for direct browser navigation (bookmark · stale-replay
+  // CSRF probe · Sec-Fetch-Site defence).
   {
-    const { peekPendingAccountWall } = await import(
-      "@/lib/nex-native/account-wall/pending-action"
+    const { consumeAndApplyPendingAccountWall } = await import(
+      "@/lib/nex-native/account-wall/consume-and-apply"
     );
-    const pending = await peekPendingAccountWall();
-    if (pending) {
-      revalidatePath("/nex-native/post-signup-apply");
-      redirect("/nex-native/post-signup-apply");
+    if (data.user?.id) {
+      const freshAcc = await accountService.getAccountBySupabaseUserId(
+        data.user.id,
+      );
+      if (freshAcc?.id) {
+        const result = await consumeAndApplyPendingAccountWall(freshAcc.id);
+        if (result) {
+          revalidatePath(result.redirectTo);
+          redirect(result.redirectTo);
+        }
+      }
     }
   }
   // 2026-10-15 · Theme-return cookie · if the guest previewed a free
@@ -609,6 +629,17 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   // parseSelectedThemeId prevents arbitrary-redirect via a crafted
   // cookie. Consumed here on success so a later signup doesn't inherit
   // a stale selection.
+  //
+  // CYCLE 12 · G-4 · 2026-11-25. Persist the chosen theme as the new
+  // account's active `chat_theme` BEFORE redirecting so the user does
+  // not need to press "Use this theme" again on the viewer. The write
+  // is best-effort · a failure degrades to the pre-G-4 behaviour (user
+  // sees the viewer and taps Use once) rather than blocking signup.
+  // The two whitelisted ids (`nex-bubbles`, `nex-flat`) are gratis
+  // live-worlds · `updateChatTheme` accepts them via the live-world
+  // branch, no catalogue row required. `?applied=1` on the destination
+  // triggers the sealed toast in `themes/[id]/page.tsx:512–517` so the
+  // user sees affirmation that the apply happened.
   {
     const { parseSelectedThemeId, SELECTED_THEME_COOKIE, selectedThemeHref } =
       await import("@/lib/nex-native/selected-theme-cookie");
@@ -616,8 +647,40 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
     const raw = jar.get(SELECTED_THEME_COOKIE)?.value ?? null;
     const chosen = parseSelectedThemeId(raw);
     if (chosen) {
-      jar.delete(SELECTED_THEME_COOKIE);
-      const dest = selectedThemeHref(chosen);
+      // CYCLE 14 · 2026-11-25 · use explicit `set(..., maxAge:0)` to
+      // match the sealed one-shot doctrine in
+      // `src/lib/nex-native/account-wall/pending-action.ts:148-154`.
+      // `jar.delete()` inside a Next.js 16 server action that ends
+      // with `redirect()` was observed to leave the cookie on the
+      // browser (regression caught by
+      // `tests/e2e/journey-selected-theme-cookie-signup.spec.ts`).
+      // The explicit set-with-maxAge-0 pattern is the project-wide
+      // defence against that footgun.
+      jar.set(SELECTED_THEME_COOKIE, "", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 0,
+      });
+      // G-4 persist. `data.user.id` is the just-authenticated supabase
+      // user. We re-resolve the account because `acc` from the earlier
+      // try block is out of scope here. Best-effort · caught errors
+      // fall through to the plain-redirect path.
+      try {
+        if (data.user?.id) {
+          const freshAcc = await accountService.getAccountBySupabaseUserId(
+            data.user.id,
+          );
+          if (freshAcc?.id) {
+            await accountService.updateChatTheme(freshAcc.id, chosen);
+          }
+        }
+      } catch {
+        /* non-fatal · redirect still carries the user back to the
+         * viewer where they can tap Use once (pre-G-4 behaviour). */
+      }
+      const dest = `${selectedThemeHref(chosen)}?applied=1`;
       revalidatePath(dest);
       redirect(dest);
     }
@@ -679,8 +742,12 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
     const jar = await cookies();
     const rawIntent = jar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
     if (isWelcomeIntent(rawIntent)) {
-      revalidatePath("/nex-native/create-account/pick-theme");
-      redirect("/nex-native/create-account/pick-theme");
+      // 2026-11-25 · Cycle-14 F2 · retired `/nex-native/create-account/
+      // pick-theme` → sealed signup on `/nex-native/sign-in?mode=signup`
+      // with `intent=pick-theme` so the post-signup handler can route
+      // to the pick-theme flow.
+      revalidatePath("/nex-native/sign-in");
+      redirect("/nex-native/sign-in?mode=signup&intent=pick-theme");
     }
   }
   // No intent cookie · default post-signup landing is the Contacts
@@ -817,14 +884,28 @@ export async function signInAction(formData: FormData): Promise<void> {
   // Account-wall continuation · same hook as createNexAccountAction so
   // an existing user who clicks "Already have one? Sign in" inside a
   // guest-mode wall is routed back to their intended action.
+  //
+  // CYCLE 14 · GAP-C14-002 · 2026-11-25. Same Fix A rework applied
+  // here as in createNexAccountAction · see that block for the full
+  // rationale. Both authenticated entry points consume via the same
+  // shared `consumeAndApplyPendingAccountWall` so the signup and
+  // sign-in replay paths cannot drift from each other.
   {
-    const { peekPendingAccountWall } = await import(
-      "@/lib/nex-native/account-wall/pending-action"
+    const { consumeAndApplyPendingAccountWall } = await import(
+      "@/lib/nex-native/account-wall/consume-and-apply"
     );
-    const pending = await peekPendingAccountWall();
-    if (pending) {
-      revalidatePath("/nex-native/post-signup-apply");
-      redirect("/nex-native/post-signup-apply");
+    const { resolveNexAppSessionFromContext } = await import(
+      "@/lib/nex-native/app/session"
+    );
+    const resolvedForWall = await resolveNexAppSessionFromContext();
+    if (resolvedForWall?.account?.id) {
+      const result = await consumeAndApplyPendingAccountWall(
+        resolvedForWall.account.id,
+      );
+      if (result) {
+        revalidatePath(result.redirectTo);
+        redirect(result.redirectTo);
+      }
     }
   }
   // Phase 3 · deep-link return. If the sign-in form carried a `next`
@@ -8085,8 +8166,12 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
 // ---------------------------------------------------------------------------
 
 function redirectToKindStepWithError(code: string, message: string): never {
-  const qs = new URLSearchParams({ e: code, m: message });
-  redirect(`/nex-native/create-account/kind?${qs.toString()}`);
+  // 2026-11-25 · Cycle-14 F2 · retired `/nex-native/create-account/kind`
+  // → sealed signup on `/nex-native/sign-in?mode=signup`. The signup
+  // form reads `kind` off the query string so the account kind survives
+  // the error-bounce round-trip.
+  const qs = new URLSearchParams({ mode: "signup", e: code, m: message });
+  redirect(`/nex-native/sign-in?${qs.toString()}`);
 }
 
 function redirectToProfileWithBanner(code: string, message: string): never {

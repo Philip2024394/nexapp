@@ -71,8 +71,13 @@ export function StartCheckoutButton({
       // Fail paths · toast via the sealed ActionToastHost event
       const code = json && !json.ok ? json.code : "stripe_error";
       if (code === "unauthenticated") {
+        // 2026-11-25 · Cycle-14 F2 · retired `/nex-native/create-account`
+        // → sealed one-URL auth on `/nex-native/sign-in?mode=signup`.
+        // `next` preserves the intent-preservation chain (buyer →
+        // handbag → auth → return to handbag) mandated by the launch
+        // programme.
         window.location.assign(
-          `/nex-native/create-account?next=${encodeURIComponent(
+          `/nex-native/sign-in?mode=signup&next=${encodeURIComponent(
             window.location.pathname,
           )}`,
         );

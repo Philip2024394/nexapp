@@ -1796,7 +1796,7 @@ export function PortraitBloomShell({
                                 pointerEvents: "none",
                               }}
                             >
-                              {formatTime(m.sent_at)}
+                              <ClientMessageTime iso={m.sent_at} />
                               {m.mine && (
                                 <ReadTick
                                   sentAtIso={m.sent_at}
@@ -2056,7 +2056,7 @@ export function PortraitBloomShell({
                             letterSpacing: "0.02em",
                           }}
                         >
-                          {formatTime(m.sent_at)}
+                          <ClientMessageTime iso={m.sent_at} />
                           {m.mine && (
                             <ReadTick
                               sentAtIso={m.sent_at}
@@ -2381,11 +2381,41 @@ function formatTime(iso: string): string {
   // hydration mismatch surfaced by the theme viewer (Bridge 97g)
   // and any chat surface where the Node process locale differs from
   // the visitor's browser locale (e.g. id-ID server → en-US client).
+  //
+  // L-043 note · 2026-11-26 · the pin fixes LOCALE drift but does
+  // not address TIMEZONE drift. Node renders this at SSR in the
+  // host timezone (varies per deployment); browser renders at
+  // hydration in the user's timezone. Example: 10:00Z message
+  // renders as "10:00" on Dublin-hosted Node vs "17:00" on Jakarta
+  // browser → hydration mismatch. The fix is a wrapper
+  // (ClientMessageTime below) at the render sites, not here.
   return new Date(iso).toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
+}
+
+// L-043 fix · 2026-11-26 · same class as L-036 / L-042.
+//
+// Message-bubble timestamp rendering is timezone-sensitive. SSR
+// picks the Node host timezone (e.g. UTC on Workers, Dublin on a
+// local dev server); the browser picks the user's system timezone.
+// The two diverge for every message that straddles a tz offset,
+// which React 19 silently reconciles as a hydration mismatch.
+//
+// The fix follows the L-036 ClientDateTime pattern: SSR renders
+// an empty placeholder (visual: a thin space to preserve bubble
+// baseline); the browser's useEffect swaps in the locale+tz
+// formatted time after mount. Cost: a brief flash of empty time
+// on first paint. Benefit: no hydration warning, user sees their
+// own local time, and the fix adapts if the user crosses tz.
+function ClientMessageTime({ iso }: { readonly iso: string }): React.ReactElement {
+  const [text, setText] = React.useState<string>("\u2007\u2007\u2007\u2007\u2007"); // 5 figure-spaces · same width as "HH:MM"
+  React.useEffect(() => {
+    setText(formatTime(iso));
+  }, [iso]);
+  return <>{text}</>;
 }
 
 /** Format a message's date as a day divider label.
@@ -4374,7 +4404,25 @@ function MessageCartOrderCard({
 
 function formatBubblePrice(pence: number, currency: string): string {
   const majors = Math.round(pence / 100);
-  const withCommas = majors.toLocaleString();
+  // L-043 fix · 2026-11-26 · same class as L-036 / L-042.
+  //
+  // Bare `majors.toLocaleString()` with no locale argument picks the
+  // host default locale · Node (SSR) picks "en-US"/"C" while the
+  // browser picks the user's system locale (e.g. "id-ID"). Node and
+  // browser format large numbers differently (1,000,000 vs 1.000.000)
+  // which React 19 silently reconciles as a hydration mismatch. The
+  // shell SSRs with real messages from `peer/[accountId]/page.tsx`
+  // and renders `formatBubblePrice` inline at 7 call sites (product
+  // cards, cart line items, subtotals, direct-price savings, cart
+  // chips) · every numeric IDR amount in a peer chat is affected.
+  //
+  // Fix: pin the locale explicitly. SSR and browser now both format
+  // via "en-US" rules → "Rp 1,000,000" on both sides. Cost: Indonesian
+  // users see commas not dots; cosmetic, not correctness. The same
+  // fix shape is preferable to a ClientNumber wrapper here because
+  // the shell has 7 call sites and the swap-on-hydrate would cause
+  // a brief flash of unformatted digits.
+  const withCommas = majors.toLocaleString("en-US");
   if (currency === "IDR") return `Rp ${withCommas}`;
   if (currency === "GBP") return `£${(pence / 100).toFixed(2)}`;
   if (currency === "USD") return `$${(pence / 100).toFixed(2)}`;

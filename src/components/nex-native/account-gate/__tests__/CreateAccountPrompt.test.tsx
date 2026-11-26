@@ -23,7 +23,10 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { CreateAccountPrompt } from "../CreateAccountPrompt";
+import {
+  CreateAccountPrompt,
+  DEFAULT_ONBOARDING_HREF,
+} from "../CreateAccountPrompt";
 
 function renderAnon(open = true): string {
   return renderToStaticMarkup(
@@ -93,6 +96,16 @@ describe("CreateAccountPrompt · anonymous variant", () => {
   it("renders a backdrop marker for click-outside", () => {
     const html = renderAnon();
     expect(html).toContain("data-nex-account-gate-backdrop");
+  });
+});
+
+describe("CreateAccountPrompt · Cycle-14 F2 · default onboarding href", () => {
+  it("DEFAULT_ONBOARDING_HREF targets the sealed one-URL auth signup mode, not the retired /create-account route", () => {
+    // 2026-11-25 · the `/nex-native/create-account` route was retired.
+    // Any default href that points at it crashes the primary CTA with
+    // a 404. This test prevents that regression from ever returning.
+    expect(DEFAULT_ONBOARDING_HREF).toBe("/nex-native/sign-in?mode=signup");
+    expect(DEFAULT_ONBOARDING_HREF).not.toContain("/create-account");
   });
 });
 

@@ -1,0 +1,44 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (8.6s)
+[teardown] nex_account fde3fa04-4a1b-41ed-8640-3e4c2358839c: update or delete on table "nex_account" violates foreign key constraint "nex_business_owner_account_id_fkey" on table "nex_business"
+[teardown] auth user 67e7f155-9288-414d-bfbd-df50916966d2: Database error deleting user
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:99:7 › L-030 · merchant onboarding full UI journey › shop-less merchant signs in → fills business-details UI → dispatcher advances → product publishes → public storefront renders (31.2s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:99:7 › L-030 · merchant onboarding full UI journey › shop-less merchant signs in → fills business-details UI → dispatcher advances → product publishes → public storefront renders 
+
+    Error: L-030 teardown must leave zero residual rows · got {"orders":[],"products":[],"businesses":[],"conversations":[],"participants":[],"messages":[],"deviceKeys":[],"accounts":["fde3fa04-4a1b-41ed-8640-3e4c2358839c"],"authUsers":["67e7f155-9288-414d-bfbd-df50916966d2"]}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 1
+
+      358 |           total,
+      359 |           `L-030 teardown must leave zero residual rows · got ${JSON.stringify(residual)}`,
+    > 360 |         ).toBe(0);
+          |           ^
+      361 |       }
+      362 |
+      363 |       // Defence-in-depth: if we lost track of the provisioned business
+        at C:\Users\Victus\nexapp\tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:360:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:99:7 › L-030 · merchant onboarding full UI journey › shop-less merchant signs in → fills business-details UI → dispatcher advances → product publishes → public storefront renders 
+  1 passed (45.1s)

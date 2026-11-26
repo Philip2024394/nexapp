@@ -1,0 +1,9 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (8.6s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-product-publish-to-storefront.spec.ts:70:7 › L-029 · product-publish → storefront journey › A · positive · live product owned by business A renders on /<slug> (12.0s)
+  ✓  3 [stage-a-pixel7] › tests\e2e\journey-product-publish-to-storefront.spec.ts:140:7 › L-029 · product-publish → storefront journey › B · status gate · draft product does NOT appear on /<slug> (16.3s)
+  ✓  4 [stage-a-pixel7] › tests\e2e\journey-product-publish-to-storefront.spec.ts:219:7 › L-029 · product-publish → storefront journey › C · ownership gate · product belongs to business A, business B's /<slug> MUST NOT render it (15.2s)
+
+  4 passed (56.2s)

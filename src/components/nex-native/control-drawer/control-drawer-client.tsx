@@ -1241,11 +1241,14 @@ function IdentityBar({
     // prompt when there's no visitor state either.
     if (drawerVisitor && drawerVisitor.nexHandle) {
       const handleDisplay = drawerVisitor.nexHandle.replace(/^nex-/i, "NEX-");
-      // Pre-load the provisional nex-id on the create-account URL so
-      // commit 5 can claim it atomically on signup success (preserve
-      // view history / likes). Query-string param only · the cookie
-      // is still the source of truth.
-      const claimHref = `/nex-native/create-account?claim=${encodeURIComponent(drawerVisitor.accountId)}`;
+      // Pre-load the provisional nex-id on the signup URL so the
+      // signup action can claim it atomically (preserve view history /
+      // likes). Query-string param only · the cookie is still the
+      // source of truth.
+      //
+      // 2026-11-25 · Cycle-14 F2 · retired `/nex-native/create-account`
+      // → sealed one-URL auth on `/nex-native/sign-in?mode=signup`.
+      const claimHref = `/nex-native/sign-in?mode=signup&claim=${encodeURIComponent(drawerVisitor.accountId)}`;
       return (
         <Link
           href={claimHref}

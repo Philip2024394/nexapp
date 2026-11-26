@@ -38,6 +38,14 @@
 // Classification: SPEC AUTHORED.
 
 import { expect, test } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  seedDeviceKeyForFixtureAccount,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
 test.use({ storageState: "tests/e2e/.auth/state.json" });
 
@@ -56,23 +64,62 @@ test.describe.serial("T-1.1 · chat send end-to-end", () => {
     ).toHaveURL(/\/nex-native\/(contacts|sign-in)(?:[/?#]|$)/);
   });
 
-  test("composer renders on a peer conversation route", async () => {
-    // Remediation 2026-11-24 · the previous spec body probed /chat for
-    // a composer, but the composer only mounts on
-    // /nex-native/chat/peer/[accountId]
-    // (_portrait-bloom-shell.tsx:2163 renders <PeerComposer /> there).
-    // Exercising this branch requires a legitimate sandbox peer
-    // fixture (two test accounts with a seeded peer relationship).
-    // Per owner instruction 2026-11-24 we DO NOT invent an accountId
-    // and do NOT seed data to make this test pass. The branch stays
-    // BLOCKED until the fixture exists.
-    test.skip(
-      true,
-      "BLOCKED-PENDING-SANDBOX-PEER-FIXTURE · composer lives on " +
-        "/nex-native/chat/peer/[accountId] · we will not invent an " +
-        "accountId or seed data · lift this skip only when a sandbox " +
-        "peer fixture is wired",
-    );
+  test("composer renders on a peer conversation route", async ({ page }) => {
+    // 2026-11-26 remediation · the historical skip cited "we will not
+    // invent an accountId or seed data"; the `_fixtures/sandbox-test-
+    // harness` has since matured to the point where a fixture peer can
+    // be created via service-role (same pattern already proven in
+    // `journey-ask-seller-nonowner-full.spec.ts` lines 79-104). The
+    // peer page's own code (src/app/nex-native/chat/peer/[accountId]/
+    // page.tsx:320-324) calls `getOrCreatePeerConversation` on load, so
+    // simply navigating to a valid peer uuid is sufficient to assert
+    // the composer branch. No weakening of encryption invariants: we
+    // only observe DOM — no reads of nex_message.body or key material.
+    test.setTimeout(60_000);
+    assertSandboxRef();
+
+    const handles: FixtureHandle[] = [];
+    try {
+      const peer = await createTestAccount("chatsend-peer");
+      handles.push(peer);
+      // Seed the peer's public device key so the sending-side encryption
+      // path does not fail-closed on `no_peer_devices`. Private half is
+      // discarded · it never leaves this process.
+      await seedDeviceKeyForFixtureAccount(peer);
+
+      const resp = await page.goto(
+        `/nex-native/chat/peer/${peer.nexAccountId}`,
+        { waitUntil: "domcontentloaded" },
+      );
+      expect(resp?.status(), "peer chat route responds <500").toBeLessThan(500);
+
+      // Peer chat may bounce to /sign-in if storageState rotated.
+      if (/\/sign-in/.test(page.url())) {
+        test.skip(
+          true,
+          `BLOCKED-AUTH · redirected to /sign-in (url=${page.url()}) · ` +
+            "storageState rotated · owner must refresh auth state",
+        );
+      }
+
+      // Observable anchor from _composer.tsx:558 ·
+      // <form data-nex-peer-composer>...<textarea /></form>.
+      const composer = page.locator("[data-nex-peer-composer]");
+      await expect(composer, "peer composer form mounts").toBeVisible({
+        timeout: 15_000,
+      });
+      // _composer.tsx:968 + :982 tag the textarea with
+      // `data-nex-composer-textarea`. This is the stable anchor; the
+      // physical textarea is rendered inside one of two ambient pill
+      // wrappers (free-chat shape vs embedded shape).
+      const textarea = page.locator("[data-nex-composer-textarea]").first();
+      await expect(textarea, "peer composer textarea mounts").toBeVisible({
+        timeout: 10_000,
+      });
+    } finally {
+      await teardownAll(handles);
+      await assertNoResidualFixtures(handles);
+    }
   });
 
   test("offline outbox · send under forced-offline reflects pending state", async ({

@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (8.4s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\regression-identity-chrome-contract.spec.ts:71:7 › L-032 · identity chrome browser-observable contract › running deployment emits a registered identity on /nex-native (782ms)
+  ✓  3 [stage-a-pixel7] › tests\e2e\regression-identity-chrome-contract.spec.ts:128:7 › L-032 · identity chrome browser-observable contract › identity chrome also present on the splash page (1.1s)
+
+  3 passed (12.9s)

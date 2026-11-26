@@ -37,8 +37,13 @@ const NEX = {
   orangeInk: "#1A1300",
 };
 
+// 2026-11-25 · Cycle-14 F2 · default signupHref retargeted off the
+// retired `/nex-native/create-account` route onto the sealed one-URL
+// auth target. Closes the "organic signup from theme viewer lands on
+// 404" known-limitation recorded in `journey-selected-theme-cookie-
+// signup.spec.ts:44-49`.
 export function GuestSignupBanner({
-  signupHref = "/nex-native/create-account",
+  signupHref = "/nex-native/sign-in?mode=signup",
 }: {
   readonly signupHref?: string;
 }) {

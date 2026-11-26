@@ -12,6 +12,7 @@
 import type * as React from "react";
 import Link from "next/link";
 import { ConfettiBurst } from "./_confetti-burst";
+import { MarkSeenPinger } from "./_mark-seen-pinger";
 
 const IRELAND = {
   drawerBg: "var(--nex-world-drawer-bg, #123D2B)",
@@ -22,12 +23,22 @@ const IRELAND = {
 interface Props {
   readonly headline: string;
   readonly subtitle: string;
+  // NEX-024 · L-008 (2026-11-26) · optional Route Handler URL that the
+  // client pings on mount to write the one-time-gate cookie. Account-
+  // active passes "/api/nex-native/welcome/mark-seen" · shop-active
+  // passes nothing (no gate semantics for that variant today).
+  readonly markSeenEndpoint?: string;
 }
 
-export function WelcomeShell({ headline, subtitle }: Props): React.JSX.Element {
+export function WelcomeShell({
+  headline,
+  subtitle,
+  markSeenEndpoint,
+}: Props): React.JSX.Element {
   return (
     <>
       <ConfettiBurst />
+      {markSeenEndpoint ? <MarkSeenPinger endpoint={markSeenEndpoint} /> : null}
       <main
         data-nex-welcome
         style={{

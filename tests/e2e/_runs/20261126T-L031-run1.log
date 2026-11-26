@@ -1,0 +1,33 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.9s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-merchant-edit-product-archive-ui.spec.ts:83:7 › L-031 · merchant edit-product UI journey · archive › signed-in merchant archives a live product via UI · DB flips to archived · storefront hides it (46.0s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-merchant-edit-product-archive-ui.spec.ts:83:7 › L-031 · merchant edit-product UI journey · archive › signed-in merchant archives a live product via UI · DB flips to archived · storefront hides it 
+
+    TimeoutError: page.waitForLoadState: Timeout 20000ms exceeded.
+
+      149 |         "/manage/products responds for signed-in owner",
+      150 |       ).toBeLessThan(500);
+    > 151 |       await page.waitForLoadState("networkidle", { timeout: 20_000 });
+          |                  ^
+      152 |
+      153 |       // The product name must be visible on the page before we archive.
+      154 |       await expect(
+        at C:\Users\Victus\nexapp\tests\e2e\journey-merchant-edit-product-archive-ui.spec.ts:151:18
+
+    Error Context: test-results\journey-merchant-edit-prod-2b802-hived-·-storefront-hides-it-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-merchant-edit-prod-2b802-hived-·-storefront-hides-it-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-merchant-edit-prod-2b802-hived-·-storefront-hides-it-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-merchant-edit-product-archive-ui.spec.ts:83:7 › L-031 · merchant edit-product UI journey · archive › signed-in merchant archives a live product via UI · DB flips to archived · storefront hides it 
+  1 passed (57.7s)

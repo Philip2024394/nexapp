@@ -1,0 +1,39 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (8.9s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\regression-spec-payload-helper.spec.ts:46:7 › L-034 · spec-payload helper · minimal valid payloads › helper produces a payload that passes schema.safeParse for EVERY registered category (117ms)
+  ✓  3 [stage-a-pixel7] › tests\e2e\regression-spec-payload-helper.spec.ts:88:7 › L-034 · spec-payload helper · minimal valid payloads › market helper passes MarketSpec.safeParse for all three scopes (10ms)
+  ✘  4 [stage-a-pixel7] › tests\e2e\regression-spec-payload-helper.spec.ts:99:7 › L-034 · spec-payload helper · minimal valid payloads › buildMinimalUpdateProductInput composes a valid spec + market pair (3ms)
+
+
+  1) [stage-a-pixel7] › tests\e2e\regression-spec-payload-helper.spec.ts:99:7 › L-034 · spec-payload helper · minimal valid payloads › buildMinimalUpdateProductInput composes a valid spec + market pair 
+
+    Error: expected the sealed Phase-1 pilot (fashion_clothing/clothing) to exist in the registry
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      109 |       pilot,
+      110 |       "expected the sealed Phase-1 pilot (fashion_clothing/clothing) to exist in the registry",
+    > 111 |     ).toBeDefined();
+          |       ^
+      112 |
+      113 |     const input = buildMinimalUpdateProductInput({
+      114 |       productId: "00000000-0000-0000-0000-000000000001",
+        at C:\Users\Victus\nexapp\tests\e2e\regression-spec-payload-helper.spec.ts:111:7
+
+    Error Context: test-results\regression-spec-payload-he-abdbb-es-a-valid-spec-market-pair-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-spec-payload-he-abdbb-es-a-valid-spec-market-pair-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-spec-payload-he-abdbb-es-a-valid-spec-market-pair-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\regression-spec-payload-helper.spec.ts:99:7 › L-034 · spec-payload helper · minimal valid payloads › buildMinimalUpdateProductInput composes a valid spec + market pair 
+  3 passed (13.3s)

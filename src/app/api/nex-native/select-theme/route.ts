@@ -18,6 +18,7 @@ import {
   parseSelectedThemeId,
   SELECTED_THEME_COOKIE,
 } from "@/lib/nex-native/selected-theme-cookie";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,24 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json(
       { ok: false, reason: "unknown_theme" },
       { status: 400 },
+    );
+  }
+  // CYCLE 14 · 2026-11-25 · the beacon only records a guest's
+  // pre-signup preview intent. An already-authenticated viewer has
+  // no downstream reader for this cookie (the cookie is consumed by
+  // `createNexAccountAction` which only runs at signup time), so
+  // writing it post-auth would leave a 24h-lived stale cookie with
+  // zero behavioral purpose and violate the one-shot invariant that
+  // `tests/e2e/journey-selected-theme-cookie-signup.spec.ts` asserts.
+  // The previous `_standard-experience-live-client.tsx:290` comment
+  // claimed this was "harmless when authenticated"; it is not · a
+  // stale cookie with no reader is noise, and could become a replay
+  // vector if a future server-action learned to read the cookie.
+  const session = await resolveSessionWithDevOverride();
+  if (session) {
+    return NextResponse.json(
+      { ok: false, reason: "already_authenticated" },
+      { status: 200 },
     );
   }
   const jar = await cookies();

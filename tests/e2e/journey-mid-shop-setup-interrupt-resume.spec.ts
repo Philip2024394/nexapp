@@ -21,6 +21,14 @@
 // Classification: SPEC AUTHORED.
 
 import { expect, test } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  signInAsFixtureInBrowser,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
 test.use({ storageState: "tests/e2e/.auth/state.json" });
 
@@ -55,12 +63,55 @@ test.describe.serial("T-4.4 · mid-shop-setup resume", () => {
     );
   });
 
-  test("resume cursor is state-driven · phone-kill at business-details lands back on business-details", async () => {
-    test.skip(
-      true,
-      "BLOCKED-PENDING-SEED · fully exercising the phone-kill branch " +
-        "requires a seeded account at a known partial state · owner must " +
-        "approve the seed fixture before mutating the test account",
-    );
+  test("resume cursor is state-driven · phone-kill at business-details lands back on business-details", async ({
+    browser,
+  }) => {
+    // 2026-11-26 remediation · the harness's `createTestAccount({
+    // returnPassword: true })` + `signInAsFixtureInBrowser` lets us
+    // mint a fresh merchant with NO nex_business row and drive the
+    // sealed sign-in form end-to-end. With no business, the sealed
+    // dispatcher at `src/app/nex-native/manage/shop/setup/page.tsx`
+    // must route to `/business-details` per the `needsDetails` branch
+    // — the exact "phone-kill resume at step 1" observable contract.
+    // No weakening of auth: same sealed `signInAction` path a real
+    // user takes; password is short-lived and never logged.
+    test.setTimeout(60_000);
+    assertSandboxRef();
+
+    const handles: FixtureHandle[] = [];
+    // Explicit `storageState: undefined` mirrors the proven pattern in
+    // `journey-manage-shopless-redirect.spec.ts:61` · the describe-level
+    // `test.use({ storageState: admin })` doesn't apply to manually
+    // created contexts, but being explicit avoids any inheritance.
+    const ctx = await browser.newContext({ storageState: undefined });
+    const page = await ctx.newPage();
+    try {
+      const account = await createTestAccount({
+        label: "setup-interrupt",
+        returnPassword: true,
+      });
+      handles.push(account);
+
+      await signInAsFixtureInBrowser(page, account);
+
+      const resp = await page.goto("/nex-native/manage/shop/setup", {
+        waitUntil: "domcontentloaded",
+      });
+      expect(resp?.status()).toBeLessThan(500);
+
+      await page.waitForURL(
+        /\/nex-native\/manage\/shop\/setup\/business-details(?:[/?#]|$)/,
+        { timeout: 10_000 },
+      );
+
+      expect(
+        page.url(),
+        "needsDetails branch lands on /business-details",
+      ).toMatch(/\/manage\/shop\/setup\/business-details/);
+    } finally {
+      await ctx.close();
+      await teardownAll(handles);
+      await assertNoResidualFixtures(handles);
+    }
   });
 });

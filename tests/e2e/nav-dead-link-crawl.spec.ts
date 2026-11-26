@@ -34,6 +34,15 @@
 // Classification: SPEC AUTHORED.
 
 import { expect, test, type Page } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  createTestBusiness,
+  createTestProduct,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
 // Cycle 4 2026-11-24 · the public Directory is intentionally hidden
 // until the configurable active-seller launch threshold (initial 500)
@@ -42,9 +51,7 @@ import { expect, test, type Page } from "@playwright/test";
 // contradict the sealed staged-launch direction. When the Directory
 // re-opens, add the seed back in a single line. Direct shop/product
 // routes remain the sealed entry contract in the pre-launch window ·
-// they are probed OPTIONALLY below when the owner-provided seed env
-// vars are present. We do NOT scrape /directory and we do NOT
-// fabricate IDs to meet a coverage number.
+// they are probed in the harness-seeded test below.
 const PILLAR_SEEDS = [
   "/nex-native",
   "/nex-native/sign-in",
@@ -52,11 +59,13 @@ const PILLAR_SEEDS = [
   "/nex-native/emergency-help",
 ];
 
-// Optional direct-URL seeds · wired only when owner provides valid
-// sandbox fixtures via env. If absent, the direct-route probe test
-// is honestly skipped rather than fabricating IDs.
-const SEED_SHOP_SLUG = process.env.NEX_E2E_SEED_SHOP_SLUG;
-const SEED_PRODUCT_ID = process.env.NEX_E2E_SEED_PRODUCT_ID;
+// 2026-11-26 L-023 remediation · env-var seed still honoured when
+// owner pins real sandbox IDs; otherwise the harness mints a real
+// merchant+business+product so the direct-URL reachability probe
+// runs by default instead of being perpetually skipped.
+let SEED_SHOP_SLUG: string | undefined = process.env.NEX_E2E_SEED_SHOP_SLUG;
+let SEED_PRODUCT_ID: string | undefined = process.env.NEX_E2E_SEED_PRODUCT_ID;
+let FIXTURE_HANDLES: FixtureHandle[] = [];
 
 // Routes known to be reachable only by direct URL + documented in the
 // journey ledger. A route in this list is NOT an orphan even if no
@@ -77,6 +86,30 @@ async function collectAnchors(page: Page): Promise<string[]> {
 }
 
 test.describe.serial("T-5.5 · owner-corrected NAV reachability crawl", () => {
+  test.beforeAll(async () => {
+    assertSandboxRef();
+    if (SEED_SHOP_SLUG && SEED_PRODUCT_ID) return;
+    const merchant = await createTestAccount("nav-crawl-merchant");
+    FIXTURE_HANDLES.push(merchant);
+    const biz = await createTestBusiness(merchant, { label: "nav-crawl-shop" });
+    FIXTURE_HANDLES.push(biz);
+    const prod = await createTestProduct(biz, {
+      name: "e2e-fixture-nav-crawl-widget",
+      pricePence: 1299,
+      currency: "GBP",
+      status: "live",
+    });
+    FIXTURE_HANDLES.push(prod);
+    SEED_SHOP_SLUG = biz.slug;
+    SEED_PRODUCT_ID = prod.productId;
+  });
+
+  test.afterAll(async () => {
+    await teardownAll(FIXTURE_HANDLES);
+    await assertNoResidualFixtures(FIXTURE_HANDLES);
+    FIXTURE_HANDLES = [];
+  });
+
   test.beforeEach(async ({ context }) => {
     await context.clearCookies();
   });
@@ -130,19 +163,13 @@ test.describe.serial("T-5.5 · owner-corrected NAV reachability crawl", () => {
   }) => {
     // Cycle 4 2026-11-24 · in the pre-500-seller launch window the
     // sealed buyer entry contract is DIRECT URL (shop slug + product
-    // UUID). We probe those routes OPTIONALLY: if the owner has
-    // provided `NEX_E2E_SEED_SHOP_SLUG` + `NEX_E2E_SEED_PRODUCT_ID`
-    // pointing at real sandbox rows, we exercise them. If not, we
-    // honestly block · we do NOT fabricate IDs and we do NOT claim
-    // the direct journey is verified on the strength of HTTP 200
-    // against a nonexistent slug (per Cycle 4 §3 verbatim).
-    test.skip(
-      !SEED_SHOP_SLUG || !SEED_PRODUCT_ID,
-      "BLOCKED-PENDING-SEED-FIXTURE · set NEX_E2E_SEED_SHOP_SLUG and " +
-        "NEX_E2E_SEED_PRODUCT_ID to real sandbox values to exercise " +
-        "the direct shop + product reachability probe during the " +
-        "pre-500-seller launch window",
-    );
+    // UUID). 2026-11-26 L-023 · the harness now seeds real sandbox
+    // rows in beforeAll so this probe runs by default. Env-var pin
+    // still honoured when the owner wants to target a specific pair.
+    expect(
+      SEED_SHOP_SLUG && SEED_PRODUCT_ID,
+      "harness must have seeded SEED_SHOP_SLUG + SEED_PRODUCT_ID",
+    ).toBeTruthy();
 
     const shopProbe = await request.fetch(`/nex-native/${SEED_SHOP_SLUG}`, {
       method: "GET",

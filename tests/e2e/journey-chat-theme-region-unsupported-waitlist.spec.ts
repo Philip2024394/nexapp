@@ -42,7 +42,9 @@ test.describe.serial("T-3.3 · unsupported region · waitlist, never USD fallbac
     // from firing · we switch to `domcontentloaded` + body-attached
     // wait. Assertion strength preserved: we still require the
     // waitlist CTA to render and refuse any USD fallback.
-    const response = await page.goto("/nex-native/chat-themes-library", {
+    // L-011 2026-11-26 · hub root now; the library grid where the
+    // Themes+ CTA is surfaced lives at /full-image.
+    const response = await page.goto("/nex-native/chat-themes-library/full-image", {
       waitUntil: "domcontentloaded",
     });
     expect(response?.status()).toBe(200);

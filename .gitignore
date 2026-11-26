@@ -425,3 +425,19 @@ scripts/gate-a-connected-matrix/*.OUTPUT.*
 # must never land in git.
 .open-next/
 .wrangler/
+
+# 2026-11-26 · Root-level scratch · never committed.
+# `_g4-auth-cookie.txt` was discovered during the parallel-agent
+# commit prep carrying a real Supabase sandbox session JWT · it
+# MUST NEVER land in git. `.tmp-directory-response.html` is a
+# captured HTML response from a probe · not source of truth.
+# `scripts/_investigate/` + `scripts/_tmp/` carry per-session probe
+# scripts that are useful locally for forensic replay but should
+# not pollute repo history. The `_tmp/l013-*.mjs` probe is the one
+# exception that got referenced from an authoritative ledger row
+# — if we ever need to ship a referenced probe, lift it into
+# `scripts/forensic/` with a proper header.
+_g4-auth-cookie.txt
+.tmp-directory-response.html
+scripts/_investigate/
+scripts/_tmp/

@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 C:/Users/Victus/nexapp
+
+
+ Test Files  3 passed (3)
+      Tests  52 passed (52)
+   Start at  17:28:49
+   Duration  574ms (transform 162ms, setup 99ms, import 200ms, tests 35ms, environment 0ms)
+

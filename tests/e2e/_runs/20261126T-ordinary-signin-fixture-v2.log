@@ -1,0 +1,8 @@
+
+Running 4 tests using 1 worker
+
+[1/4] [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json
+[2/4] [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:124:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · valid credentials with `next=/product/<id>` returns buyer to the product
+[3/4] [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:174:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · `?next=` is URL-level rejected by safeNext when the form POSTS without the hidden field (defence-in-depth)
+[4/4] [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:233:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · absent `next` lands on default `/nex-native/contacts`
+  4 passed (37.8s)

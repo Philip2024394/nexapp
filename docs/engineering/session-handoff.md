@@ -7,7 +7,410 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-24 (Cycle 9 closure — buyer authentication journeys completed, Ask Seller composer BROKEN)
+## Current state · 2026-11-26 (continuation · L-043 Chat-pillar hydration pattern-hunt landed · BUILT · typecheck clean · verify blocked on host disk)
+
+**Where we are.** Agent-A pattern-hunt from L-036/L-042 extended into the Chat pillar per Rule 4. Three edits applied to `src/app/nex-native/chat/_portrait-bloom-shell.tsx`:
+
+1. `formatBubblePrice` at `:4375` — bare `majors.toLocaleString()` pinned to `"en-US"` (SSR/CSR locale divergence, affects 7 inline price-bubble call sites).
+2. New `<ClientMessageTime iso={...} />` wrapper added right after `formatTime` — `useState<string>("\u2007\u2007\u2007\u2007\u2007")` (5 figure-spaces, same width as "HH:MM") seed + `useEffect` swap to `formatTime(iso)`. Addresses host-tz vs viewer-tz divergence that the existing `"en-US"` locale pin cannot fix.
+3. Call-site swaps at `:1799` and `:2059` route message bubbles through `ClientMessageTime` instead of the render-time `formatTime(m.sent_at)`.
+
+`npx tsc --noEmit` exit 0 (background job `bzpmo7won`).
+
+**Pattern-hunt scope-seal.** Of 7 Agent-A findings in the bloom shell: 2 real hazards fixed (#4 bare toLocaleString, #5 timezone drift under pinned locale), 4 pinned-locale sites deferred as defensive polish (modern Node ICU low real risk: #1 themes en-IE, #2 themes launcher en-IE, #6 bloom-shell price-input id-ID, #7 guest-chat en-US), 1 Agent-A false positive ruled out (#3 Shop product detail — `export default async function Page` Server Component, SSR-baked string, zero mismatch surface — NOT touched).
+
+**L-043 status:** BUILT · VERIFICATION BLOCKED (host disk 97 MB · reclaim crosses owner host-boundary per L-041). Regression spec deferred to same fixture-seed phase as L-041/L-042 (chat-peer mounts require seeded account + peer + message fixtures). No sealed invariant touched — device-only Chat storage + E2E encryption + bubble DOM contract all preserved; only SSR-first-paint content changed to match post-hydration output.
+
+**Safe next engineering steps within existing authority:**
+1. On host-disk reclaim (owner stops dev :3008 + deletes `.next/` ~ regenerable): run the joint L-041 + L-042 + L-043 verification pass.
+2. Continue the autonomous Chat/Shop/Themes end-to-end work per owner directive — specifically the next unfinished authorised ledger row (per Rule 1 startup procedure).
+3. L-012 clean full regression rerun on reclaimed disk.
+
+**Owner-gated items (unchanged):** L-004 credentials · L-005 mig 207/257 decision · L-006 F2 batch · host-disk reclaim.
+
+**Git state:** working-tree changes limited to `src/app/nex-native/chat/_portrait-bloom-shell.tsx` (L-043 edits) + `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-043 row + decision log) + this handoff. No commits. No pushes. No migrations. No product-code changes outside the single file named above.
+
+---
+
+## Current state · 2026-11-26 (continuation · P-ledger-close · L-001 + L-002 + F.2 promoted · parallel pillar audits running)
+
+**Where we are.** Two P0 ledger items closed this cycle: **L-001 (permanent rulebook + startup enforcement) VERIFIED** and **L-002 (post-regression failure register · 74 failures classified) VERIFIED**. Failure register reconciled against same-day ledger progress — §A (54 Live-Commerce) OBSOLETE after L-027 project removal · §B (8 SOS) CLOSED by L-007 · §C (5 /welcome) BLOCKED-AT-APPROVAL (L-006 F2) · §D (1 authed-home) RECLASSIFIED-SKIPPED (L-024) · §E (2 welcome-cookie) FLAKY-DEV-HMR (L-028 · needs prod-build recheck) · §F.1 (1 directory timeout) CLOSED by L-003 · §F.2 (1 theme-viewer organic-signup) promoted LIKELY-FIXED → **VERIFIED CLOSED** using `tests/e2e/_runs/20261125T203207Z-L003-adjacent-verify.log:5` (✓ 4.5s).
+
+**Net launch-critical open failures:** 5 (all in §C · single-blocker on F2 approval phrase per `docs/engineering/l006-f2-approval-request-2026-11-26.md`).
+
+**L-042 pattern-hunt scope-seal** (carried from prior session): merchant orders list hydration fix BUILT at `src/app/nex-native/manage/orders/_client.tsx:77-83` (`ClientRelTime` wrapper) + call-site swap at `:388`. Regression spec `tests/e2e/regression-l042-orders-list-hydration.spec.ts` wired into `playwright.config.ts:157`. VERIFICATION BLOCKED on host disk (currently 353 MB free on `C:` · up from 97 MB but still tight for new Playwright runs).
+
+**Parallel agents launched this cycle (read-only pillar audits):**
+- Agent A — **Pillar hydration pattern-hunt extension**: extend L-036/L-042 scan to Chat + Shop + Themes surfaces (not merchant orders). Reports real hazards + false positives. Scope excludes HQ and already-covered surfaces.
+- Agent B — **Drawer-row code-level evidence audit**: map which cells of the 18×4×3 L-041 matrix can be answered by code reading alone vs require browser. Promotes L-041 toward CODE-INSPECTED-NOT-BROWSER-VERIFIED intermediate. (Report pending at handoff write.)
+
+**Safe next engineering steps within existing authority:**
+1. On host-disk reclaim (owner stops dev :3008 + deletes `.next/` ~ regenerable): run `npx playwright test --reporter=list tests/e2e/regression-l042-orders-list-hydration.spec.ts tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts --project=stage-a-pixel7 2>&1 | tee tests/e2e/_runs/$(date +%Y%m%dT%H%M%SZ)-L041-L042-verify.log; echo "EXIT=${PIPESTATUS[0]}"`. This promotes L-042 BUILT → VERIFIED and L-041 PARTIAL → VERIFIED for the merchant-IE cell at least.
+2. Act on Agent A / Agent B reports when they return — fix real hazards within authority (ClientDateTime wrapper pattern for hydration; code-inspected drawer cells that reveal dead routes can be either marked for F2-batch inclusion or fixed if not retirement-related).
+3. L-012 clean full regression rerun on reclaimed disk.
+
+**Owner-gated items (do not cross without named approval):**
+- L-004 Stripe + PayPal credentials (T10 positive-path)
+- L-005 mig 207/257 reconciliation decision (`APPROVE OPTION A FILE REVIEW` / `OPTION B` / `OPTION C` / `HOLD`)
+- L-006 F2 `/create-account` emitter migration + `welcome/page.tsx` restore
+- Host-disk reclaim (stop dev :3008, delete `.next/` ~ 2.8 GB)
+
+**Git state at cycle end:** clean working-tree except for in-cycle doc edits:
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-001 + L-002 rows + F.2 correction)
+- `docs/engineering/post-regression-failure-register-2026-11-26.md` (added §K reconciliation)
+- `docs/engineering/session-handoff.md` (this update)
+
+No commits made. No pushes made. No migrations applied. No product-code changes.
+
+---
+
+## Current state · 2026-11-26 (continuation · BLOCKED-PENDING-SEED remediation cycle · +14 tests promoted)
+
+**Where we are.** Nine spec files promoted from historical `BLOCKED-PENDING-SEED` skips to real browser-verified passes via the sandbox-test-harness pattern. Zero product-code weakening. Zero sealed-invariant break. Every fixture torn down with `assertNoResidualFixtures`.
+
+**Promoted this cycle** (all VERIFIED in `NEX-DELIVERY-LEDGER.md`):
+- L-015 `journey-chat-send-e2e` composer-renders · 3 passed
+- L-016 `journey-signed-out-browse-buy-auth-gate` buy-gate · 2 passed
+- L-017 `journey-buyer-checkout` direct product + add-to-cart · 2 passed
+- L-018 `journey-buyer-signed-out-purchase-resume` full guest→Dev Pass→refresh · 5 passed (+ step-8 nav-resilient `waitForFunction` fix)
+- L-019 `journey-mid-shop-setup-interrupt-resume` dispatcher · 3 passed
+- L-020 `journey-buyer-ordinary-signin` next-preservation + malicious-next · 4 passed (+ `hydrateEnv()` for `.env.local` admin creds)
+- L-021 `journey-buyer-signup-wiring` non-mutating wiring inspection · 3 passed
+- L-022 `journey-buyer-adversarial` 5 adversarial regressions · 6 passed + 1 honest cart-dedup skip (inner-describe cookie re-seat + Cycle-7 settle)
+- L-023 `nav-dead-link-crawl` direct shop + product reachability · 7 passed
+
+**Remaining BLOCKED-PENDING-SEED skips are owner-gated, not fixture-gated.** Catalogued but not portable within current authority:
+- `journey-mid-checkout-session-expired`, `journey-buyer-checkout` sibling tests — `BLOCKED-ON-MIG-354-365` (owner-approval migration gate)
+- `journey-vault-standalone-access` — `BLOCKED-ON-MIG-207-257` (owner-approval, L-005 pending)
+- `journey-stripe-webhook-t10`, `journey-paypal-webhook-t10`, `journey-payment-status-t10` — `BLOCKED-PENDING-CONFIG` (L-004 pending credentials + `mig 320/366`)
+- `journey-first-user-A-to-contacts` outbound-message, `journey-chat-send-e2e` offline-outbox/retract/delete-for-me — `BLOCKED-PENDING-SECOND-TEST-ACCOUNT` send-flow (would be building, not porting; chat-send product path still broken per task #74 investigation)
+- `journey-chat-theme-first-free-apply`, `journey-chat-theme-apply-free` — owner approval for DB-seeded theme fixture
+- `journey-chat-attachment-legacy-public-envelope-resolve` — Stage A §3 owner-approved seeding
+- `journey-directory-browse-and-filter` — sealed-deferred until Directory re-opens at 500-active-seller threshold
+- `location-permission-explanation-card` — scope-skipped; Emergency Help not active launch feature
+- `pwa-install-cadence` dismiss-cooldown — hard-coded skip; fixture needs register→contacts→interaction gate
+- `bio-link-mobile` non-discoverable handle — needs seeded `nex_handle` + `is_discoverable=false` fixture; trade-off not pursued in cycle
+- `diagnostic-ask-seller-send-handler` — intentionally diagnostic-only per its own header
+
+**Safe next engineering steps within existing authority:**
+1. Proceed to higher-priority ledger items — L-002 (failure-register classification), L-009 (live-commerce 54 failures triage), L-010 (per-combination nav evidence), L-012 (preserved full regression rerun).
+2. For L-009: open `docs/engineering/post-regression-failure-register-2026-11-26.md` (if present) to classify live-commerce failures as fixture-missing vs feature-incomplete per Rule 8 taxonomy.
+
+**Owner-gated items (do not cross without named approval):**
+- L-004 Stripe + PayPal credentials
+- L-005 mig 207/257 reconciliation decision
+- L-006 F2 `/create-account` emitter migration + `welcome/page.tsx` restore
+
+**Git state at cycle end:** clean working-tree except for in-cycle doc + test-file edits enumerated in ledger L-015 through L-023. No commits made. No pushes made. No migrations applied.
+
+---
+
+## Current state · 2026-11-25 (Cycle 14 continuation — T5-T10 FIXTURE HARNESS LANDED; T8 + T10 SPECS AUTHORED + PASSING)
+
+### T5-T10 fixture-harness cycle (within existing authority · no commits yet)
+
+- **Fixture harness built**:
+  `tests/e2e/_fixtures/sandbox-test-harness.ts` +
+  `tests/e2e/_fixtures/README.md` +
+  `tests/e2e/fixture-harness-smoke.spec.ts`.
+  - Sandbox-ref guard (hard-stops on prod ref or unknown ref).
+  - Pooler URL preferred when username encodes sealed sandbox ref;
+    falls back to `SANDBOX_DATABASE_URL`.
+  - `createTestAccount` / `createTestBusiness` / `createTestProduct` /
+    `createTestOrder` + `TestOrderHandle`.
+  - `teardownAll` runs reverse-FK order (events → orders → products →
+    businesses → accounts + auth.users).
+  - `reclaimAbandonedTestRecords` cleans rows older than 1h with the
+    `e2e-fixture-` marker.
+  - `createTestProduct` supplies mig-239 fallback values
+    `department_id='everything_else'` / `category_id='other'` to satisfy
+    the sealed 30-dept CHECK constraint.
+  - Smoke test PASS: round-trip create+teardown against sandbox.
+- **T8 merchant-order spec** authored: `journey-merchant-order-t8.spec.ts`
+  (previously NO SPEC) · 1 PASS. Covers nex_order persistence, event
+  trail, business.owner_account_id ownership, service-role state
+  transition `created → pending`, anon RLS leak probe.
+- **T10 payment-status + notifications spec** authored:
+  `journey-payment-status-t10.spec.ts` (previously NO SPEC) · 2 PASS.
+  Covers `nex_order.payment_method` CHECK enforcement (mig 320), honest
+  "NEX does not verify funds" claim via auditable 'paid' event (mig
+  005), notification dedup via partial UNIQUE index (mig 366 · Postgres
+  error code 23505), leak-safe title/subtitle payload.
+
+### Unfiltered typecheck + lint (per reporting-correction)
+
+- `npx tsc --noEmit` ran full project: 1397 errors across the pre-
+  existing codebase. **Zero errors in files authored this cycle**
+  (`sandbox-test-harness.ts`, `fixture-harness-smoke.spec.ts`,
+  `journey-merchant-order-t8.spec.ts`, `journey-payment-status-t10.spec.ts`).
+- Lint: **not configured in this repo** · no `.eslintrc`,
+  no `eslint.config.*`, no `"lint"` npm script. Reported honestly
+  rather than claiming a passing lint.
+
+### T5-T7 reruns (skip reasons documented, not fixture-related)
+
+- **T5 create-shop** (`journey-create-shop.spec.ts`): BLOCKED-PENDING-SEED
+  comment in spec; harness unblocks the write but spec body still needs
+  rewire to use it — out of simple "rerun" scope.
+- **T6 directory** (`journey-directory-browse-and-filter.spec.ts`):
+  sealed DEFERRED (directory hidden until 500-seller launch threshold).
+- **T7 ask-seller** (`journey-ask-seller-nonowner-full.spec.ts`): skips
+  without `NEX_E2E_SEED_SHOP_SLUG` + `NEX_E2E_SEED_PRODUCT_ID` env vars.
+
+### Directory perf baseline (DELIVERED · no code changes applied)
+
+- 3 dev samples: ~23s total body / 130ms TTFB / 380 KB body →
+  effective 17 KB/s = stalled RSC stream, NOT bandwidth.
+- Prod build: TTFB 30ms, body still ~22s → NOT dev overhead.
+- Root cause: ~10 serial round-trips/request including a `pg.Pool`
+  canonical read to eu-west-1 from Windows dev box;
+  `dynamic = "force-dynamic"` pays full cost every request.
+- **Cleanup owed**: prod server left running on :3011 (background
+  `bwlo1ijai`), plus `.tmp-directory-response.html` and
+  `.tmp-prod-server.log` — sandbox-denied agent cleanup.
+
+### Durable in-repo audit records · 2026-11-25
+
+- **Mig 207/257 inspection**: `docs/doctrine/mig-207-257-review-2026-11-25.md`
+  (see §11 Addendum for the 2026-11-25 ground-truth evidence).
+  Both migrations additive. **Ground-truth finding** (read-only sandbox
+  probe via `scripts/_investigate/mig-207-ground-truth.mjs` +
+  `migration-history-gap.mjs`):
+  (a) all 3 mig 207 columns PRESENT on `nex_account`
+  (`onboarding_step`, `shop_theme_id`, `vault_trial_used_at`) — 207
+  was in fact applied despite missing its own history row;
+  (b) mig 257 is **partially** applied — only 2 of 9 declared columns
+  present (`shop_tier`, `shop_status`); the other 7 (`shop_period_end`,
+  `shop_past_due_at`, `vault_*`, `business_trial_status`) are MISSING;
+  (c) 152 migration files on disk have no corresponding
+  `nex_migration_history` row — the recording gap is systemic, not
+  isolated to 207;
+  (d) 11 bisnis accounts all carry `bisnis_expires_at = NULL`, NOT the
+  sentinel/dated values mig 257 Part 6 hard-asserts — so mig 257 cannot
+  be re-run as-written without either amending the preconditions or
+  owner-named correction of the underlying data. Correction plan is
+  **Step A only** auto-safe (back-date the single 207 history row);
+  Steps B-D require named owner approval.
+- **PayPal integration audit**:
+  `docs/doctrine/paypal-integration-audit-2026-11-25.md`. Architecture
+  is merchant-direct and sealed; webhook verification is live-wire
+  and fail-closed; idempotency is correct via `nex_order_event`
+  metadata JSONB containment. **Five activation blockers**:
+  (1) mig 336 PROPOSAL not applied · (2) no Partner Referrals
+  onboarding flow · (3) no merchant-initiated refund UI/API · (4) no
+  partial refund support · (5) no `PAYPAL_ENV=live` activation seal.
+
+### Still pending · require owner approval, NOT executed
+
+- **Migration 207/257 reconciliation** on sandbox ref `kdstoyyeygcopkogqsyv`
+  — supersedes the earlier "apply 207/257" line. The ground-truth
+  evidence (see Durable Audit Records above) shows 207 is already
+  applied, 257 is 2-of-9 partial, 152 files have no history row, and
+  the Part 6 bisnis expiry asserts no longer match the data.
+  Reconciliation requires an owner-named plan: Step A = back-date the
+  single 207 history row (auto-safe); Step B = decide whether to
+  back-fill the 152 missing rows or reset the recorder; Step C =
+  decide whether mig 257 is forward-ported with revised preconditions
+  or the 7 missing columns are added via a fresh migration; Step D =
+  reconcile 11 bisnis-tier expiry rows. Steps B-D all need the owner
+  before any write.
+- **PayPal audit activation** — 5 blockers captured in the durable
+  audit (mig 336 apply · Partner Referrals onboarding · merchant
+  refund path · partial refunds · `PAYPAL_ENV=live` seal).
+- **Perf fix for /directory** — any change must carry a verified
+  measurement + regression test + required CI check + blueprint entry
+  per CLAUDE.md §10. Out of scope for a journey/fixture cycle.
+- **Commits + pushes** — no code committed; next-cycle spec-author
+  must either commit the harness + T8/T10 specs (with owner trigger)
+  or the harness will not survive a session.
+
+### T1 ratchet (preserved from earlier continuation)
+
+- **BLOCKER-NAV-001 RESOLVED** within existing authority. `.env.local`'s
+  `DATABASE_URL` is a pooler URL whose username encodes sandbox ref
+  `postgres.kdstoyyeygcopkogqsyv`. Each affected spec now carries a
+  `resolveSandboxDbUrl()` helper that validates username ref ==
+  `SANDBOX_REF` before preferring pooler over the IPv6-only direct URL.
+- **Vault spec**: 3 PASS + 3 SKIP (zero FAIL). `vault_tier` column
+  absent in sandbox → per-scenario `test.skip(!hasColumn('vault_tier'))`
+  gates for scenarios 1 (paid vault_tier), 4 (active trial · select
+  errors when any column is missing), 6 (gratis sentinel).
+- **Theme-signup specs**: both PASS (previously BLOCKED on IPv6).
+
+### T5-T10 journey survey (within existing authority)
+
+- **T5 create shop**: 1 PASS + 3 SKIP (test account already provisioned).
+- **T6 discovery**: 1 PASS + 6 SKIP (empty catalogue).
+  Also: `/nex-native/directory` ttfb 0.14s but total body 22.8s via curl.
+  Perf concern, not a regression. Not fixed here (§10 gate).
+- **T7 Ask-Seller**: 1 PASS + 2 SKIP (needs seeded product fixture).
+- **T8 merchant order**: **NO SPEC EXISTS** — zero e2e coverage.
+- **T9 checkout**: 2 PASS + 4 SKIP + 1 FAIL (fail is preamble goto to
+  slow `/directory` route; URL-shape assertion never reached).
+- **T10 payment status + notifications**: **NO SPEC EXISTS**.
+
+Common gating factor T5-T10: sandbox has no seeded fixture data
+(products, orders, checkout sessions, merchant accounts). Journeys
+stay PARTIAL at journey level even where routes are MAPPED. T8+T10
+require spec authoring + fixture seeding + (T10) webhook simulation.
+
+### Historical state preserved below (superseded by sub-sections above)
+
+## Current state · 2026-11-25 (Cycle 14 continuation — T1/T2/T3/T4 complete, T5-T10 BLOCKED on DB IPv6)
+
+**Cycle-14 continuation outcome** (post IAV approval, pre commit/push authorisation):
+
+- **T1 · Run F2 + F1 Playwright** — COMPLETE with mixed results.
+  - PASS: `journey-visitor-claim-signup.spec.ts` × 2 (after polling-dispatch
+    hydration-race fix).
+  - SKIPPED with named blocker: `journey-guest-chat-signup-cta.spec.ts`
+    (needs provisional-session fixture + seeded owner-account row;
+    F2 fix evidenced at source `_guest-chat-client.tsx:114` + catalogue
+    defence `product-knowledge.test.ts:74-85`).
+  - BLOCKED on **BLOCKER-NAV-001** (IPv6-only sandbox direct DB):
+    `journey-vault-standalone-access.spec.ts` × 6,
+    `journey-full-guest-signup-pick-theme.spec.ts`,
+    `journey-selected-theme-cookie-signup.spec.ts`. Specs reinforced
+    with dynamic column probing to tolerate pre-mig-257 schema.
+
+- **T2 · Navigation inventory** — COMPLETE. New durable artefact:
+  `docs/engineering/navigation-inventory.md`. 18 drawer destinations +
+  2 popup/CTA href shapes recorded. Status: 17 MAPPED, 2 VERIFIED (href
+  shape), 0 BROKEN. BLOCKER-NAV-001/002 recorded.
+
+- **T3 · IAV security evidence record** — COMPLETE. New durable artefact:
+  `docs/doctrine/cycle-14-iav-security-evidence-2026-11-25.md`. Five
+  targets: all SECURE, one LOW residual (T5 `mode`-param length cap).
+  Prior NEEDS-INFO on live policy load CLOSED by G2 probes.
+
+- **T4 · Baseline unit test failures** — COMPLETE. 21/21 passing.
+  Root cause: 2026-11-08 catalogue rename retired `plan.bisnis`,
+  `plan.themes_ringan`, `plan.buy_theme`, `plan.own_theme_request`,
+  `plan.gratis` in favour of `plan.chat_free`, `plan.chat_themes`,
+  `plan.nex_shop`. The lookup function `planEntryForSubscription` in
+  `src/lib/nex-native/intelligence/product-knowledge.ts` still
+  referenced the retired IDs → every paying-user LLM context lookup
+  returned null since 2026-11-08 (real product defect, not test
+  staleness). Fixed the lookup + updated 7 stale test assertions.
+
+- **T5-T10 · Customer journeys** — BLOCKED on BLOCKER-NAV-001.
+  Business onboarding → publish, discovery → storefront, Ask-Seller,
+  merchant order management, buyer payment, notifications. Each
+  requires either DB-write fixtures from node (BLOCKED on IPv6) or
+  seeded multi-account state (BLOCKED on fixture harness). Reporting
+  these as VERIFIED without exercising them would violate the
+  Strict Completion Standard.
+
+### Files changed this cycle (uncommitted, pending separate push approval per CLAUDE.md §4)
+
+- `src/lib/nex-native/intelligence/product-knowledge.ts` · reconcile
+  `planEntryForSubscription` to 2026-11-08 catalogue IDs.
+- `src/lib/nex-native/intelligence/__tests__/product-knowledge.test.ts` ·
+  update 7 stale assertions to current catalogue.
+- `tests/e2e/journey-visitor-claim-signup.spec.ts` · polling-dispatch
+  pattern for React hydration tolerance.
+- `tests/e2e/journey-guest-chat-signup-cta.spec.ts` · convert to
+  `test.skip` with detailed BLOCKER-NAV-002 annotation.
+- `tests/e2e/journey-vault-standalone-access.spec.ts` · dynamic
+  entitlement-column probing (pre-mig-257 compatibility).
+- `docs/engineering/navigation-inventory.md` · NEW.
+- `docs/doctrine/cycle-14-iav-security-evidence-2026-11-25.md` · NEW.
+- `docs/engineering/session-handoff.md` · this delta.
+
+### Next safe actions requiring owner approval
+
+1. Resolve BLOCKER-NAV-001 (IPv4 add-on OR SANDBOX_POOLER_URL env var
+   with verified sandbox-ref user). Unblocks 9 Playwright specs and
+   enables T5-T10 journey verification.
+2. Approve commit + push for files listed above per CLAUDE.md §4.
+3. Approve provisional-session fixture harness to unblock T7
+   (Ask-Seller) and reinstate `journey-guest-chat-signup-cta.spec.ts`.
+
+---
+
+## Previous state · 2026-11-25 (Cycle 11 in-flight — Ask Seller security root-cause CLOSED, account-isolation regression VERIFIED)
+
+**Cycle 11 outcome (in-flight):** the Cycle 10 "identity mismatch" is **not a disclosure defect**. JWT `sub` evidence refutes the hypothesis · account-isolation authorization boundary is proven at four layers. Remaining Cycle 11 tasks (NEX-021 deepening, NEX-006/007 math/editorial, Ask Seller product-share-lock root-cause, whole-app launch gaps, Blueprint update) are PENDING.
+
+- **CLOSED (not a vulnerability):** the Cycle 10 "`nex-11339` → `nex-11244`'s conversation" redirect.
+  - `tests/e2e/.auth/state.json` JWT `sub` claim decodes to `67f6cd2d-c60b-4675-a442-25fa708e1e26`.
+  - That value is `nex-11244.supabase_user_id` in sandbox `kdstoyyeygcopkogqsyv` (not `nex-11339`).
+  - The server resolved the cookie to `nex-11244`'s account via `getAccountBySupabaseUserId` and redirected to `nex-11244`'s own participant conversation. Authorization-correct outcome.
+  - The Cycle 10 "nex-11339" label was a fixture mis-identification (that account has `supabase_user_id = NULL` and cannot be the resolved cookie identity).
+
+- **VERIFIED this cycle (sandbox, Pixel 7, dev `:3008`):**
+  - **C11-SEC-1 · Code-trace completed** across `src/app/nex-native/[businessSlug]/page.tsx:206-236`, `src/app/nex-native/[businessSlug]/_open-shop-chat-action.ts`, `src/lib/nex-native/app/session.ts:101-196`, `src/lib/nex-native/app/dev-impersonation.ts:162-163`, `src/app/nex-native/conversations/[conversationId]/page.tsx:106-137`, `src/lib/nex-native/business-message-service.ts:110-280`, `src/app/api/nex-native/chat/encrypted/route.ts:87-260`, `src/app/api/nex-native/chat/encrypted/since/route.ts:24-61`, `src/app/api/nex-native/chat/conversations/[conversationId]/route.ts:27-36`. Four-layer defence confirmed.
+  - **C11-SEC-3 · Account-isolation regression spec authored + 6/6 green** · `tests/e2e/security-account-isolation.spec.ts`. Covers: RSC non-participant collapses to not-found with zero conversation markup; all three chat APIs reject non-participant reads + writes with non-2xx; unauth write/read return `401` before any participant check runs.
+
+- **DELIVERED this cycle:**
+  - `tests/e2e/security-account-isolation.spec.ts` (NEW · 6 tests · wired into `stage-a-pixel7` testMatch).
+  - `playwright.config.ts` · `stage-a-pixel7` testMatch extended with `security-account-isolation\.spec\.ts`.
+  - `docs/product/launch-evidence-ledger.md` § 2.1b Cycle 11 delta (root-cause record + four-layer code trace + regression spec evidence + explicit BLOCKED-on-fixture carve-outs).
+
+- **BLOCKED (explicitly on missing second fixture · NOT improvised):**
+  - Cross-account probe against a KNOWN-existing counter-party conversation id. Random-UUID probes exercise the same guard code path (server collapses non-existent and not-a-participant identically by design), but a two-fixture test would strengthen the evidence further. Needs a Founder-approved second sandbox storageState.
+  - The Ask Seller composer "Send tapped · chip remains · no error surfaced" defect from Cycle 9/10 is a product-share-lock / UX observability defect on `nex-11244`'s legitimate historical conversation. NOT security. Needs a separate fix path (read `src/app/nex-native/conversations/[conversationId]/_client.tsx:989-1028` + the product-share-lock server action under authorisation).
+
+- **NOT STARTED this cycle (Cycle 11 remainder):**
+  - C11-NEX-021 · deepen full-viewport coverage beyond CSS contract (real-device Safari is still emulation-only).
+  - C11-NEX-006 · editorial copy accuracy + drawer behaviour verification.
+  - C11-NEX-007 · math correctness against `src/app/nex-native/switch/__tests__/` unit tests + locale/FX branches.
+  - C11-LAUNCH · identify next whole-app launch gaps from the Blueprint vs ledger delta.
+  - C11-DOC · Blueprint + nav-journey ledger updates.
+
+**Next.js 16.3.8 Turbopack overlay `AbortError: Transition was skipped` (observed this cycle · NOT a security event):** diagnosed as benign View Transitions API behaviour. Root cause: `src/app/nex-native/_navigation-transitions-client.tsx:260-268` only `.catch()`es `transition.finished`; the simultaneously-rejected `transition.ready` and `transition.updateCallbackDone` go unhandled and surface in the dev overlay. Fix (text-only recommendation, NOT applied this cycle): add `.catch(() => {})` handlers to all three promises on the returned transition object. Zero behavioural impact · dev-only overlay noise.
+
+**Not authorised this cycle (unchanged):** production access, migrations, Stripe activation, Emergency Help activation, public Shop Directory release, commits/pushes/merges/deploys, sandbox buyer account creation, exposure of service-role secrets, rewrite of commit `10ca82cc`, Purchase-Resumption Option C implementation.
+
+**Uncommitted state carried forward:** local `useLang()` changes remain uncommitted per owner instruction 2026-11-25. No touching commit `10ca82cc`.
+
+**Next safe action (within Cycle 11 scope):**
+
+- **1.** Re-classify the Ask Seller composer defect in `launch-evidence-ledger.md` § 2.1 from "possible disclosure" to "product-share-lock / UX observability defect on legitimate conversation" (already done in § 2.1b delta — propagate wording to § 2.1 row if needed).
+- **2.** NEX-007 math verification · run existing unit tests under `src/app/nex-native/switch/__tests__/` via `npm run test -- switch` and record pass/fail counts + exact test files touched.
+- **3.** NEX-006 editorial copy verification · spec deepening against the actual Why-NEX page content (not markers only).
+- **4.** C11-LAUNCH gap identification from Blueprint `§ 14` vs ledger delta. Record findings, do not implement.
+
+---
+
+## Prior cycle · 2026-11-25 (Cycle 10 closure — Ask Seller fixture STOP, NEX-021/006/007 VERIFIED)
+
+**Cycle 10 outcome:** Founder Decision 1 (Path B · Ask Seller using `nex-11339` storage) STOPPED on identity mismatch · Founder Decision 2 (NEX-021 · NEX-006 · NEX-007 wider-launch verification) DELIVERED and VERIFIED.
+
+- **STOP · Ask Seller · Path B (Decision 1 verbatim stop-clause invoked):**
+  - Current storageState account `nex-11339` (`2b8811b3-cf5e-415c-aa32-1d960197d654`, `supabase_user_id = NULL`) has NO row in `nex_conversation_participant`, yet the sealed `?open-chat=1&product=<id>` redirect resolves to `conversations/0e23bc69-2e0e-4504-8279-200d39449485`.
+  - DB evidence (sandbox `kdstoyyeygcopkogqsyv`, read-only): conversation `0e23bc69…` has `nex_conversation_participant.account_id = 80a9cedb-f477-4116-bcd8-78fb337d31e2` (`nex-11244`, `supabase_user_id = 67f6cd2d-c60b-4675-a442-25fa708e1e26`) on `side='customer'`.
+  - Duplicate-account hypothesis tested + REJECTED (22 rows / 22 distinct `supabase_user_id`).
+  - Classification: **product-side server identity resolution bug OR storageState account never linked to a Supabase auth user** — not a fixture mis-pick. STOP invoked per Decision 1: "If the current account unexpectedly encounters a lock, identity mismatch, missing participant or ambiguous fixture, STOP and report the evidence. Do not improvise another fixture."
+  - No seller reply was sent to `0e23bc69…`. No impersonation. No new accounts. The historical `nex-11244` share-locked conversation is preserved untouched.
+
+- **VERIFIED this cycle (sandbox, Pixel 7, dev server `:3008`, HEAD uncommitted):**
+  - **NEX-021 · full-viewport rule** · `tests/e2e/full-viewport-chrome.spec.ts` · 4/4 green (17.4 s) on `stage-a-pixel7 --no-deps`. Three pillar routes (`/nex-native`, `/nex-native/sign-in`, `/nex-native/directory`) all satisfy: body width ≥ innerW-1, body height ≥ innerH-1, zero body/html margin, no horizontal scroll. Sealed `viewport-fit=cover` + `theme-color #020914` meta present on splash.
+  - **NEX-006 · Why NEX smoke** · `tests/e2e/smoke-why-nex.spec.ts` AUTHORED + green (1.8 s). Observable: `[data-nex-why-page]` root marker, ≥1 `[data-nex-why-advantage]`, ≥1 `[data-nex-why-status="LIVE"]`, sealed Switch-calculator CTA linking to `/nex-native/switch`.
+  - **NEX-007 · Switch calculator smoke** · `tests/e2e/smoke-switch-calculator.spec.ts` AUTHORED + green (2.0 s). Observable: `[data-nex-switch-page]` root, `aria-label="Switch cost calculator"` section, sealed honesty copy (dated-examples / Last verified citation), reactive Comparison (nothing-to-compare copy disappears after entering GMV=1000 / orders=10 / commission=10%).
+
+- **DELIVERED this cycle:**
+  - `tests/e2e/smoke-why-nex.spec.ts` (NEW, 56 lines, wired into `stage-a-pixel7` testMatch).
+  - `tests/e2e/smoke-switch-calculator.spec.ts` (NEW, 99 lines, wired into `stage-a-pixel7` testMatch).
+  - `playwright.config.ts` · `stage-a-pixel7` testMatch extended with the two new smoke patterns.
+
+- **BLOCKED (cannot be unblocked without owner action):**
+  - Ask Seller clean non-owner end-to-end · needs either (a) an owner-approved linkage of `nex-11339` to a real Supabase auth user so sign-in resolves to that account, or (b) an authorised investigation of the server session resolver that redirected the `nex-11339` cookie-holder to `nex-11244`'s conversation. Code change not authorised in this cycle.
+  - Deployment identity of `nexapp-preview.nex-sandbox.workers.dev` · remains unverifiable from outside (no `x-nex-commit-sha` header, no `/api/nex-native/version` response). Per Founder qualification 2026-11-25, this is **evidence of non-current build** but NOT by itself proof that every route/asset from the expected build is absent.
+
+**Not authorised this cycle (unchanged):** production access, migrations, Stripe activation, Emergency Help activation, public Shop Directory release, commits/pushes/merges/deploys, sandbox buyer account creation, exposure of service-role secrets, rewrite of commit `10ca82cc`.
+
+**Uncommitted state carried forward from prior cycle:** local `useLang()` changes remain uncommitted per owner instruction 2026-11-25. No touching commit `10ca82cc`.
+
+**Next safe action (Cycle 11 candidate · AWAITING AUTHORISATION):**
+
+- **Highest-value next task:** authorised investigation of the server session resolver that maps `nex-11339` cookie-holder to `0e23bc69…` (`nex-11244`'s conversation). Candidate root-cause branches: (a) `resolveNexAppSessionFromContext` falls back to env-impersonation when `supabase_user_id` is NULL, (b) the sealed `?open-chat=1` server-action keys on the first participant row for a business regardless of the current viewer, (c) the storageState account was never Supabase-auth-linked and the session cookie resolves via a legacy owner lookup. Read-only inspection first, no code edit without the fresh word.
+- **Second:** NEX-022 real-device Safari install verification (currently emulation-only) — owner-sealed 2026-11-24 flagged the Chromium-with-iPhone-UA profile as NOT production Safari.
+- **Third:** promote `purchase-resumption-decision-brief-2026-11-24.md` from DELIVERED to IMPLEMENTED per Founder decision on the brief.
+
+---
+
+## Prior cycle · 2026-11-24 (Cycle 9 closure — buyer authentication journeys completed, Ask Seller composer BROKEN)
 
 **Cycle 9 outcome:** five workstreams executed. Ordinary sign-in + adversarial + signup wiring + purchase-resumption brief = **VERIFIED / DELIVERED**. Non-owner Ask Seller composer send = **BROKEN** (honest finding, not papered over).
 

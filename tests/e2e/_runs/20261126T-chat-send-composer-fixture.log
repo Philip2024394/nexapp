@@ -1,0 +1,54 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.3s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:53:7 › T-1.1 · chat send end-to-end › sanity · /chat redirects to /contacts (retired hub) (8.0s)
+  ✘  3 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:67:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route (30.0s)
+  -  4 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:121:7 › T-1.1 · chat send end-to-end › offline outbox · send under forced-offline reflects pending state
+  -  5 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:135:7 › T-1.1 · chat send end-to-end › retract · sender-side retract affordance renders in the message menu
+  -  6 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:143:7 › T-1.1 · chat send end-to-end › delete-for-me · distinct label from retract
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:67:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route 
+
+    Error: peer composer textarea mounts
+
+    expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-peer-composer]').locator('textarea').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - peer composer textarea mounts locator('[data-nex-peer-composer]').locator('textarea').first() with timeout 5000ms
+      - waiting for locator('[data-nex-peer-composer]').locator('textarea').first()
+
+
+      110 |       });
+      111 |       const textarea = composer.locator("textarea").first();
+    > 112 |       await expect(textarea, "peer composer textarea mounts").toBeVisible({
+          |                                                               ^
+      113 |         timeout: 5_000,
+      114 |       });
+      115 |     } finally {
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-send-e2e.spec.ts:112:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-chat-send-e2e-T-1--a3410-n-a-peer-conversation-route-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-chat-send-e2e-T-1--a3410-n-a-peer-conversation-route-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-send-e2e-T-1--a3410-n-a-peer-conversation-route-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-send-e2e-T-1--a3410-n-a-peer-conversation-route-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:67:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route 
+  3 did not run
+  2 passed (49.5s)

@@ -107,7 +107,11 @@ function GuestChatInner(props: Props): React.JSX.Element {
   const shopHref = businessSlug
     ? `/nex-native/${businessSlug}?commerce=1`
     : "/nex-native/home";
-  const signUpHref = `/nex-native/create-account?next=${encodeURIComponent(`/nex-native/chat/guest/${ownerAccountId}`)}`;
+  // 2026-11-25 · Cycle-14 F2 · retired `/nex-native/create-account` →
+  // sealed signup on `/nex-native/sign-in?mode=signup`. `next` restores
+  // the guest conversation after signup so the new account lands
+  // straight back in the chat that triggered the signup prompt.
+  const signUpHref = `/nex-native/sign-in?mode=signup&next=${encodeURIComponent(`/nex-native/chat/guest/${ownerAccountId}`)}`;
 
   const [messages, setMessages] = React.useState<ClientMessage[]>(initialMessages);
   const [composerText, setComposerText] = React.useState("");

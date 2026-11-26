@@ -1,0 +1,10 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (10.5s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:45:7 › T-2.5 · buyer checkout + price validation › direct shop → direct product · add-to-cart affordance surfaces (27.3s)
+  -  3 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:123:7 › T-2.5 · buyer checkout + price validation › checkout · cart JSONB snapshot shape persisted in nex_order
+  -  4 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:133:7 › T-2.5 · buyer checkout + price validation › price-tamper rejection · modified unit_price must be refused server-side
+
+  2 skipped
+  2 passed (41.8s)

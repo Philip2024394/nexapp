@@ -62,6 +62,26 @@ function formatRelTime(iso: string): string {
   }
 }
 
+// L-042 fix · 2026-11-26 · same class as L-036 hydration defect.
+//
+// `formatRelTime` is doubly SSR-unsafe:
+//   (a) `Date.now()` differs between the Node SSR pass and the browser
+//       hydration pass by whatever latency the shell adds · it can cross
+//       minute/hour boundaries and flip the text.
+//   (b) `toLocaleDateString()` with no locale argument picks the host
+//       locale · Node host vs browser host diverge.
+//
+// Fix: SSR renders the stable raw ISO · the relative-time string is
+// computed client-side after hydration. Matches the `ClientDateTime`
+// pattern applied for L-036 in `[orderId]/_client.tsx`.
+function ClientRelTime({ iso }: { readonly iso: string }): React.ReactElement {
+  const [text, setText] = React.useState<string>(iso);
+  React.useEffect(() => {
+    setText(formatRelTime(iso));
+  }, [iso]);
+  return <>{text}</>;
+}
+
 function stateTone(state: string): { bg: string; fg: string; label: string } {
   switch (state) {
     case "created":
@@ -365,7 +385,7 @@ function OrderRow({
             {formatMoney(order.price_pence, order.currency)}
           </div>
           <div style={{ marginTop: 4, fontSize: 10.5, color: PALETTE.textDim }}>
-            {formatRelTime(order.created_at)}
+            <ClientRelTime iso={order.created_at} />
           </div>
         </div>
       </Link>

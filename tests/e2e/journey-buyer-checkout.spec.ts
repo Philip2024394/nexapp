@@ -29,87 +29,95 @@
 // Classification: SPEC AUTHORED.
 
 import { expect, test } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  createTestBusiness,
+  createTestProduct,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
 test.use({ storageState: "tests/e2e/.auth/state.json" });
 
 test.describe.serial("T-2.5 · buyer checkout + price validation", () => {
   test("direct shop → direct product · add-to-cart affordance surfaces", async ({ page }) => {
-    // Remediation 2026-11-24 cycle 4 · Founder decision: the public
-    // Directory is withheld until the 500-active-seller launch
-    // threshold is reached. During the pre-500 window, buyer-journey
-    // tests must enter via direct shop + product URLs rather than
-    // scraping /directory. Required env vars:
-    //   · NEX_E2E_SEED_SHOP_SLUG    → URL-safe slug that resolves to
-    //                                  a live sandbox nex_business row
-    //                                  (schema: nex-supabase/migrations
-    //                                  /002_nex_business.sql).
-    //   · NEX_E2E_SEED_PRODUCT_ID   → UUID that resolves to a live
-    //                                  sandbox nex_product row with
-    //                                  status='live' (schema: 003).
-    //
-    // If either env var is absent we DO NOT fabricate IDs and DO NOT
-    // fall back to the slow /directory path · we honestly BLOCK the
-    // test. Per Cycle 4 §3 ("Do not claim direct shop/product
-    // journeys are verified merely because a nonexistent URL returns
-    // HTTP 200"), an unseeded sandbox is an honest blocker, not a
-    // pass.
-    const shopSlug = process.env.NEX_E2E_SEED_SHOP_SLUG;
-    const productId = process.env.NEX_E2E_SEED_PRODUCT_ID;
-    test.skip(
-      !shopSlug || !productId,
-      "BLOCKED-PENDING-SEED-FIXTURE · set NEX_E2E_SEED_SHOP_SLUG and " +
-        "NEX_E2E_SEED_PRODUCT_ID to a valid sandbox shop slug + live " +
-        "product UUID. The pre-500-seller launch window hides the " +
-        "public Directory; direct shop/product URLs are the sealed " +
-        "entry contract. We will not fabricate IDs or scrape /directory.",
-    );
+    // 2026-11-26 remediation · owner-authorised fixture-backed seeding
+    // via the sandbox test harness. `createTestBusiness` +
+    // `createTestProduct({ status: "live" })` write real rows through
+    // the service role and are torn down with
+    // `assertNoResidualFixtures`. This is not fabrication and not
+    // Directory-scraping; it is the same pattern proven in
+    // `journey-ask-seller-nonowner-full.spec.ts`. Env-var overrides
+    // (`NEX_E2E_SEED_SHOP_SLUG`, `NEX_E2E_SEED_PRODUCT_ID`) are still
+    // honoured so an owner-pinned fixture wins.
+    test.setTimeout(90_000);
+    assertSandboxRef();
 
-    // Direct shop route · verified in Cycle 3 timing evidence to be
-    // separate from the directory landing feed (2-3s vs 22s).
-    const shopResponse = await page.goto(`/nex-native/${shopSlug}`, {
-      waitUntil: "domcontentloaded",
-    });
-    expect(shopResponse?.status(), "direct shop URL responds").toBeLessThan(500);
-    await page.waitForFunction(() => Boolean(document.body), null, {
-      timeout: 10_000,
-    });
+    const envSlug = process.env.NEX_E2E_SEED_SHOP_SLUG;
+    const envProductId = process.env.NEX_E2E_SEED_PRODUCT_ID;
+    const handles: FixtureHandle[] = [];
+    let shopSlug: string;
+    let productId: string;
 
-    // Cycle 7 2026-11-24 · Gap B classification (Founder-corrected):
-    // navigation issue stopped reproducing under corrected test
-    // timing. NO application-code change was made. The shop page
-    // mounts several client components (ShopChatFab,
-    // ProductDetailSheet, BurgerMenu, PhoneFrame) that initiate
-    // RSC + asset prefetches on mount. If a hard page.goto to the
-    // product URL fires before the shop's hydration-phase requests
-    // settle, Chromium aborts the new main-frame request and
-    // Playwright surfaces net::ERR_ABORTED. In real UX the buyer
-    // clicks a product tile (soft nav · no main-frame request) and
-    // the race does not occur. The test waits here to model
-    // realistic timing. This does NOT prove an application defect
-    // was fixed · only that the Playwright-specific race does not
-    // reproduce under realistic sequencing.
-    await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => {});
-    // Belt-and-braces · ensure React hydration microtasks have
-    // drained before the next hard navigation. 1500ms matches the
-    // cycle 7 probe evidence where this exact wait flipped the
-    // sequence from ERR_ABORTED to a clean 200.
-    await page.waitForTimeout(1500);
+    if (envSlug && envProductId) {
+      shopSlug = envSlug;
+      productId = envProductId;
+    } else {
+      const merchant = await createTestAccount("checkout-merchant");
+      handles.push(merchant);
+      const biz = await createTestBusiness(merchant, { label: "checkout-shop" });
+      handles.push(biz);
+      const prod = await createTestProduct(biz, {
+        name: "e2e-fixture-checkout-widget",
+        pricePence: 2499,
+        currency: "GBP",
+        status: "live",
+      });
+      handles.push(prod);
+      shopSlug = biz.slug;
+      productId = prod.productId;
+    }
 
-    // Direct product route.
-    const productResponse = await page.goto(`/nex-native/product/${productId}`, {
-      waitUntil: "domcontentloaded",
-    });
-    expect(productResponse?.status(), "direct product URL responds 200").toBe(200);
-    await page.waitForFunction(() => Boolean(document.body), null, {
-      timeout: 10_000,
-    });
+    try {
+      const shopResponse = await page.goto(`/nex-native/${shopSlug}`, {
+        waitUntil: "domcontentloaded",
+      });
+      expect(shopResponse?.status(), "direct shop URL responds").toBeLessThan(500);
+      await page.waitForFunction(() => Boolean(document.body), null, {
+        timeout: 10_000,
+      });
 
-    // Observable: the sealed product page renders an add-to-cart (or
-    // buy) affordance. `[data-nex-product-page]` is set by
-    // `src/app/nex-native/product/[productId]/page.tsx:76`.
-    await page.waitForSelector("[data-nex-product-page]", { timeout: 10_000 });
-    const addBtn = page.getByRole("button", { name: /add to cart|buy/i });
-    await expect(addBtn.first()).toBeVisible();
+      // Cycle 7 2026-11-24 hydration race note: give the shop page's
+      // mount-time RSC prefetches a moment to settle before issuing a
+      // hard navigation to /product (avoids net::ERR_ABORTED).
+      await page
+        .waitForLoadState("networkidle", { timeout: 15_000 })
+        .catch(() => {});
+      await page.waitForTimeout(1500);
+
+      const productResponse = await page.goto(
+        `/nex-native/product/${productId}`,
+        { waitUntil: "domcontentloaded" },
+      );
+      expect(
+        productResponse?.status(),
+        "direct product URL responds 200",
+      ).toBe(200);
+      await page.waitForFunction(() => Boolean(document.body), null, {
+        timeout: 10_000,
+      });
+
+      await page.waitForSelector("[data-nex-product-page]", {
+        timeout: 10_000,
+      });
+      const addBtn = page.getByRole("button", { name: /add to cart|buy/i });
+      await expect(addBtn.first()).toBeVisible();
+    } finally {
+      await teardownAll(handles);
+      await assertNoResidualFixtures(handles);
+    }
   });
 
   test("checkout · cart JSONB snapshot shape persisted in nex_order", async () => {

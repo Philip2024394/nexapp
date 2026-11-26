@@ -56,12 +56,30 @@ function formatMoney(pence: number, currency: string): string {
   }
 }
 
-function formatDateTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+// L-036 fix · 2026-11-26.
+//
+// Previous implementation called `new Date(iso).toLocaleString()` from
+// render in this "use client" component. Next.js SSRs client components
+// for their initial HTML before hydration, so the first render ran in
+// the Node runtime (server locale + server timezone) and the first
+// client render ran in the browser (viewer locale + viewer timezone),
+// producing divergent text and a React hydration warning.
+//
+// Fix: render the stable raw ISO on SSR (identical on server and
+// client), then replace with a locale-formatted value in a useEffect
+// after hydration. Initial server and client renders now match exactly
+// · the localization improvement is a post-hydration visual-only swap
+// · zero behavioural change for already-hydrated views.
+function ClientDateTime({ iso }: { readonly iso: string }): React.ReactElement {
+  const [formatted, setFormatted] = React.useState<string>(iso);
+  React.useEffect(() => {
+    try {
+      setFormatted(new Date(iso).toLocaleString());
+    } catch {
+      /* keep ISO on parse failure · identical to the pre-fix catch */
+    }
+  }, [iso]);
+  return <>{formatted}</>;
 }
 
 function stateTone(state: string): { fg: string; label: string } {
@@ -286,7 +304,7 @@ export function OrderDetailClient({
             color: PALETTE.textDim,
           }}
         >
-          Created {formatDateTime(order.created_at)}
+          Created <ClientDateTime iso={order.created_at} />
           {shopDisplayName ? ` · ${shopDisplayName}` : ""}
         </div>
       </section>
@@ -783,7 +801,7 @@ export function OrderDetailClient({
                         "ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace",
                     }}
                   >
-                    {formatDateTime(e.created_at)}
+                    <ClientDateTime iso={e.created_at} />
                   </span>
                 </div>
                 {e.metadata && Object.keys(e.metadata).length > 0 ? (

@@ -1,0 +1,57 @@
+
+Running 51 tests using 1 worker
+
+  ✓   1 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (6.3s)
+  -   2 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓   3 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (4.9s)
+  -   4 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback
+  ✓   5 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback (4.8s)
+  ✓   6 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.6s)
+  ✓   7 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (8.1s)
+  ✓   8 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.2s)
+  ✓   9 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.1s)
+  ✓  10 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.1s)
+  ✓  11 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.1s)
+  ✓  12 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (3.1s)
+  ✓  13 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.9s)
+  ✓  14 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (3.1s)
+  ✓  15 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.0s)
+  -  16 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -  17 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓  18 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (5.2s)
+  -  19 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓  20 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (7.8s)
+  ✓  21 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback (5.1s)
+  -  22 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback
+  ✓  23 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.6s)
+  ✓  24 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (5.7s)
+  ✓  25 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.5s)
+  ✓  26 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.4s)
+  ✓  27 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.2s)
+  ✓  28 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.1s)
+  ✓  29 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (3.2s)
+  ✓  30 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (3.6s)
+  ✓  31 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (6.6s)
+  ✓  32 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (7.9s)
+  -  33 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -  34 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓  35 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (5.0s)
+  ✓  36 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path (5.5s)
+  ✓  37 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (5.4s)
+  -  38 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback
+  -  39 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback
+  ✓  40 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.8s)
+  ✓  41 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (6.1s)
+  ✓  42 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.2s)
+  ✓  43 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.2s)
+  ✓  44 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.3s)
+  ✓  45 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.8s)
+  ✓  46 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (4.9s)
+  ✓  47 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.8s)
+  ✓  48 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.9s)
+  ✓  49 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.1s)
+  -  50 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -  51 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+
+  12 skipped
+  39 passed (3.2m)

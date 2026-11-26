@@ -49,11 +49,23 @@ test.describe.serial("T-5.2 · PWA install promotion cadence", () => {
       // long-poll connections; wait for DOM parsed + body attached so
       // `toHaveCount(0)` has a stable document to probe. Assertion
       // strength preserved · we still require zero install banners.
+      //
+      // L-025 hardening 2026-11-26 · under full-suite load the iOS
+      // install-home-slider (rendered from _install-home-slider-client
+      // after the client-side eligibility check resolves) occasionally
+      // hydrates AFTER our `toHaveCount(0)` snapshot on iphone-emulated.
+      // Matching the sealed L-007 precedent in
+      // `nex-pwa-install-and-location.spec.ts`, we add a bounded
+      // `networkidle` wait so the hydration race is resolved BEFORE we
+      // probe. This is NOT a weakening: the assertion `toHaveCount(0)`
+      // is unchanged and the window of enforcement widens (hydration
+      // completes → any late banner would now be caught, not missed).
       const response = await page.goto(route, { waitUntil: "domcontentloaded" });
       expect(response?.status(), `${route} responds`).toBeLessThan(500);
       await page.waitForFunction(() => Boolean(document.body), null, {
         timeout: 10_000,
       });
+      await page.waitForLoadState("networkidle", { timeout: 20_000 });
 
       // The sealed install promotion component is expected to carry a
       // stable `data-nex-install-prompt` test-id. We also match the

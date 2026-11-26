@@ -1,0 +1,51 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.5s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:132:9 › L-035 · merchant order-detail state-transition UI journey › merchant can transition created→paid→completed via sealed detail UI; ownership gate blocks cross-merchant access (56.5s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:132:9 › L-035 · merchant order-detail state-transition UI journey › merchant can transition created→paid→completed via sealed detail UI; ownership gate blocks cross-merchant access 
+
+    Error: Contract D · nex_order.state must transition to "paid" within poll window · got created · alert="" · notice="<none>" · serverActionResponses=[
+      {
+        "url": "http://localhost:3008/nex-native/manage/orders/139c69d9-179a-42ac-ab9c-817caa9f36ac",
+        "status": 200,
+        "method": "POST",
+        "bodySnippet": "3:I[\"[project]/node_modules/next/dist/next-devtools/userspace/app/segment-explorer-node.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"SegmentViewNode\"]\n5:\"$Sreact.fragment\"\n16:I[\"[project]/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"default\"]\n18:I[\"[p"
+      },
+      {
+        "url": "http://localhost:3008/nex-native/manage/orders/139c69d9-179a-42ac-ab9c-817caa9f36ac",
+        "status": 200,
+        "method": "POST",
+        "bodySnippet": "3:I[\"[project]/node_modules/next/dist/next-devtools/userspace/app/segment-explorer-node.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"SegmentViewNode\"]\n5:\"$Sreact.fragment\"\n16:I[\"[project]/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"default\"]\n18:I[\"[p"
+      }
+    ] · consoleMessages=[]
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "paid"
+    Received: "created"
+
+      279 |           paidState,
+      280 |           `Contract D · nex_order.state must transition to "paid" within poll window · got ${paidState} · alert="${alertText.trim()}" · notice="${noticeText.trim()}" · serverActionResponses=${JSON.stringify(serverActionResponses, null, 2)} · consoleMessages=${JSON.stringify(consoleMessages.slice(-20), null, 2)}`,
+    > 281 |         ).toBe("paid");
+          |           ^
+      282 |
+      283 |         // Contract D (ledger) · a nex_ledger_entry row exists for
+      284 |         // this order (sealed commerce-service.markOrderPaid side-
+        at C:\Users\Victus\nexapp\tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:281:11
+
+    Error Context: test-results\journey-merchant-order-det-e2e96-locks-cross-merchant-access-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-merchant-order-det-e2e96-locks-cross-merchant-access-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-merchant-order-det-e2e96-locks-cross-merchant-access-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:132:9 › L-035 · merchant order-detail state-transition UI journey › merchant can transition created→paid→completed via sealed detail UI; ownership gate blocks cross-merchant access 
+  1 passed (1.2m)

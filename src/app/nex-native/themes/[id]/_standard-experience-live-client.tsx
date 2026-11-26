@@ -286,8 +286,14 @@ export function StandardExperienceLiveClient({
       {/* 2026-10-15 · owner-authorised · remember which free NEX
           theme the guest previewed so `createNexAccountAction` can
           redirect them straight back to it after signup. Fire-and-
-          forget cookie beacon · no visual UI · harmless when the
-          viewer is already authenticated. */}
+          forget cookie beacon · no visual UI.
+          CYCLE 14 · 2026-11-25 · the beacon API
+          (`/api/nex-native/select-theme`) short-circuits with
+          `{ok:false, reason:"already_authenticated"}` when the
+          caller has an active session, so an authenticated repeat
+          mount does NOT re-set the cookie. See
+          `tests/e2e/journey-selected-theme-cookie-signup.spec.ts`
+          for the one-shot invariant this enforces. */}
       {isNexBrandTheme && <MarkSelectedThemeClient themeId={pkg.identity.id} />}
 
       <StandardExperience

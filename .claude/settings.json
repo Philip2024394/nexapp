@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"console.log('\\n═══════════════════════════════════════════════════════════════\\nNEX MANDATORY READ ORDER (owner-sealed 2026-11-26):\\n  1. CLAUDE.md\\n  2. docs/engineering/NEX-DELIVERY-RULES.md\\n  3. docs/engineering/NEX-DELIVERY-LEDGER.md\\n  4. latest docs/engineering/cycle-strict-completion-*.md\\n  5. git rev-parse --show-toplevel && git remote -v && git status --short\\n\\nOperating mode: LAUNCH DELIVERY. Not audit-and-report.\\nApproval boundaries in force: no prod · no migration apply · no commit/push/deploy · no live Stripe/PayPal.\\n═══════════════════════════════════════════════════════════════\\n');\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"console.log('[NEX rulebook reminder] Before responding: confirm CLAUDE.md + NEX-DELIVERY-RULES.md + NEX-DELIVERY-LEDGER.md have been consulted this session. Approval boundaries: no prod/migration/commit/push/deploy/live-Stripe-PayPal without explicit owner approval.');\""
+          }
+        ]
+      }
+    ]
+  }
+}

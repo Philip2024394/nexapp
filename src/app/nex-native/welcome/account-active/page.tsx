@@ -31,10 +31,7 @@
 import type * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
-import {
-  hasSeenAccountActive,
-  markAccountActiveSeen,
-} from "@/lib/nex-native/onboarding/account-active-seen";
+import { hasSeenAccountActive } from "@/lib/nex-native/onboarding/account-active-seen";
 import { WelcomeShell } from "../_welcome-shell";
 
 export const runtime = "nodejs";
@@ -51,15 +48,27 @@ export default async function AccountActiveWelcomePage(): Promise<React.JSX.Elem
     redirect("/nex-native/contacts");
   }
 
-  // First visit · record the "seen" marker before rendering so a
-  // reload does NOT re-paint the celebration. Cookie is HttpOnly so
-  // client JS cannot forge it.
-  await markAccountActiveSeen();
-
+  // L-008 (2026-11-26) · the "seen" cookie is written by the Route
+  // Handler `/api/nex-native/welcome/mark-seen`. The WelcomeShell
+  // mounts a client-side pinger (MarkSeenPinger) that POSTs to that
+  // endpoint on first render; the browser then has the signed cookie,
+  // and the NEXT visit to this URL redirects to /contacts.
+  //
+  // Why not middleware or `cookies().set()` here:
+  //   · Server Components are read-only for cookies in Next.js 16
+  //     (`ReadonlyRequestCookiesError` / E1180).
+  //   · Middleware's `NextResponse.cookies.set()` propagates the
+  //     just-written value back into THIS request's cookie reads,
+  //     which made `hasSeenAccountActive()` above fire on the first
+  //     visit and redirect before the celebration ever painted.
+  // A Route Handler runs as a separate HTTP transaction, so its
+  // Set-Cookie lands in the browser without affecting this page's
+  // SSR. See `_mark-seen-pinger.tsx` for the client trigger.
   return (
     <WelcomeShell
       headline="Congratulations · your NEX account is active"
       subtitle="You can open a shop any time from the drawer · for now, the NEX chat world is yours to explore."
+      markSeenEndpoint="/api/nex-native/welcome/mark-seen"
     />
   );
 }

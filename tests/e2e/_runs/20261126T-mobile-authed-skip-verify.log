@@ -1,0 +1,16 @@
+
+Running 11 tests using 1 worker
+
+[1/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:87:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › sanity · signed-in home is reachable (not bounced to /sign-in)
+[2/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:106:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-visit invitation visibility matches conversationCount === 0
+[3/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:140:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home → first-visit · tap invitation navigates correctly
+[4/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:161:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → chat-themes-library · live catalogue opens
+[5/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:180:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → shop · honest preview opens, no commerce bypass
+[6/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:204:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → personalize · honest preview opens, no fake upload
+[7/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:232:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › themes library · select a free theme and verify navigation
+[8/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:262:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › send first message · BLOCKED pending known test peer
+[9/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:288:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · invitation absent when conversationCount ≥ 1
+[10/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:325:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-contact panel renders for eligible new users
+[11/11] [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:377:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-contact action cards point at sealed destinations when visible
+  11 skipped
+EXIT=0

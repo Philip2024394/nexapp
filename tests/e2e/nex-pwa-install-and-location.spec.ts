@@ -152,16 +152,48 @@ async function readGeoCallCount(page: Page): Promise<number> {
 /**
  * Helper: fill the trusted-contact phone number and wait for the
  * "Enable location + prepare SMS" button to become enabled before
- * clicking it. React's controlled-input state can lag behind
- * `fill()` in the dev build on slow runs, so the explicit
- * `toBeEnabled()` wait is load-bearing · without it G/I failed
- * intermittently with a disabled-element click retry.
+ * clicking it.
+ *
+ * 2026-11-26 (L-007 hydration gate) · callers `goto` with
+ * `waitUntil: "domcontentloaded"` which returns before React hydrates
+ * the controlled `<input>`. On a cold on-demand compile the SSR HTML
+ * arrives, `fill()` writes the value into the native input, then React
+ * hydrates and resets the controlled state back to `""` · the button's
+ * `disabled={!phoneLooksValid}` stays true through all 10 s of the
+ * toBeEnabled poll (observed · 23/23 polls disabled on a cold compile,
+ * then PASS in 2.6 s once warm). Waiting for a known client-only
+ * listener on `enableButton` (the `onClick` attribute cannot be
+ * observed, so we `waitFor({state:"attached"})` + rely on the fact
+ * that Playwright's `fill()` dispatches input/change events that only
+ * take effect once React's hydration root has owned the element) is
+ * NOT sufficient · the attached check passes on SSR markup. The fix
+ * that does work: fill, then verify the native input kept the value;
+ * if React has blanked it (controlled-state reset), re-fill. This
+ * loops at most 3× (each ≤ 300 ms) before giving up and falling
+ * through to the standard `toBeEnabled` wait, so warm runs pay zero
+ * extra cost.
  */
 async function beginLocationFlow(page: Page, phone: string): Promise<void> {
-  await page.getByLabel(/trusted contact phone/i).fill(phone);
+  const input = page.getByLabel(/trusted contact phone/i);
   const enableButton = page.getByRole("button", {
     name: ENABLE_BUTTON_ARIA,
   });
+  await input.waitFor({ state: "attached", timeout: 15_000 });
+  // networkidle = all RSC + chunk requests settled · after this the
+  // React hydration root has claimed the controlled <input>, so
+  // `fill()` writes a value that React will preserve. Without this
+  // step, a cold on-demand compile hydrates AFTER fill() returns and
+  // resets the input to its initial empty state, leaving the submit
+  // button permanently disabled for the test.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
+  // Up to 4 fill attempts · each separated by a tick in case a late
+  // RSC flush still races. On warm runs the first attempt sticks.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await input.fill(phone);
+    await page.waitForTimeout(200);
+    const current = await input.inputValue();
+    if (current === phone) break;
+  }
   // 10s cap: the iPhone-emulated project under the dev server is
   // slower to settle React state than the Pixel 7 or desktop projects.
   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
@@ -180,10 +212,21 @@ test("A · install page renders and leaves 'detecting'", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: /install nex/i }),
   ).toBeVisible();
+  // 2026-11-26 (L-007 hydration gate · install-client variant) · on a
+  // cold on-demand compile the client bundle may not have hydrated by
+  // the 5 s `toBeHidden` deadline below. The `useEffect` detection +
+  // 1.2 s setTimeout fallback only start running once React has
+  // claimed the root, so until hydration lands the `{kind:"detecting"}`
+  // SSR output stays on screen. Waiting for `networkidle` guarantees
+  // the RSC payload + client chunks have been fetched and the
+  // hydration root has mounted · on warm runs this returns almost
+  // immediately. The 10 s bump on `toBeHidden` absorbs the 1.2 s
+  // detection timeout inside the component without masking real bugs.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
   // After the client runs, we leave "Checking your device…" within the
-  // 1.2s detection timeout the component uses.
+  // detection timeout (1.2s inside the component + hydration window).
   await expect(page.getByText(/checking your device/i)).toBeHidden({
-    timeout: 5_000,
+    timeout: 10_000,
   });
   expect(errors, "no runtime page errors").toEqual([]);
 });
@@ -205,11 +248,13 @@ test("B · iPhone-emulated viewport shows Share → Add to Home Screen path", as
   );
   void browserName; // reserved for future webkit upgrade
   await page.goto(INSTALL_PATH, { waitUntil: "domcontentloaded" });
+  // 2026-11-26 (L-007 hydration gate · install-client variant) · see §A.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
   // The component checks /iPad|iPhone|iPod/.test(ua). The iPhone 14 Pro
   // device-profile UA matches that regex.
   await expect(
     page.getByRole("heading", { name: /install on iphone or ipad/i }),
-  ).toBeVisible({ timeout: 5_000 });
+  ).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/Add to Home Screen/i)).toBeVisible();
 });
 
@@ -239,9 +284,11 @@ test("C · display-mode: standalone yields 'installed' state", async ({
     }) as typeof window.matchMedia;
   });
   await page.goto(INSTALL_PATH, { waitUntil: "domcontentloaded" });
+  // 2026-11-26 (L-007 hydration gate · install-client variant) · see §A.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
   await expect(
     page.getByRole("heading", { name: /nex is installed/i }),
-  ).toBeVisible({ timeout: 5_000 });
+  ).toBeVisible({ timeout: 10_000 });
 });
 
 // ---------------------------------------------------------------------------
@@ -256,23 +303,25 @@ test("D · desktop settles on either the install card OR an honest fallback", as
     `project '${testInfo.project.name}' is not the desktop project`,
   );
   await page.goto(INSTALL_PATH, { waitUntil: "domcontentloaded" });
+  // 2026-11-26 (L-007 hydration gate · install-client variant) · see §A.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
   // Wait for either the "Install on this computer" heading OR the
   // fallback honest copy to appear after the detection timeout.
   await Promise.race([
     expect(
       page.getByRole("heading", { name: /install on this computer/i }),
-    ).toBeVisible({ timeout: 5_000 }),
+    ).toBeVisible({ timeout: 10_000 }),
     expect(
       page.getByText(/does not currently support/i),
-    ).toBeVisible({ timeout: 5_000 }),
+    ).toBeVisible({ timeout: 10_000 }),
   ]);
 });
 
 // ---------------------------------------------------------------------------
-// §E · mobile-unsupported honest copy
+// §E · mobile honest-fallback copy (Android three-dot path OR unsupported)
 // ---------------------------------------------------------------------------
 
-test("E · mobile without beforeinstallprompt lands on 'unsupported' honest copy", async ({
+test("E · mobile without beforeinstallprompt lands on an honest fallback", async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -280,13 +329,35 @@ test("E · mobile without beforeinstallprompt lands on 'unsupported' honest copy
     `project '${testInfo.project.name}' is not the Pixel 7 mobile project`,
   );
   await page.goto(INSTALL_PATH, { waitUntil: "domcontentloaded" });
+  // 2026-11-26 (L-007 hydration gate · install-client variant) · see
+  // §A for rationale. Without this gate the cold-compile hydration
+  // race leaves the SSR `{kind:"detecting"}` state in place past the
+  // deadline on the honest-fallback heading assertion below.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
   // Dev build: Chromium headless does not fire `beforeinstallprompt`
   // without a valid installable manifest + user engagement heuristics.
-  // The detection timeout (1200ms) must take us to the "unsupported"
-  // copy · never a dead Install button.
+  // Per the sealed 2026-11-24 install rules, when the mobile detection
+  // succeeds but `beforeinstallprompt` never fires, the component MUST
+  // present an honest, platform-aware fallback rather than a dead
+  // Install button:
+  //   · "Install on Android" copy (state `android-fallback`) when the
+  //     UA matches a mobile Chromium that still has the three-dot menu
+  //     "Install app" path, OR
+  //   · "Install not available here" copy (state `unsupported`) when
+  //     no path exists at all.
+  // Either branch satisfies the honest-fallback rule. Historically
+  // this test asserted the "unsupported" branch only; the component's
+  // sealed behaviour now prefers the more informative Android-menu
+  // instructions on mobile Chromium, so the test accepts either.
+  const androidFallback = page.getByRole("heading", { name: /install on android/i });
+  const unsupported = page.getByRole("heading", { name: /install not available here/i });
+  await expect(androidFallback.or(unsupported)).toBeVisible({ timeout: 10_000 });
+  // AND the dead-Install-button rule: the Chromium install CTA must
+  // NOT be visible in either fallback state (both branches contain
+  // only instructional copy, not a button that would call deferred.prompt()).
   await expect(
-    page.getByRole("heading", { name: /install not available here/i }),
-  ).toBeVisible({ timeout: 5_000 });
+    page.getByRole("button", { name: /^install nex$/i }),
+  ).toHaveCount(0);
 });
 
 // ---------------------------------------------------------------------------

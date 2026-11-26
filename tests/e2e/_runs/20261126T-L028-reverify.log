@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:223:7 › account-active · unauthenticated › A · redirects guest to /sign-in (2.8s)
+  ✓  2 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:244:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie (18.2s)
+  ✓  3 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:302:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts (27.5s)
+  ✓  4 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:334:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust (17.7s)
+  ✓  5 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:371:7 › account-active · authenticated (dev-pass real Supabase) › E · /manage/shop/start?from=signup Skip-for-now link resolves to welcome (12.2s)
+
+  5 passed (1.3m)

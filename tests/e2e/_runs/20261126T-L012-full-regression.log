@@ -1,0 +1,2403 @@
+
+Running 306 tests using 1 worker
+
+  ✓    1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (10.5s)
+  ✓    2 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:38:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page renders at phone viewport without horizontal overflow (854ms)
+  ✘    3 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances (6.2s)
+  ✓    4 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:73:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › sign-in page loads at phone viewport without horizontal overflow (1.3s)
+  ✓    5 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:87:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › create-account page loads at phone viewport without horizontal overflow (1.5s)
+  ✘    6 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome (3.1s)
+  ✘    7 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome (1.1s)
+  ✘    8 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome (1.1s)
+  ✘    9 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target (6.8s)
+  ✘   10 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:45:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › sanity · signed-in home is reachable (not bounced to /sign-in) (20.8s)
+  -   11 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:64:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-visit invitation visibility matches conversationCount === 0
+  -   12 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:98:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home → first-visit · tap invitation navigates correctly
+  -   13 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:119:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → chat-themes-library · live catalogue opens
+  -   14 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:138:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → shop · honest preview opens, no commerce bypass
+  -   15 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:162:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → personalize · honest preview opens, no fake upload
+  -   16 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:190:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › themes library · select a free theme and verify navigation
+  -   17 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:220:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › send first message · BLOCKED pending known test peer
+  -   18 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:246:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · invitation absent when conversationCount ≥ 1
+  -   19 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:283:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-contact panel renders for eligible new users
+  -   20 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:335:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-contact action cards point at sealed destinations when visible
+  ✓   21 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (5.3s)
+  -   22 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓   23 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (8.8s)
+  -   24 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback
+  ✓   25 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback (4.8s)
+  ✓   26 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.5s)
+  ✓   27 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (5.9s)
+  ✓   28 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.5s)
+  ✓   29 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.6s)
+  ✓   30 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.6s)
+  ✓   31 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.0s)
+  ✓   32 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (2.1s)
+  ✓   33 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.5s)
+  ✓   34 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.2s)
+  ✓   35 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.9s)
+  -   36 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -   37 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓   38 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (9.3s)
+  -   39 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓   40 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (5.4s)
+  ✓   41 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback (5.2s)
+  -   42 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback
+  ✓   43 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.6s)
+  ✓   44 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (6.0s)
+  ✓   45 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.6s)
+  ✓   46 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.8s)
+  ✓   47 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.7s)
+  ✓   48 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (2.8s)
+  ✓   49 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (2.8s)
+  ✓   50 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (5.8s)
+  ✓   51 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (1.4s)
+  ✓   52 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.8s)
+  -   53 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -   54 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓   55 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (7.9s)
+  ✓   56 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path (5.1s)
+  ✓   57 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (5.6s)
+  -   58 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback
+  -   59 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback
+  ✓   60 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.5s)
+  ✓   61 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (6.2s)
+  ✓   62 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (9.8s)
+  ✓   63 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.7s)
+  ✓   64 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.7s)
+  ✓   65 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.0s)
+  ✓   66 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (2.0s)
+  ✓   67 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.4s)
+  ✓   68 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.4s)
+  ✓   69 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.8s)
+  -   70 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -   71 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓   72 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:223:7 › account-active · unauthenticated › A · redirects guest to /sign-in (3.3s)
+  ✓   73 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:244:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie (22.3s)
+  ✓   74 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:302:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts (23.4s)
+  ✓   75 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:334:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust (16.9s)
+  ✓   76 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:371:7 › account-active · authenticated (dev-pass real Supabase) › E · /manage/shop/start?from=signup Skip-for-now link resolves to welcome (16.5s)
+  ✘   77 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (837ms)
+  -   78 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render
+  -   79 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render
+  -   80 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render
+  -   81 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform
+  -   82 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+  ✓   83 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (970ms)
+  ✓   84 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render (1.4s)
+  ✓   85 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render (1.3s)
+  ✓   86 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render (987ms)
+  ✓   87 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform (503ms)
+  -   88 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+  ✘   89 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-comments-behind.spec.ts:4:5 › CAPTURE · panel paints above comments overlay in root stacking (11.2s)
+  ✘   90 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-counts.spec.ts:4:5 › CAPTURE · counts on Like / Share / Save (10.8s)
+  ✘   91 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-dev-roles.spec.ts:7:7 › CAPTURE · dev role URLs › desktop shows mobile-sized frame · banner under Broadcasted · roles differ (5.9s)
+  ✘   92 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-feed-prefs.spec.ts:4:5 › CAPTURE · Live Feed Preferences in 3-dot panel (11.2s)
+  ✘   93 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-heart-right.spec.ts:4:5 › CAPTURE · Like heart back on composer right · enlarged · count below (5.8s)
+  ✓   94 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-live-persona-bayu.spec.ts:4:5 › CAPTURE · Live persona Bayu (1.2s)
+  ✓   95 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-live-persona-hendra.spec.ts:4:5 › CAPTURE · Live persona Hendra (1.1s)
+  ✘   96 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-overlay-pref.spec.ts:4:5 › CAPTURE · Promotional overlays tri-state (11.1s)
+  ✘   97 [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-products-flow.spec.ts:4:5 › CAPTURE · products flow walk (11.1s)
+
+=== live-viewer-dev-video-3 @ 320px · innerWidth=320 · docScrollWidth=320
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-3 @ 360px · innerWidth=360 · docScrollWidth=360
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-3 @ 375px · innerWidth=375 · docScrollWidth=375
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-3 @ 390px · innerWidth=390 · docScrollWidth=390
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-3 @ 412px · innerWidth=412 · docScrollWidth=412
+  OK · no element overflows the viewport right edge
+  ✓   98 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-diag.spec.ts:34:7 › DIAG · composer overflow walk · live-viewer-dev-video-3 (2.3s)
+
+=== live-viewer-dev-video-1 @ 320px · innerWidth=320 · docScrollWidth=320
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-1 @ 360px · innerWidth=360 · docScrollWidth=360
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-1 @ 375px · innerWidth=375 · docScrollWidth=375
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-1 @ 390px · innerWidth=390 · docScrollWidth=390
+  OK · no element overflows the viewport right edge
+
+=== live-viewer-dev-video-1 @ 412px · innerWidth=412 · docScrollWidth=412
+  OK · no element overflows the viewport right edge
+  ✓   99 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-diag.spec.ts:34:7 › DIAG · composer overflow walk · live-viewer-dev-video-1 (2.6s)
+  ✘  100 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 320px · textarea stays inside the viewport right edge (909ms)
+  ✘  101 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 360px · textarea stays inside the viewport right edge (862ms)
+  ✘  102 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 375px · textarea stays inside the viewport right edge (709ms)
+  ✘  103 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 390px · textarea stays inside the viewport right edge (868ms)
+  ✘  104 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 412px · textarea stays inside the viewport right edge (873ms)
+  ✘  105 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 320px · textarea stays inside the viewport right edge (816ms)
+  ✘  106 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 360px · textarea stays inside the viewport right edge (884ms)
+  ✘  107 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 375px · textarea stays inside the viewport right edge (944ms)
+  ✘  108 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 390px · textarea stays inside the viewport right edge (853ms)
+  ✘  109 [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 412px · textarea stays inside the viewport right edge (838ms)
+  ✓  110 [mobile-chromium-pixel7-live-public] › tests\e2e\create-page-visual.spec.ts:9:5 › diagnostic · /create at Pixel 7 mobile viewport (7.2s)
+{
+  "url": "http://localhost:3008/nex-native/create",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "panel_bbox": null,
+  "main_bbox": null,
+  "cards_count": 0,
+  "html_bg": "rgb(245, 237, 211) url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\") no-repeat fixed 50% 50% / 100% 100% padding-box border-box",
+  "body_bg": "rgb(245, 237, 211) url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\") no-repeat fixed 50% 50% / 100% 100% padding-box border-box",
+  "stage_bbox": {
+    "bbox": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    "overflow": "hidden",
+    "background": "rgb(245, 237, 211) url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\") no-repeat fixed 50% 50% / 100% 100% padding-box border-",
+    "bg_image": "url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\")"
+  },
+  "frame_bbox": {
+    "bbox": {
+      "x": 576,
+      "y": 138,
+      "w": 288,
+      "h": 624
+    },
+    "overflow": "hidden auto"
+  },
+  "panel_computed": null,
+  "console_errors": [],
+  "page_errors": []
+}
+  ✘  111 [mobile-chromium-pixel7-live-public] › tests\e2e\create-page-visual.spec.ts:22:5 › diagnostic · /create at desktop viewport 1440x900 (13.8s)
+  ✓  112 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:19:7 › NEX Live · public surfaces · fail-open shape › central Live feed renders · honest empty state when no sessions (782ms)
+  ✓  113 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:37:7 › NEX Live · public surfaces · fail-open shape › viewer surface with a non-live session id · redirects to sign-in for guests (543ms)
+  ✓  114 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:49:7 › NEX Live · public surfaces · fail-open shape › viewer surface · ?product= malformed · page still renders without 500 (515ms)
+  ✓  115 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:65:7 › NEX Live · public surfaces · fail-open shape › Shop Contacts page · guests redirect to sign-in (478ms)
+  ✘  116 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:73:7 › NEX Live · public surfaces · fail-open shape › directory landing · no live sessions · renders without live chips (4.8s)
+  ✘  117 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:44:7 › NEX Live · uploaded-video viewer · in-browser journey › drawer landing redirects to the first video (10.9s)
+  ✘  118 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:51:7 › NEX Live · uploaded-video viewer · in-browser journey › video element has src + is playing (5.7s)
+  ✘  119 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:76:7 › NEX Live · uploaded-video viewer · in-browser journey › video fits full-bleed mobile viewport · objectFit cover (portrait) or contain (landscape) (8.8s)
+  ✘  120 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:118:7 › NEX Live · uploaded-video viewer · in-browser journey › sound · tries unmuted autoplay first · falls back to muted + chip only when browser blocks (5.7s)
+  ✘  121 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:155:7 › NEX Live · uploaded-video viewer · in-browser journey › header · Live {Country} title + magnifying glass + 3-dot drawer visible top-row (5.7s)
+  ✘  122 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:190:7 › NEX Live · uploaded-video viewer · in-browser journey › magnifying glass opens 12-tile category grid overlay (10.7s)
+  ✘  123 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:207:7 › NEX Live · uploaded-video viewer · in-browser journey › category chain · tapping Travel tile routes to first temple video with chain context (10.8s)
+  ✘  124 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:233:7 › NEX Live · uploaded-video viewer · in-browser journey › category chain · swipe up advances temple → volcano → beach (10.7s)
+  ✘  125 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:286:7 › NEX Live · uploaded-video viewer · in-browser journey › 3-dot drawer trigger · ControlDrawer mounted (same as /contacts) (5.8s)
+  ✘  126 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:304:7 › NEX Live · uploaded-video viewer · in-browser journey › Like button · toggles aria-pressed on click (5.8s)
+  ✘  127 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:315:7 › NEX Live · uploaded-video viewer · in-browser journey › Big CTA · uploaded video with no business → View Market, routes to directory (5.8s)
+  ✘  128 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:336:7 › NEX Live · uploaded-video viewer · in-browser journey › Go Live · anchor renders in footer · routes to broadcaster surface (5.7s)
+  ✘  129 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:351:7 › NEX Live · uploaded-video viewer · in-browser journey › footer actions · all 4 buttons visible without overflow on 412px viewport (5.8s)
+  ✘  130 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:375:7 › NEX Live · uploaded-video viewer · in-browser journey › Share · fallback popover opens when navigator.share is unavailable (5.7s)
+  ✘  131 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:400:7 › NEX Live · uploaded-video viewer · in-browser journey › Share · bottom sheet · NEX contact mode renders contact rows (10.8s)
+  ✘  132 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:414:7 › NEX Live · uploaded-video viewer · in-browser journey › Posted date · uploaded video chip shows 'Posted {localized date}' (5.8s)
+  ✘  133 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:428:7 › NEX Live · uploaded-video viewer · in-browser journey › Send button · gated by non-empty composer text (5.8s)
+  ✘  134 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:458:7 › NEX Live · uploaded-video viewer · in-browser journey › swipe up (synthesised pointer drag) navigates to the next video (5.7s)
+  ✘  135 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:504:7 › NEX Live · uploaded-video viewer · in-browser journey › mouse drag up (desktop · real page.mouse API) navigates to the next video (5.8s)
+  ✘  136 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:529:7 › NEX Live · uploaded-video viewer · in-browser journey › mouse wheel down · navigates to next · cooldown prevents double-skip (5.7s)
+  ✘  137 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:546:7 › NEX Live · uploaded-video viewer · in-browser journey › keyboard ArrowDown mirrors swipe up · navigates to next (5.8s)
+  ✘  138 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:590:7 › NEX Live · uploaded-video viewer · in-browser journey › full viewer screenshot · owner-reviewable artifact (5.7s)
+  ✘  139 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:607:7 › NEX Live · explicit non-claims › does NOT require a separate streaming app · browser-only (10.8s)
+  ✓  140 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:620:7 › NEX Live · explicit non-claims › does NOT prove a Live WebRTC session end-to-end (5ms)
+  ✘  141 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-viewer-footer.spec.ts:32:7 › NEX Live viewer footer · visibility verification › guest viewer redirects to sign-in (auth-gated · no footer visible to anon) (10.7s)
+  ✓  142 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-viewer-footer.spec.ts:42:7 › NEX Live viewer footer · visibility verification › viewer page HTML carries the three footer button hooks (SSR shape) (758ms)
+  ✘  143 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:23:7 › NEX Live · visual verification · mobile viewport › feed renders at mobile viewport · guest sees list + no Go Live CTA (5.9s)
+  ✘  144 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:46:7 › NEX Live · visual verification · mobile viewport › viewer page redirects guests to sign-in · artifact captured (10.7s)
+  ✘  145 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:62:7 › NEX Live · visual verification · mobile viewport › feed empty-state is honestly labelled when no live sessions exist (828ms)
+  ✘  146 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:77:7 › NEX Live · visual verification · mobile viewport › Shop Contacts page redirects guests to sign-in (10.8s)
+  ✓  147 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:87:7 › NEX Live · explicit non-claims › DOES NOT prove the signed-in viewer footer renders · needs auth fixture (6ms)
+  ✓  148 [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:99:7 › NEX Live · explicit non-claims › vertical swipe-nav on the viewer surface is implemented · interactive E2E needs auth fixture (1ms)
+  ✘  149 [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-3-dots-container.spec.ts:21:5 › Live viewer · 3-dot panel adopts Category-tile palette + closes on outside tap (5.4s)
+  ✘  150 [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-products-flow.spec.ts:22:5 › Live viewer · broadcaster · 3-dot panel + products flow (11.0s)
+  ✘  151 [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-products-flow.spec.ts:140:5 › Live viewer · non-broadcaster · no Products pill, no picker (10.9s)
+  ✘  152 [mobile-chromium-pixel7-live-public] › tests\e2e\live-header-ping-and-ai-chip.spec.ts:17:5 › Live viewer header · white ping lines · red tower · AI chip without parens (859ms)
+  ✘  153 [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:44:7 › Live Library · 3-tile control panel › renders Go Live + Create + Studio tiles · no retired Record/Draft/Insights (11.2s)
+  ✘  154 [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:74:7 › Live Library · 3-tile control panel › Create tile routes to /nex-native/create and the 5-card entry renders (11.2s)
+  ✘  155 [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:121:7 › Live Library · 3-tile control panel › Studio tile routes to /nex-native/live-commerce/studio and surface renders (11.2s)
+  ✘  156 [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:148:7 › Live Library · 3-tile control panel › Go Live tile routes to /nex-native/live-commerce/welcome (11.1s)
+  ✓  157 [mobile-chromium-pixel7-live-public] › tests\e2e\sign-in-composer-overflow.spec.ts:14:7 › sign-in surface · no textarea/input overflows the viewport @ 320px (1.5s)
+  ✓  158 [mobile-chromium-pixel7-live-public] › tests\e2e\sign-in-composer-overflow.spec.ts:14:7 › sign-in surface · no textarea/input overflows the viewport @ 360px (1.5s)
+  ✓  159 [mobile-chromium-pixel7-live-public] › tests\e2e\sign-in-composer-overflow.spec.ts:14:7 › sign-in surface · no textarea/input overflows the viewport @ 375px (1.4s)
+  ✓  160 [mobile-chromium-pixel7-live-public] › tests\e2e\sign-in-composer-overflow.spec.ts:14:7 › sign-in surface · no textarea/input overflows the viewport @ 412px (1.6s)
+  -  161 [stage-a-pixel7] › tests\e2e\diagnostic-ask-seller-send-handler.spec.ts:23:5 › DIAGNOSTIC · capture send-path state
+  ✓  162 [stage-a-pixel7] › tests\e2e\fixture-harness-smoke.spec.ts:22:5 › fixture harness · create+teardown round-trip (5.7s)
+  ✓  163 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin (915ms)
+  ✓  164 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/sign-in · body occupies full viewport with zero margin (595ms)
+  ✓  165 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin (4.8s)
+  ✓  166 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:107:7 › T-5.1 · full-viewport rule · Pixel 7 › sealed viewport meta is present on the root layout (1.4s)
+  ✓  167 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native · full-viewport CSS contract + post-scroll stability (1.3s)
+  ✓  168 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/sign-in · full-viewport CSS contract + post-scroll stability (2.3s)
+  ✓  169 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/directory · full-viewport CSS contract + post-scroll stability (4.0s)
+  ✓  170 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/why-nex · full-viewport CSS contract + post-scroll stability (1.1s)
+  ✓  171 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/switch · full-viewport CSS contract + post-scroll stability (3.8s)
+  ✓  172 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/pricing · full-viewport CSS contract + post-scroll stability (2.5s)
+  ✓  173 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:137:7 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › none of the public pillar surfaces leak overflow:scroll on <html> (blocks the full-bleed splash contract) (5.1s)
+  ✓  174 [stage-a-pixel7] › tests\e2e\journey-ask-seller-nonowner-full.spec.ts:51:7 › Cycle 9 · non-owner Ask Seller · observable send › SUCCESS · non-owner lands on conversation · Send to shop · chip clears + DB confirms conversation/participants/message (31.7s)
+  -  175 [stage-a-pixel7] › tests\e2e\journey-ask-seller-nonowner-full.spec.ts:344:7 › Cycle 9 · non-owner Ask Seller · observable send › ERROR PATH · Ask Seller surfaces honest error label when send fails
+  ✓  176 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:87:7 › Cycle 9 · adversarial regression · buyer purchase-intent › tampered `?next=` · hidden sign-in input must NOT render for any malicious shape (4.9s)
+  ✓  177 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:125:7 › Cycle 9 · adversarial regression · buyer purchase-intent › direct-link deep entry · guest Add-to-Cart preserves `next=` to sign-in (1.5s)
+  ✓  178 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:160:7 › Cycle 9 · adversarial regression · buyer purchase-intent › reload on sign-in with `?next=` preserves the hidden `next` input value (1.8s)
+  ✓  179 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:191:7 › Cycle 9 · adversarial regression · buyer purchase-intent › duplicate guest Add-to-Cart taps · single auth-gate banner · idempotent (2.7s)
+  -  180 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:238:9 › Cycle 9 · adversarial regression · buyer purchase-intent › signed-in cart dedup › tapping Add-to-Cart repeatedly dedupes to a single cart row
+  ✓  181 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:334:9 › Cycle 9 · adversarial regression · buyer purchase-intent › back-nav after resumed sign-in › goBack from a second route returns to product without re-mounting auth-gate (25.3s)
+  ✓  182 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:45:7 › T-2.5 · buyer checkout + price validation › direct shop → direct product · add-to-cart affordance surfaces (28.9s)
+  -  183 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:123:7 › T-2.5 · buyer checkout + price validation › checkout · cart JSONB snapshot shape persisted in nex_order
+  -  184 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:133:7 › T-2.5 · buyer checkout + price validation › price-tamper rejection · modified unit_price must be refused server-side
+  ✓  185 [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:124:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · valid credentials with `next=/product/<id>` returns buyer to the product (7.4s)
+  ✓  186 [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:174:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · `?next=` is URL-level rejected by safeNext when the form POSTS without the hidden field (defence-in-depth) (4.3s)
+  ✓  187 [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:233:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · absent `next` lands on default `/nex-native/contacts` (7.6s)
+  ✓  188 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:94:7 › Cycle 8 · signed-out buyer · purchase intent preservation › end-to-end · guest → Add to Cart gate → Dev Pass → return to product → add → survive refresh (9.0s)
+  ✓  189 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:230:7 › Cycle 8 · signed-out buyer · purchase intent preservation › new-account creation · signup form wiring preserves ?next= (URL-level only · end-to-end BLOCKED without approved buyer) (1.2s)
+  ✓  190 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:266:7 › Cycle 8 · signed-out buyer · purchase intent preservation › Ask Seller sealed contract · ?open-chat=1&product=<id> redirects signed-in non-owner to product-context conversation (13.1s)
+  ✓  191 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:306:7 › Cycle 8 · signed-out buyer · purchase intent preservation › independent challenge · browser back after resumed sign-in does not resurrect auth-gate (6.9s)
+  ✓  192 [stage-a-pixel7] › tests\e2e\journey-buyer-signup-wiring.spec.ts:88:7 › Cycle 9 · signup form wiring (non-mutating) › signup form · wiring + next-preservation · NO submit (1.5s)
+  ✓  193 [stage-a-pixel7] › tests\e2e\journey-buyer-signup-wiring.spec.ts:140:7 › Cycle 9 · signup form wiring (non-mutating) › signup mode toggle · ?mode=signup round-trips the `next` to sign-in form when mode is cleared (2.1s)
+  ✓  194 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-document.spec.ts:21:7 › T-1.2 · encrypted document attachment › POST /api/nex-native/attachment/encrypted · pdf extension accepted (3.3s)
+  ✓  195 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:35:7 › T-1.2 · encrypted image attachment › POST /api/nex-native/attachment/encrypted · returns private bucket path (1.2s)
+  -  196 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:81:7 › T-1.2 · encrypted image attachment › round-trip decrypt · BLOCKED-PENDING-SECOND-TEST-ACCOUNT
+  -  197 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-fail-safe-503.spec.ts:34:7 › T-1.2 · fail-safe 503 · observable only when private bucket absent › encrypted route: when 503 is returned, body + Retry-After match sealed contract
+  ✓  198 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-fail-safe-503.spec.ts:64:7 › T-1.2 · fail-safe 503 · observable only when private bucket absent › standard route: default 410 Gone under NEX_CHAT_PLAINTEXT_FREEZE (default ON) (2.6s)
+  -  199 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-legacy-public-envelope-resolve.spec.ts:31:7 › T-1.2 · legacy public-envelope resolve › resolver returns a playback URL for a legacy row · BLOCKED-PENDING-SEED
+  -  200 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-legacy-public-envelope-resolve.spec.ts:40:7 › T-1.2 · legacy public-envelope resolve › resolver does NOT silently fall back to plaintext for encrypted envelopes
+  ✓  201 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-non-participant-404.spec.ts:32:7 › T-1.2 · signed-URL mint non-participant 404 (non-leaking) › GET with a fabricated storage_path responds 404 · body does not disclose state (3.4s)
+  ✓  202 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:53:7 › T-1.1 · chat send end-to-end › sanity · /chat redirects to /contacts (retired hub) (7.7s)
+  ✓  203 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:67:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route (14.7s)
+  -  204 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:125:7 › T-1.1 · chat send end-to-end › offline outbox · send under forced-offline reflects pending state
+  -  205 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:139:7 › T-1.1 · chat send end-to-end › retract · sender-side retract affordance renders in the message menu
+  -  206 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:147:7 › T-1.1 · chat send end-to-end › delete-for-me · distinct label from retract
+  -  207 [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:23:7 › T-3.1 · apply free chat theme › theme library responds and renders at least one card
+  -  208 [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:51:7 › T-3.1 · apply free chat theme › applying a free theme does not surface a paywall
+  -  209 [stage-a-pixel7] › tests\e2e\journey-chat-theme-first-free-apply.spec.ts:27:7 › T-3.1 · first-free apply › first paid-theme apply · completes without paywall
+  -  210 [stage-a-pixel7] › tests\e2e\journey-chat-theme-first-free-apply.spec.ts:37:7 › T-3.1 · first-free apply › second paid-theme apply · triggers Themes+ subscribe prompt
+  -  211 [stage-a-pixel7] › tests\e2e\journey-chat-theme-region-unsupported-waitlist.spec.ts:29:7 › T-3.3 · unsupported region · waitlist, never USD fallback › unsupported region CTA shows WAITLIST + no USD amount
+  ✓  212 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:35:7 › L-011 · chat themes three-category hub › hub renders exactly three cards and each targets its category route (842ms)
+  ✓  213 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:58:7 › L-011 · chat themes three-category hub › each hub card navigates to its library sub-route (7.6s)
+  ✓  214 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:69:9 › L-011 · chat themes three-category hub › /nex-native/chat-themes-library/plain · library shell responds 200 and renders the plain library (4.5s)
+  ✓  215 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:69:9 › L-011 · chat themes three-category hub › /nex-native/chat-themes-library/small · library shell responds 200 and renders the small library (1.0s)
+  ✓  216 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:69:9 › L-011 · chat themes three-category hub › /nex-native/chat-themes-library/full-image · library shell responds 200 and renders the full-image library (2.5s)
+  -  217 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:64:7 › T-2.2 · create shop journey › baseline · /manage redirects to setup dispatcher iff the account has no business
+  -  218 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:95:7 › T-2.2 · create shop journey › setup dispatcher routes an empty account to business-details first
+  ✓  219 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:123:7 › T-2.2 · create shop journey › harness · fresh fixture account can own a nex_business row with correct FK + slug + teardown (4.7s)
+  ✓  220 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:204:7 › T-2.2 · create shop journey › real browser journey · shop-less account → /manage → business-details → submit → nex_business row persists (33.8s)
+  -  221 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:49:7 › T-4.6 · directory browse + filter (signed-out) › directory landing responds 200 and renders a list surface
+  -  222 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:81:7 › T-4.6 · directory browse + filter (signed-out) › search / filter affordance is present and interactive
+  -  223 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:113:7 › T-4.6 · directory browse + filter (signed-out) › tapping a business card navigates to a [businessSlug] route (no sign-in bounce)
+  ✓  224 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:33:7 › T-4.1 · first-user A → contacts → first thread › sanity · signed-in /home reachable (1.8s)
+  ✓  225 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:44:7 › T-4.1 · first-user A → contacts → first thread › home · first-visit invitation renders iff conversationCount === 0 (1.7s)
+  ✓  226 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:61:7 › T-4.1 · first-user A → contacts → first thread › contacts · list surface responds and renders a list region (8.2s)
+  ✓  227 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:77:7 › T-4.1 · first-user A → contacts → first thread › contacts · add-contact affordance is reachable (does not auto-persist) (7.7s)
+  ✓  228 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:95:7 › T-4.1 · first-user A → contacts → first thread › first-thread · opening a conversation route responds (no new row inserted) (8.3s)
+  -  229 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:110:7 › T-4.1 · first-user A → contacts → first thread › outbound first message · BLOCKED pending second test account
+  ✓  230 [stage-a-pixel7] › tests\e2e\journey-full-guest-signup-pick-theme.spec.ts:166:5 › full guest→signup→theme journey · pick-theme account-wall handoff applies chosen theme (25.5s)
+  -  231 [stage-a-pixel7] › tests\e2e\journey-guest-chat-signup-cta.spec.ts:66:6 › guest-chat signup CTA · href targets sealed signup URL with next preserved
+  ✓  232 [stage-a-pixel7] › tests\e2e\journey-kind-select-signup.spec.ts:31:5 › kind-select error handler · sealed signup URL serves and preserves (e,m) params (1.3s)
+  ✓  233 [stage-a-pixel7] › tests\e2e\journey-manage-shopless-redirect.spec.ts:53:7 › defect #73 regression · /nex-native/manage shop-less redirect › shop-less fixture visiting /manage redirects to /manage/shop/setup via RSC streaming (23.3s)
+  ✓  234 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8-ui-loop.spec.ts:112:7 › T-8 · merchant order full UI loop › merchant signs in · sees order · opens detail · marks paid · marks completed · ownership gate holds · zero residuals (1.3m)
+  ✓  235 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8.spec.ts:71:7 › T-8 · merchant order journey › created order persists · event row written · state transition observable (7.8s)
+  ✓  236 [stage-a-pixel7] › tests\e2e\journey-mid-checkout-session-expired.spec.ts:31:7 › T-4.5 · mid-checkout session-expired recovery › manage orders surface responds under a signed-in merchant account (2.5s)
+  -  237 [stage-a-pixel7] › tests\e2e\journey-mid-checkout-session-expired.spec.ts:48:7 › T-4.5 · mid-checkout session-expired recovery › Finish-payment affordance renders for an awaiting_payment order
+  ✓  238 [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:36:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps (8.9s)
+  ✓  239 [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:66:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details (18.8s)
+  ✓  240 [stage-a-pixel7] › tests\e2e\journey-payment-status-t10.spec.ts:95:7 › T-10 · payment status + notifications › merchant-owned payment method tagged · state transition recorded · no false verification claim (7.9s)
+  ✓  241 [stage-a-pixel7] › tests\e2e\journey-payment-status-t10.spec.ts:182:7 › T-10 · payment status + notifications › duplicate 'order_paid' notification insert dedupes via (recipient, source_ref) UNIQUE (7.9s)
+  ✓  242 [stage-a-pixel7] › tests\e2e\journey-paypal-webhook-t10.spec.ts:80:7 › T-10b · PayPal webhook verification › method guard · GET returns 405 (1.6s)
+  ✓  243 [stage-a-pixel7] › tests\e2e\journey-paypal-webhook-t10.spec.ts:89:7 › T-10b · PayPal webhook verification › config branch · creds missing short-circuits before any state change (7.0s)
+  -  244 [stage-a-pixel7] › tests\e2e\journey-paypal-webhook-t10.spec.ts:201:7 › T-10b · PayPal webhook verification › positive-path · live verify-webhook-signature · requires PAYPAL_* creds
+  ✓  245 [stage-a-pixel7] › tests\e2e\journey-pending-wall-race-conditions.spec.ts:234:7 › pending-wall one-shot · race-condition regression › TEST A · direct re-visit to /post-signup-apply after apply must not replay (30.0s)
+  ✓  246 [stage-a-pixel7] › tests\e2e\journey-pending-wall-race-conditions.spec.ts:336:7 › pending-wall one-shot · race-condition regression › TEST B · browser back-navigation after apply must not resurrect cookie or double-apply (31.3s)
+  ✓  247 [stage-a-pixel7] › tests\e2e\journey-pending-wall-security-regressions.spec.ts:174:7 › G-4 P2 · pending-wall security regressions › tampered premium payload · premium_required bounce · no DB write · cookie consumed (6.6s)
+  ✓  248 [stage-a-pixel7] › tests\e2e\journey-pending-wall-security-regressions.spec.ts:245:7 › G-4 P2 · pending-wall security regressions › Origin-only probe (no Sec-Fetch-Site) with foreign Origin · bounce to /contacts · DB untouched · cookie preserved (4.8s)
+  ✓  249 [stage-a-pixel7] › tests\e2e\journey-pending-wall-security-regressions.spec.ts:323:7 › G-4 P2 · pending-wall security regressions › invalid nextUrl variants · each rejected by decode · fallback to /contacts · DB untouched (20.8s)
+  ✓  250 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:168:7 › G-4 · post-signup-apply pick-theme handoff › valid pick-theme cookie → redirect → applied chip (no second Activate) (9.8s)
+  ✓  251 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:244:7 › G-4 · post-signup-apply pick-theme handoff › one-shot · second visit with no cookie redirects to /contacts (8.9s)
+  ✓  252 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:267:7 › G-4 · post-signup-apply pick-theme handoff › REAL one-shot · cookie cleared on consumption · user's intervening theme choice preserved on later visit (19.0s)
+  ✓  253 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:367:7 › G-4 · post-signup-apply pick-theme handoff › CSRF defence · Sec-Fetch-Site: cross-site must not consume cookie or mutate DB (4.4s)
+  ✓  254 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:62:7 › T-4.3 · State-D returning signed-out user → sign-in › entry · signed-out user hitting the app root lands on welcome, not /home (944ms)
+  ✓  255 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:74:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 signed-out new-device branch · no-JS auto-divert to /free-chat?show-themes=1 EXACT (1.1s)
+  -  256 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:139:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 signed-in SOS-configured branch · real <a href> anchor requirement
+  ✓  257 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:159:7 › T-4.3 · State-D returning signed-out user → sign-in › destination · /sign-in renders and is interactive (unknown device branch) (2.0s)
+  ✓  258 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:187:7 › T-4.3 · State-D returning signed-out user → sign-in › known-device branch · face/WebAuthn affordance surfaces when the device-known marker is present (1.9s)
+  ✓  259 [stage-a-pixel7] › tests\e2e\journey-selected-theme-cookie-signup.spec.ts:158:5 › SELECTED_THEME_COOKIE · guest previews free theme then signs up · chosen theme is auto-applied (21.3s)
+  ✓  260 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:42:7 › T-4.6 · signed-out buy intent → auth-gate › auth-gate banner renders when a signed-out user taps Buy on a product (8.0s)
+  -  261 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:141:7 › T-4.6 · signed-out buy intent → auth-gate › close dismisses the auth-gate without navigating off the product page
+  -  262 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:150:7 › T-4.6 · signed-out buy intent → auth-gate › sign-in CTA preserves intent via ?next=
+  ✓  263 [stage-a-pixel7] › tests\e2e\journey-stripe-webhook-t10.spec.ts:81:7 › T-10a · Stripe webhook verification › method guard · GET returns 405 with Allow: POST (1.7s)
+  ✓  264 [stage-a-pixel7] › tests\e2e\journey-stripe-webhook-t10.spec.ts:94:7 › T-10a · Stripe webhook verification › unsigned/bad-sig POST never reaches state change · opaque failure surface (9.8s)
+  -  265 [stage-a-pixel7] › tests\e2e\journey-stripe-webhook-t10.spec.ts:246:7 › T-10a · Stripe webhook verification › positive-path · valid signature transitions state · dedup replay same event
+  ✓  266 [stage-a-pixel7] › tests\e2e\journey-theme-viewer-organic-signup.spec.ts:25:5 › guest on theme viewer · GuestSignupBanner CTA targets sealed signup URL · destination is live (6.3s)
+  ✓  267 [stage-a-pixel7] › tests\e2e\journey-unauth-checkout-signup-return.spec.ts:28:5 › unauth buyer clicking checkout · sealed signup URL with next preserved (1.7s)
+  -  268 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:254:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid vault_tier + no shop · entitled · redirect to /vault/setup
+  ✓  269 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:284:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid shop_tier + null vault entitlement · NOT entitled · paywall (9.8s)
+  ✓  270 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:312:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › no shop + no vault entitlement · NOT entitled · paywall (6.3s)
+  -  271 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:328:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › active vault_trial_used_at (3 days old) · entitled · redirect to /vault/setup
+  ✓  272 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:359:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › expired vault_trial_used_at (8 days old) · NOT entitled · paywall (10.3s)
+  -  273 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:379:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › vault_tier='gratis' with no trial · NOT entitled · paywall
+  ✓  274 [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:34:5 › visitor interact popup · claim CTA preserves claim param, targets sealed signup URL (2.4s)
+  ✓  275 [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:71:5 › control-drawer visitor-claim pill · links to sealed signup URL with claim param preserved (965ms)
+  ✓  276 [stage-a-pixel7] › tests\e2e\journey-welcome-intent-pick-theme.spec.ts:28:5 › welcome-intent branch · redirect target serves sealed signup URL with intent=pick-theme (1.3s)
+  -  277 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:70:7 › T-5.3 · location permission explanation card › Emergency Help landing does NOT auto-request geolocation on load
+  -  278 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:105:7 › T-5.3 · location permission explanation card › sealed explanation copy renders somewhere in the Emergency Help setup surface
+  -  279 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:128:7 › T-5.3 · location permission explanation card › denial branch · user denying location does NOT block SOS setup progression
+  ✓  280 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating (1.0s)
+  ✓  281 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/sign-in · every discovered anchor responds <500 and respects gating (1.7s)
+  ✓  282 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/install · every discovered anchor responds <500 and respects gating (1.4s)
+  ✓  283 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/emergency-help · every discovered anchor responds <500 and respects gating (1.1s)
+  ✓  284 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:161:7 › T-5.5 · owner-corrected NAV reachability crawl › direct shop + product routes respond <500 when owner-seeded fixtures are present (2.0s)
+  ✓  285 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:195:7 › T-5.5 · owner-corrected NAV reachability crawl › documented direct-URL-only routes are NOT orphaned by the allowlist (472ms)
+  ✓  286 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (984ms)
+  ✓  287 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render (762ms)
+  ✓  288 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render (3.0s)
+  ✓  289 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render (2.2s)
+  ✓  290 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform (703ms)
+  -  291 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+  ✓  292 [stage-a-pixel7] › tests\e2e\regression-l013-canonical-connectivity.spec.ts:76:7 › L-013 · NEX_POSTGRES_URL canonical connectivity › SELECT 1 responds within 3 s (1.1s)
+  ✓  293 [stage-a-pixel7] › tests\e2e\regression-l013-canonical-connectivity.spec.ts:84:7 › L-013 · NEX_POSTGRES_URL canonical connectivity › nex.business_canonical schema is reachable (count is a non-negative int) (230ms)
+  ✓  294 [stage-a-pixel7] › tests\e2e\regression-l013-canonical-connectivity.spec.ts:95:7 › L-013 · NEX_POSTGRES_URL canonical connectivity › public.nex_business (live directory source) has rows (226ms)
+  ✓  295 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:108:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › RSC /conversations/<random-uuid> renders not-found UI (no conversation content leaked) (2.4s)
+  ✓  296 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:151:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › API GET /chat/conversations/<random-uuid> returns a non-success guard response (4.3s)
+  ✓  297 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:185:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › API GET /chat/encrypted/since for a non-participant conversation is rejected (1.4s)
+  ✓  298 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:206:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › API POST /chat/encrypted for a non-participant conversation is rejected (1.8s)
+  ✓  299 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:255:9 › C11-SEC-3 · account-isolation + conversation boundary › unauthenticated boundary (no storage state) › unauth POST /chat/encrypted is rejected with 401 before any participant check (74ms)
+  ✓  300 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:279:9 › C11-SEC-3 · account-isolation + conversation boundary › unauthenticated boundary (no storage state) › unauth GET /chat/encrypted/since is rejected with 401 (67ms)
+  ✓  301 [stage-a-pixel7] › tests\e2e\smoke-switch-calculator.spec.ts:33:7 › NEX-007 · Switch calculator · public smoke › public route renders sealed markers + presets + reactive comparison (5.1s)
+  ✓  302 [stage-a-pixel7] › tests\e2e\smoke-why-nex.spec.ts:30:7 › NEX-006 · Why NEX · public smoke › public route renders sealed markers + LIVE advantage + Switch cross-link (651ms)
+  ✓  303 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:51:7 › C11-NEX-006 · Why NEX · editorial verification › renders exactly 7 advantage cards with sealed LIVE pair and no over-claim (766ms)
+  ✓  304 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:105:7 › C11-NEX-006 · Why NEX · editorial verification › renders the three sealed CTAs with correct hrefs (640ms)
+  ✓  305 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:126:7 › C11-NEX-006 · Why NEX · editorial verification › Honest limits footer declares nexapp.app domain + no outage-immunity promise (986ms)
+  ✓  306 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:152:7 › C11-NEX-006 · Why NEX · editorial verification › page does not make 'first / only / best' over-claims in user-facing copy (1.1s)
+
+
+  1) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/create-account"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('a[href*="/nex-native/create-account"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/create-account"]').first()
+
+
+      65 |     const createAccountLink = page.locator('a[href*="/nex-native/create-account"]').first();
+      66 |     const signInLink = page.locator('a[href*="/nex-native/sign-in"]').first();
+    > 67 |     await expect(createAccountLink).toBeVisible();
+         |                                     ^
+      68 |     await expect(signInLink).toBeVisible();
+      69 |   });
+      70 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:67:37
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome 
+
+    Error: redirect chain ends with 200
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      107 |       waitUntil: "networkidle",
+      108 |     });
+    > 109 |     expect(response?.status(), "redirect chain ends with 200").toBe(200);
+          |                                                                ^
+      110 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      111 |   });
+      112 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:109:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      117 |       waitUntil: "networkidle",
+      118 |     });
+    > 119 |     expect(response?.status()).toBe(200);
+          |                                ^
+      120 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      121 |   });
+      122 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:119:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      128 |       { waitUntil: "networkidle" },
+      129 |     );
+    > 130 |     expect(response?.status()).toBe(200);
+          |                                ^
+      131 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      132 |   });
+      133 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:130:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/create-account"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('a[href*="/nex-native/create-account"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/create-account"]').first()
+
+
+      144 |       .locator('a[href*="/nex-native/create-account"]')
+      145 |       .first();
+    > 146 |     await expect(createAccount).toBeVisible();
+          |                                 ^
+      147 |     const box = await createAccount.boundingBox();
+      148 |     expect(box, "create-account CTA has a bounding box").not.toBeNull();
+      149 |     // 24-px floor · we don't police a specific NEX tap-target spec here,
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:146:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:45:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › sanity · signed-in home is reachable (not bounced to /sign-in) 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native/home", waiting until "networkidle"
+
+
+      46 |     page,
+      47 |   }) => {
+    > 48 |     const response = await page.goto("/nex-native/home", {
+         |                                 ^
+      49 |       waitUntil: "networkidle",
+      50 |     });
+      51 |     expect(
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-authenticated-journey.spec.ts:48:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-authenticated-journ-4d109-ble-not-bounced-to-sign-in--mobile-chromium-pixel7-authed\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-authenticated-journ-4d109-ble-not-bounced-to-sign-in--mobile-chromium-pixel7-authed\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-authenticated-journ-4d109-ble-not-bounced-to-sign-in--mobile-chromium-pixel7-authed\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-authenticated-journ-4d109-ble-not-bounced-to-sign-in--mobile-chromium-pixel7-authed\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render 
+
+    Error: browserContext.close: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-11\traces\4d4131c7bcd4951e37f6-41d16e92b8da24fbdd4c.trace'
+
+    Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-11\3f431ec500b5bda4e98f5ed2550542ca.zip'
+
+    Error Context: test-results\pwa-install-cadence-T-5-2--7f285-ompt-banner-MUST-NOT-render-pwa-install-cadence-iphone-emulated\error-context.md
+
+  8) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-comments-behind.spec.ts:4:5 › CAPTURE · panel paints above comments overlay in root stacking 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      32 |
+      33 |   // Open panel.
+    > 34 |   await page.locator("[data-nex-live-footer-more]").click();
+         |                                                     ^
+      35 |   await page.waitForTimeout(260);
+      36 |
+      37 |   const stacking = await page.evaluate(() => {
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-comments-behind.spec.ts:34:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-comments-behind-C-bb6cc-ts-overlay-in-root-stacking-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\_capture-comments-behind-C-bb6cc-ts-overlay-in-root-stacking-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\_capture-comments-behind-C-bb6cc-ts-overlay-in-root-stacking-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\_capture-comments-behind-C-bb6cc-ts-overlay-in-root-stacking-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-counts.spec.ts:4:5 › CAPTURE · counts on Like / Share / Save 
+
+    TimeoutError: locator.textContent: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-like-count]')
+
+
+      10 |   });
+      11 |   await page.waitForTimeout(400);
+    > 12 |   const sellerLike = await page.locator("[data-nex-live-footer-like-count]").textContent();
+         |                                                                              ^
+      13 |   const sellerShare = await page.locator("[data-nex-live-footer-share-count]").textContent();
+      14 |   console.log(`SELLER like="${sellerLike}" share="${sellerShare}"`);
+      15 |   await page.screenshot({
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-counts.spec.ts:12:78
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-counts-CAPTURE-·-counts-on-Like-Share-Save-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\_capture-counts-CAPTURE-·-counts-on-Like-Share-Save-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\_capture-counts-CAPTURE-·-counts-on-Like-Share-Save-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\_capture-counts-CAPTURE-·-counts-on-Like-Share-Save-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-dev-roles.spec.ts:7:7 › CAPTURE · dev role URLs › desktop shows mobile-sized frame · banner under Broadcasted · roles differ 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-video-viewer-dev-banner-role="seller"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-video-viewer-dev-banner-role="seller"]') with timeout 5000ms
+      - waiting for locator('[data-nex-video-viewer-dev-banner-role="seller"]')
+
+
+      17 |     await expect(
+      18 |       page.locator('[data-nex-video-viewer-dev-banner-role="seller"]'),
+    > 19 |     ).toBeVisible();
+         |       ^
+      20 |     // Phone frame is applied.
+      21 |     const sellerFrame = await page.evaluate(() => {
+      22 |       const el = document.querySelector<HTMLElement>(
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-dev-roles.spec.ts:19:7
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-15\traces\27a594e3860774228918-b5ecb5455d99e6e457f5-recording1.network' -> 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-15\traces\27a594e3860774228918-b5ecb5455d99e6e457f5-recording1-pwnetcopy-1.network'
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-15\traces\27a594e3860774228918-b5ecb5455d99e6e457f5.trace'
+
+    Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-15\ad97861758c8a4faeb9a04fe47c2c8b7.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-dev-roles-CAPTURE-51b9b--Broadcasted-·-roles-differ-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-feed-prefs.spec.ts:4:5 › CAPTURE · Live Feed Preferences in 3-dot panel 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      15 |   // Open the 3-dot panel, then flip to Feed (preferences now live
+      16 |   // behind the Feed pill since bada8d4).
+    > 17 |   await page.locator("[data-nex-live-footer-more]").click();
+         |                                                     ^
+      18 |   await page.waitForTimeout(260);
+      19 |   await page.locator("[data-nex-live-footer-extra-feed]").click();
+      20 |   await page.waitForTimeout(260);
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-feed-prefs.spec.ts:17:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-feed-prefs-CAPTUR-f167b--Preferences-in-3-dot-panel-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\_capture-feed-prefs-CAPTUR-f167b--Preferences-in-3-dot-panel-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\_capture-feed-prefs-CAPTUR-f167b--Preferences-in-3-dot-panel-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\_capture-feed-prefs-CAPTUR-f167b--Preferences-in-3-dot-panel-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-heart-right.spec.ts:4:5 › CAPTURE · Like heart back on composer right · enlarged · count below 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-like]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-like]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-like]')
+
+
+      14 |   // Heart lives inside the composer-row column, NOT the action row.
+      15 |   const heart = page.locator("[data-nex-live-footer-like]");
+    > 16 |   await expect(heart).toBeVisible();
+         |                       ^
+      17 |   const inlineAttr = await heart.getAttribute("data-nex-live-footer-like-inline");
+      18 |   expect(inlineAttr).toBe("true");
+      19 |   const rowAttr = await heart.getAttribute("data-nex-live-footer-like-row");
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-heart-right.spec.ts:16:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-heart-right-CAPTU-9192b-ht-·-enlarged-·-count-below-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\_capture-heart-right-CAPTU-9192b-ht-·-enlarged-·-count-below-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\_capture-heart-right-CAPTU-9192b-ht-·-enlarged-·-count-below-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\_capture-heart-right-CAPTU-9192b-ht-·-enlarged-·-count-below-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-overlay-pref.spec.ts:4:5 › CAPTURE · Promotional overlays tri-state 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      11 |   await page.reload({ waitUntil: "domcontentloaded" });
+      12 |   await page.waitForTimeout(400);
+    > 13 |   await page.locator("[data-nex-live-footer-more]").click();
+         |                                                     ^
+      14 |   await page.waitForTimeout(260);
+      15 |   await page.locator("[data-nex-live-footer-extra-feed]").click();
+      16 |   await page.waitForTimeout(260);
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-overlay-pref.spec.ts:13:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-overlay-pref-CAPT-dd7b3-motional-overlays-tri-state-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\_capture-overlay-pref-CAPT-dd7b3-motional-overlays-tri-state-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\_capture-overlay-pref-CAPT-dd7b3-motional-overlays-tri-state-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\_capture-overlay-pref-CAPT-dd7b3-motional-overlays-tri-state-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14) [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-products-flow.spec.ts:4:5 › CAPTURE · products flow walk 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      13 |
+      14 |   // Step 2 · open the 3-dot panel.
+    > 15 |   await page.locator("[data-nex-live-footer-more]").click();
+         |                                                     ^
+      16 |   await page.waitForTimeout(260);
+      17 |   await page.screenshot({ path: `${dir}/02-panel-open.png`, fullPage: false });
+      18 |
+        at C:\Users\Victus\nexapp\tests\e2e\_capture-products-flow.spec.ts:15:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\_capture-products-flow-CAPTURE-·-products-flow-walk-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\_capture-products-flow-CAPTURE-·-products-flow-walk-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\_capture-products-flow-CAPTURE-·-products-flow-walk-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\_capture-products-flow-CAPTURE-·-products-flow-walk-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 320px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-fb347-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-fb347-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-fb347-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-fb347-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  16) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 360px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-a081e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-a081e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-a081e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-a081e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  17) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 375px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-d228a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-d228a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-d228a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-d228a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  18) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 390px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-5f0a4-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-5f0a4-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-5f0a4-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-5f0a4-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  19) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 412px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-e9185-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-e9185-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-e9185-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-e9185-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  20) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 320px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-de34a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-de34a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-de34a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-de34a-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  21) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 360px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-a90ea-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-a90ea-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-a90ea-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-a90ea-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  22) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 375px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-bbd5f-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-bbd5f-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-bbd5f-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-bbd5f-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  23) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 390px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-8755e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-8755e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-8755e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-8755e-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  24) [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 412px · textarea stays inside the viewport right edge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      64 |         });
+      65 |
+    > 66 |         expect(probe.found).toBe(true);
+         |                             ^
+      67 |         if (!probe.found) return;
+      68 |
+      69 |         console.log(
+        at C:\Users\Victus\nexapp\tests\e2e\composer-overflow-regression.spec.ts:66:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-1b802-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\composer-overflow-regressi-1b802-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\composer-overflow-regressi-1b802-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\composer-overflow-regressi-1b802-ide-the-viewport-right-edge-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  25) [mobile-chromium-pixel7-live-public] › tests\e2e\create-page-visual.spec.ts:22:5 › diagnostic · /create at desktop viewport 1440x900 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 5
+    Received: 0
+
+       98 |   // Fail if the panel is not inside the viewport · owner's black-screen
+       99 |   // symptom suggests this.
+    > 100 |   expect(info.cards_count).toBe(5);
+          |                            ^
+      101 | });
+      102 |
+        at C:\Users\Victus\nexapp\tests\e2e\create-page-visual.spec.ts:100:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\create-page-visual-diagnos-8f985-t-desktop-viewport-1440x900-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\create-page-visual-diagnos-8f985-t-desktop-viewport-1440x900-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\create-page-visual-diagnos-8f985-t-desktop-viewport-1440x900-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\create-page-visual-diagnos-8f985-t-desktop-viewport-1440x900-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  26) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:73:7 › NEX Live · public surfaces · fail-open shape › directory landing · no live sessions · renders without live chips 
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      94 |     // the exact copy, we just confirm it didn't blank or 5xx.
+      95 |     const bodyText = await page.locator("body").innerText();
+    > 96 |     expect(bodyText.length).toBeGreaterThan(0);
+         |                             ^
+      97 |   });
+      98 | });
+      99 |
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-public-surfaces.spec.ts:96:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-public-surfa-334af--renders-without-live-chips-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-public-surfa-334af--renders-without-live-chips-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-public-surfa-334af--renders-without-live-chips-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-public-surfa-334af--renders-without-live-chips-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  27) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:44:7 › NEX Live · uploaded-video viewer · in-browser journey › drawer landing redirects to the first video 
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /\/nex-native\/videos\/dev-video-1/
+    Received string:  "http://localhost:3008/nex-native/live-commerce"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      46 |     await expect
+      47 |       .poll(() => page.url(), { timeout: 10_000 })
+    > 48 |       .toMatch(/\/nex-native\/videos\/dev-video-1/);
+         |        ^
+      49 |   });
+      50 |
+      51 |   test("video element has src + is playing", async ({ page }) => {
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:48:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-ce2af-edirects-to-the-first-video-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-ce2af-edirects-to-the-first-video-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-ce2af-edirects-to-the-first-video-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-ce2af-edirects-to-the-first-video-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  28) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:51:7 › NEX Live · uploaded-video viewer · in-browser journey › video element has src + is playing 
+
+    Error: expect(locator).toBeAttached() failed
+
+    Locator: locator('[data-nex-video-viewer-element]')
+    Expected: attached
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeAttached" locator('[data-nex-video-viewer-element]') with timeout 5000ms
+      - waiting for locator('[data-nex-video-viewer-element]')
+
+
+      52 |     await page.goto(VIEWER_PATH);
+      53 |     const video = page.locator("[data-nex-video-viewer-element]");
+    > 54 |     await expect(video).toBeAttached({ timeout: 5000 });
+         |                         ^
+      55 |     const src = await video.getAttribute("src");
+      56 |     expect(src, "video src must be set").toBeTruthy();
+      57 |     expect(src).toContain("/dev/live-videos/");
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:54:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-b5a4b--element-has-src-is-playing-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-b5a4b--element-has-src-is-playing-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-b5a4b--element-has-src-is-playing-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-b5a4b--element-has-src-is-playing-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  29) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:76:7 › NEX Live · uploaded-video viewer · in-browser journey › video fits full-bleed mobile viewport · objectFit cover (portrait) or contain (landscape) 
+
+    Error: Timeout 8000ms exceeded while waiting on the predicate
+
+      87 |         { timeout: 8000 },
+      88 |       )
+    > 89 |       .toBe(true);
+         |        ^
+      90 |     const info = await video.evaluate((v) => {
+      91 |       const el = v as HTMLVideoElement;
+      92 |       return {
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:89:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-c1b70-trait-or-contain-landscape--mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-c1b70-trait-or-contain-landscape--mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-c1b70-trait-or-contain-landscape--mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-c1b70-trait-or-contain-landscape--mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  30) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:118:7 › NEX Live · uploaded-video viewer · in-browser journey › sound · tries unmuted autoplay first · falls back to muted + chip only when browser blocks 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer-element]') to be visible
+
+
+      121 |     await page.goto(VIEWER_PATH);
+      122 |     const video = page.locator("[data-nex-video-viewer-element]");
+    > 123 |     await video.waitFor({ timeout: 5000 });
+          |                 ^
+      124 |     // Owner directive 2026-10-24 · "sound is auto playing with each
+      125 |     // video live and always playing for live unless user will mute".
+      126 |     // After the mount effect runs the viewer settles into exactly
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:123:17
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-01981-ip-only-when-browser-blocks-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-01981-ip-only-when-browser-blocks-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-01981-ip-only-when-browser-blocks-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-01981-ip-only-when-browser-blocks-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  31) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:155:7 › NEX Live · uploaded-video viewer · in-browser journey › header · Live {Country} title + magnifying glass + 3-dot drawer visible top-row 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-video-viewer-header]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-video-viewer-header]') with timeout 5000ms
+      - waiting for locator('[data-nex-video-viewer-header]')
+
+
+      158 |     await page.goto(VIEWER_PATH);
+      159 |     const header = page.locator("[data-nex-video-viewer-header]");
+    > 160 |     await expect(header).toBeVisible({ timeout: 5000 });
+          |                          ^
+      161 |     // zIndex-stability check · the title stays visible after the video
+      162 |     // paints its first frame (regression guard for the Oct 24 bug).
+      163 |     const title = page.locator("[data-nex-video-viewer-title-primary]");
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:160:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-b95ab--dot-drawer-visible-top-row-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-b95ab--dot-drawer-visible-top-row-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-b95ab--dot-drawer-visible-top-row-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-b95ab--dot-drawer-visible-top-row-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  32) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:190:7 › NEX Live · uploaded-video viewer · in-browser journey › magnifying glass opens 12-tile category grid overlay 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer-search]')
+
+
+      192 |   }) => {
+      193 |     await page.goto(VIEWER_PATH);
+    > 194 |     await page.locator("[data-nex-video-viewer-search]").click();
+          |                                                          ^
+      195 |     const sheet = page.locator("[data-nex-category-sheet]");
+      196 |     await expect(sheet).toBeVisible({ timeout: 3000 });
+      197 |     const tiles = page.locator("[data-nex-category-tile]");
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:194:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-d7c91--tile-category-grid-overlay-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-d7c91--tile-category-grid-overlay-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-d7c91--tile-category-grid-overlay-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-d7c91--tile-category-grid-overlay-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  33) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:207:7 › NEX Live · uploaded-video viewer · in-browser journey › category chain · tapping Travel tile routes to first temple video with chain context 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer-search]')
+
+
+      212 |     // if that finished we show next close to that beaches".
+      213 |     await page.goto(VIEWER_PATH);
+    > 214 |     await page.locator("[data-nex-video-viewer-search]").click();
+          |                                                          ^
+      215 |     // Travel tile — pinned slug "travel" at position 3 (index 2).
+      216 |     await page
+      217 |       .locator('[data-nex-category-tile][data-nex-category-slug="travel"]')
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:214:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-dc6f7-le-video-with-chain-context-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-dc6f7-le-video-with-chain-context-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-dc6f7-le-video-with-chain-context-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-dc6f7-le-video-with-chain-context-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  34) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:233:7 › NEX Live · uploaded-video viewer · in-browser journey › category chain · swipe up advances temple → volcano → beach 
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /\/videos\/dev-video-1\?chain=travel/
+    Received string:  "http://localhost:3008/nex-native/live-commerce/discover/travel"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      238 |     await expect
+      239 |       .poll(() => page.url(), { timeout: 10_000 })
+    > 240 |       .toMatch(/\/videos\/dev-video-1\?chain=travel/);
+          |        ^
+      241 |     // Swipe up · should advance to volcano (dev-video-2).
+      242 |     await page.evaluate(() => {
+      243 |       const el = document.querySelector(
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:240:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-3f435-es-temple-→-volcano-→-beach-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-3f435-es-temple-→-volcano-→-beach-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-3f435-es-temple-→-volcano-→-beach-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-3f435-es-temple-→-volcano-→-beach-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  35) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:286:7 › NEX Live · uploaded-video viewer · in-browser journey › 3-dot drawer trigger · ControlDrawer mounted (same as /contacts) 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-video-viewer-menu-trigger]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-video-viewer-menu-trigger]') with timeout 5000ms
+      - waiting for locator('[data-nex-video-viewer-menu-trigger]')
+
+
+      295 |     await page.goto(VIEWER_PATH);
+      296 |     const wrapper = page.locator("[data-nex-video-viewer-menu-trigger]");
+    > 297 |     await expect(wrapper).toBeVisible({ timeout: 5000 });
+          |                           ^
+      298 |     // ControlDrawer renders a button as its trigger; it's inside
+      299 |     // the wrapper.
+      300 |     const triggerBtn = wrapper.locator("button").first();
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:297:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-9f53a-r-mounted-same-as-contacts--mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-9f53a-r-mounted-same-as-contacts--mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-9f53a-r-mounted-same-as-contacts--mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-9f53a-r-mounted-same-as-contacts--mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  36) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:304:7 › NEX Live · uploaded-video viewer · in-browser journey › Like button · toggles aria-pressed on click 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-like]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-like]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-like]')
+
+
+      305 |     await page.goto(VIEWER_PATH);
+      306 |     const like = page.locator("[data-nex-live-footer-like]");
+    > 307 |     await expect(like).toBeVisible({ timeout: 5000 });
+          |                        ^
+      308 |     expect(await like.getAttribute("aria-pressed")).toBe("false");
+      309 |     await like.click();
+      310 |     expect(await like.getAttribute("aria-pressed")).toBe("true");
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:307:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-2d884-ggles-aria-pressed-on-click-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-2d884-ggles-aria-pressed-on-click-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-2d884-ggles-aria-pressed-on-click-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-2d884-ggles-aria-pressed-on-click-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  37) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:315:7 › NEX Live · uploaded-video viewer · in-browser journey › Big CTA · uploaded video with no business → View Market, routes to directory 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-view-shop]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-view-shop]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-view-shop]')
+
+
+      324 |     await page.goto(VIEWER_PATH);
+      325 |     const cta = page.locator("[data-nex-live-footer-view-shop]");
+    > 326 |     await expect(cta).toBeVisible();
+          |                       ^
+      327 |     const kind = await cta.getAttribute("data-nex-live-footer-view-target-kind");
+      328 |     expect(kind).toBe("market");
+      329 |     await expect(cta).toHaveText(/Market/);
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:326:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-dace6--Market-routes-to-directory-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-dace6--Market-routes-to-directory-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-dace6--Market-routes-to-directory-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-dace6--Market-routes-to-directory-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  38) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:336:7 › NEX Live · uploaded-video viewer · in-browser journey › Go Live · anchor renders in footer · routes to broadcaster surface 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-go-live]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-go-live]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-go-live]')
+
+
+      339 |     await page.goto(VIEWER_PATH);
+      340 |     const goLive = page.locator("[data-nex-live-footer-go-live]");
+    > 341 |     await expect(goLive).toBeVisible({ timeout: 5000 });
+          |                          ^
+      342 |     const href = await goLive.getAttribute("href");
+      343 |     expect(href).toBe("/nex-native/live-commerce/enter-broadcast-room");
+      344 |     const tagName = await goLive.evaluate((el) => el.tagName.toLowerCase());
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:341:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-8135f-utes-to-broadcaster-surface-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-8135f-utes-to-broadcaster-surface-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-8135f-utes-to-broadcaster-surface-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-8135f-utes-to-broadcaster-surface-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  39) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:351:7 › NEX Live · uploaded-video viewer · in-browser journey › footer actions · all 4 buttons visible without overflow on 412px viewport 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-viewer-footer-actions]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-viewer-footer-actions]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-viewer-footer-actions]')
+
+
+      354 |     await page.goto(VIEWER_PATH);
+      355 |     const actionsRow = page.locator("[data-nex-live-viewer-footer-actions]");
+    > 356 |     await expect(actionsRow).toBeVisible();
+          |                              ^
+      357 |     const rowRect = await actionsRow.evaluate((el) => el.getBoundingClientRect());
+      358 |     // Each of the 4 buttons must fit inside the row without clipping.
+      359 |     const buttons = [
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:356:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-69236--overflow-on-412px-viewport-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-69236--overflow-on-412px-viewport-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-69236--overflow-on-412px-viewport-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-69236--overflow-on-412px-viewport-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  40) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:375:7 › NEX Live · uploaded-video viewer · in-browser journey › Share · fallback popover opens when navigator.share is unavailable 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-share]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-share]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-share]')
+
+
+      379 |     await page.goto(VIEWER_PATH);
+      380 |     const share = page.locator("[data-nex-live-footer-share]");
+    > 381 |     await expect(share).toBeVisible();
+          |                         ^
+      382 |     await share.click();
+      383 |     const sheet = page.locator("[data-nex-video-share-sheet]");
+      384 |     await expect(sheet).toBeVisible({ timeout: 3000 });
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:381:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-d8474-igator-share-is-unavailable-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-d8474-igator-share-is-unavailable-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-d8474-igator-share-is-unavailable-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-d8474-igator-share-is-unavailable-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  41) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:400:7 › NEX Live · uploaded-video viewer · in-browser journey › Share · bottom sheet · NEX contact mode renders contact rows 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-share]')
+
+
+      402 |   }) => {
+      403 |     await page.goto(VIEWER_PATH);
+    > 404 |     await page.locator("[data-nex-live-footer-share]").click();
+          |                                                        ^
+      405 |     await page
+      406 |       .locator("[data-nex-video-share-option-nex-contact]")
+      407 |       .click();
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:404:56
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-c560f-t-mode-renders-contact-rows-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-c560f-t-mode-renders-contact-rows-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-c560f-t-mode-renders-contact-rows-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-c560f-t-mode-renders-contact-rows-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  42) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:414:7 › NEX Live · uploaded-video viewer · in-browser journey › Posted date · uploaded video chip shows 'Posted {localized date}' 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-video-viewer-title-secondary]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-video-viewer-title-secondary]') with timeout 5000ms
+      - waiting for locator('[data-nex-video-viewer-title-secondary]')
+
+
+      420 |     // "Broadcasted {date}" rendered as the title's secondary line.
+      421 |     const subtitle = page.locator("[data-nex-video-viewer-title-secondary]");
+    > 422 |     await expect(subtitle).toBeVisible({ timeout: 5000 });
+          |                            ^
+      423 |     await expect
+      424 |       .poll(async () => (await subtitle.textContent()) ?? "", { timeout: 4000 })
+      425 |       .toMatch(/^Broadcasted\s+/);
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:422:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-286c4-hows-Posted-localized-date--mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-286c4-hows-Posted-localized-date--mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-286c4-hows-Posted-localized-date--mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-286c4-hows-Posted-localized-date--mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  43) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:428:7 › NEX Live · uploaded-video viewer · in-browser journey › Send button · gated by non-empty composer text 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-send]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-send]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-send]')
+
+
+      429 |     await page.goto(VIEWER_PATH);
+      430 |     const send = page.locator("[data-nex-live-footer-send]");
+    > 431 |     await expect(send).toBeVisible();
+          |                        ^
+      432 |     expect(await send.isDisabled()).toBe(true);
+      433 |     // Type via the composer textarea. NexTextarea on desktop
+      434 |     // Chromium is read-only when the keypad is active · in headless
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:431:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-9dbda--by-non-empty-composer-text-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-9dbda--by-non-empty-composer-text-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-9dbda--by-non-empty-composer-text-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-9dbda--by-non-empty-composer-text-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  44) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:458:7 › NEX Live · uploaded-video viewer · in-browser journey › swipe up (synthesised pointer drag) navigates to the next video 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer]') to be visible
+
+
+      461 |     await page.goto(VIEWER_PATH);
+      462 |     await page.waitForLoadState("domcontentloaded");
+    > 463 |     await page.locator("[data-nex-video-viewer]").waitFor({ timeout: 5000 });
+          |                                                   ^
+      464 |     // Owner directive 2026-10-24 · "swipe must be screen same as
+      465 |     // tiktok not button . but also active swipe up or down with
+      466 |     // mouse on computer". The viewer uses PointerEvents · we
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:463:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-53a01-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-53a01-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-53a01-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-53a01-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  45) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:504:7 › NEX Live · uploaded-video viewer · in-browser journey › mouse drag up (desktop · real page.mouse API) navigates to the next video 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer]') to be visible
+
+
+      507 |     await page.goto(VIEWER_PATH);
+      508 |     const viewer = page.locator("[data-nex-video-viewer]");
+    > 509 |     await viewer.waitFor({ timeout: 5000 });
+          |                  ^
+      510 |     // Owner directive 2026-10-24 · "also active swipe up or down with
+      511 |     // mouse on computer". Use Playwright's real mouse API · it drives
+      512 |     // the browser's native pointer-event pipeline including the
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:509:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-74526-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-74526-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-74526-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-74526-navigates-to-the-next-video-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  46) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:529:7 › NEX Live · uploaded-video viewer · in-browser journey › mouse wheel down · navigates to next · cooldown prevents double-skip 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer]') to be visible
+
+
+      531 |   }) => {
+      532 |     await page.goto(VIEWER_PATH);
+    > 533 |     await page.locator("[data-nex-video-viewer]").waitFor({ timeout: 5000 });
+          |                                                   ^
+      534 |     await page.evaluate(() => {
+      535 |       const el = document.querySelector("[data-nex-video-viewer]") as HTMLElement | null;
+      536 |       if (!el) throw new Error("viewer not mounted");
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:533:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-d05c5-oldown-prevents-double-skip-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-d05c5-oldown-prevents-double-skip-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-d05c5-oldown-prevents-double-skip-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-d05c5-oldown-prevents-double-skip-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  47) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:546:7 › NEX Live · uploaded-video viewer · in-browser journey › keyboard ArrowDown mirrors swipe up · navigates to next 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer]') to be visible
+
+
+      548 |   }) => {
+      549 |     await page.goto(VIEWER_PATH);
+    > 550 |     await page.locator("[data-nex-video-viewer]").waitFor({ timeout: 5000 });
+          |                                                   ^
+      551 |     // Owner directive 2026-10-25 (F3 corrective) · the viewer's
+      552 |     // keyboard handler is installed inside a `useEffect`, which
+      553 |     // React commits AFTER the first paint. `waitFor` on the viewer
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:550:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-58eb9-wipe-up-·-navigates-to-next-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-58eb9-wipe-up-·-navigates-to-next-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-58eb9-wipe-up-·-navigates-to-next-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-58eb9-wipe-up-·-navigates-to-next-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  48) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:590:7 › NEX Live · uploaded-video viewer · in-browser journey › full viewer screenshot · owner-reviewable artifact 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer]') to be visible
+
+
+      592 |   }, testInfo) => {
+      593 |     await page.goto(VIEWER_PATH);
+    > 594 |     await page.locator("[data-nex-video-viewer]").waitFor({ timeout: 5000 });
+          |                                                   ^
+      595 |     // Give the video 1 second to start rendering so the screenshot
+      596 |     // has pixels, not black.
+      597 |     await page.waitForTimeout(1500);
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:594:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-f4172-·-owner-reviewable-artifact-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-f4172-·-owner-reviewable-artifact-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-f4172-·-owner-reviewable-artifact-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-f4172-·-owner-reviewable-artifact-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  49) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:607:7 › NEX Live · explicit non-claims › does NOT require a separate streaming app · browser-only 
+
+    TimeoutError: locator.getAttribute: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-video-viewer-element]')
+
+
+      614 |     await page.goto(VIEWER_PATH);
+      615 |     const video = page.locator("[data-nex-video-viewer-element]");
+    > 616 |     const src = await video.getAttribute("src");
+          |                             ^
+      617 |     expect(src, "browser serves the stream directly").toBeTruthy();
+      618 |   });
+      619 |
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-video-journey.spec.ts:616:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-6da34-treaming-app-·-browser-only-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-video-journe-6da34-treaming-app-·-browser-only-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-video-journe-6da34-treaming-app-·-browser-only-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-video-journe-6da34-treaming-app-·-browser-only-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  50) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-viewer-footer.spec.ts:32:7 › NEX Live viewer footer · visibility verification › guest viewer redirects to sign-in (auth-gated · no footer visible to anon) 
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /\/nex-native\/sign-in|\/welcome/
+    Received string:  "http://localhost:3008/nex-native/live-commerce/00000000-0000-0000-0000-000000000000"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      37 |     await expect
+      38 |       .poll(() => page.url(), { timeout: 10_000 })
+    > 39 |       .toMatch(/\/nex-native\/sign-in|\/welcome/);
+         |        ^
+      40 |   });
+      41 |
+      42 |   test("viewer page HTML carries the three footer button hooks (SSR shape)", async ({
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-viewer-footer.spec.ts:39:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-viewer-foote-e35ea--no-footer-visible-to-anon--mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-viewer-foote-e35ea--no-footer-visible-to-anon--mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-viewer-foote-e35ea--no-footer-visible-to-anon--mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-viewer-foote-e35ea--no-footer-visible-to-anon--mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  51) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:23:7 › NEX Live · visual verification · mobile viewport › feed renders at mobile viewport · guest sees list + no Go Live CTA 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Expected pattern: /NEX Live/i
+    Received string:  "404This page could not be found."
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 5000ms
+      - waiting for locator('body')
+        14 × locator resolved to <body>…</body>
+           - unexpected value "404This page could not be found."
+
+
+      40 |
+      41 |     // Feed header "NEX Live" eyebrow + h1 is visible.
+    > 42 |     await expect(page.locator("body")).toContainText(/NEX Live/i);
+         |                                        ^
+      43 |     await expect(page.locator("body")).toContainText(/Who's live now|coming next/i);
+      44 |   });
+      45 |
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-visual-verify.spec.ts:42:40
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-498cc-st-sees-list-no-Go-Live-CTA-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-visual-verif-498cc-st-sees-list-no-Go-Live-CTA-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-498cc-st-sees-list-no-Go-Live-CTA-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-visual-verif-498cc-st-sees-list-no-Go-Live-CTA-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  52) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:46:7 › NEX Live · visual verification · mobile viewport › viewer page redirects guests to sign-in · artifact captured 
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /\/nex-native\/sign-in|\/welcome/
+    Received string:  "http://localhost:3008/nex-native/live-commerce/11111111-1111-1111-1111-111111111111"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      52 |     await expect
+      53 |       .poll(() => page.url(), { timeout: 10_000 })
+    > 54 |       .toMatch(/\/nex-native\/sign-in|\/welcome/);
+         |        ^
+      55 |     const bodyShot = await page.screenshot({ fullPage: false });
+      56 |     await testInfo.attach("viewer-guest-redirect-viewport", {
+      57 |       body: bodyShot,
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-visual-verify.spec.ts:54:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-6b1fb-sign-in-·-artifact-captured-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-visual-verif-6b1fb-sign-in-·-artifact-captured-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-6b1fb-sign-in-·-artifact-captured-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-visual-verif-6b1fb-sign-in-·-artifact-captured-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  53) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:62:7 › NEX Live · visual verification · mobile viewport › feed empty-state is honestly labelled when no live sessions exist 
+
+    Error: feed body must have discoverable Live content or honest empty state
+
+    expect(received).toMatch(expected)
+
+    Expected pattern: /no (one is )?live|coming next|Who's live now/i
+    Received string:  "404
+    This page could not be found."
+
+      72 |       body,
+      73 |       "feed body must have discoverable Live content or honest empty state",
+    > 74 |     ).toMatch(/no (one is )?live|coming next|Who's live now/i);
+         |       ^
+      75 |   });
+      76 |
+      77 |   test("Shop Contacts page redirects guests to sign-in", async ({ page }) => {
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-visual-verify.spec.ts:74:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-c5444-when-no-live-sessions-exist-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-visual-verif-c5444-when-no-live-sessions-exist-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-c5444-when-no-live-sessions-exist-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-visual-verif-c5444-when-no-live-sessions-exist-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  54) [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:77:7 › NEX Live · visual verification · mobile viewport › Shop Contacts page redirects guests to sign-in 
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /\/nex-native\/sign-in|\/welcome/
+    Received string:  "http://localhost:3008/nex-native/manage/live/shop-contacts/22222222-2222-2222-2222-222222222222"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      80 |     await expect
+      81 |       .poll(() => page.url(), { timeout: 10_000 })
+    > 82 |       .toMatch(/\/nex-native\/sign-in|\/welcome/);
+         |        ^
+      83 |   });
+      84 | });
+      85 |
+        at C:\Users\Victus\nexapp\tests\e2e\live-commerce-visual-verify.spec.ts:82:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-438eb-redirects-guests-to-sign-in-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-commerce-visual-verif-438eb-redirects-guests-to-sign-in-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-commerce-visual-verif-438eb-redirects-guests-to-sign-in-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-commerce-visual-verif-438eb-redirects-guests-to-sign-in-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  55) [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-3-dots-container.spec.ts:21:5 › Live viewer · 3-dot panel adopts Category-tile palette + closes on outside tap 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-live-footer-more]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('[data-nex-live-footer-more]') with timeout 5000ms
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      29 |   const panel = page.locator("[data-nex-live-footer-extra-actions]");
+      30 |
+    > 31 |   await expect(toggle).toBeVisible({ timeout: 5000 });
+         |                        ^
+      32 |
+      33 |   // Panel starts closed · opacity 0 · aria-hidden true.
+      34 |   await expect(panel).toHaveAttribute("data-nex-live-footer-extra-actions-open", "false");
+        at C:\Users\Victus\nexapp\tests\e2e\live-footer-3-dots-container.spec.ts:31:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-footer-3-dots-contain-68137-lette-closes-on-outside-tap-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-footer-3-dots-contain-68137-lette-closes-on-outside-tap-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-footer-3-dots-contain-68137-lette-closes-on-outside-tap-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-footer-3-dots-contain-68137-lette-closes-on-outside-tap-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  56) [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-products-flow.spec.ts:22:5 › Live viewer · broadcaster · 3-dot panel + products flow 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      33 |
+      34 |   // Open panel.
+    > 35 |   await dots.click();
+         |              ^
+      36 |   await expect(panel).toHaveAttribute(
+      37 |     "data-nex-live-footer-extra-actions-open",
+      38 |     "true",
+        at C:\Users\Victus\nexapp\tests\e2e\live-footer-products-flow.spec.ts:35:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-footer-products-flow--65a70-·-3-dot-panel-products-flow-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-footer-products-flow--65a70-·-3-dot-panel-products-flow-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-footer-products-flow--65a70-·-3-dot-panel-products-flow-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-footer-products-flow--65a70-·-3-dot-panel-products-flow-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  57) [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-products-flow.spec.ts:140:5 › Live viewer · non-broadcaster · no Products pill, no picker 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-more]')
+
+
+      147 |
+      148 |   const dots = page.locator("[data-nex-live-footer-more]");
+    > 149 |   await dots.click();
+          |              ^
+      150 |   await expect(
+      151 |     page.locator("[data-nex-live-footer-extra-actions]"),
+      152 |   ).toHaveAttribute("data-nex-live-footer-extra-actions-open", "true");
+        at C:\Users\Victus\nexapp\tests\e2e\live-footer-products-flow.spec.ts:149:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-footer-products-flow--b0e3a--no-Products-pill-no-picker-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-footer-products-flow--b0e3a--no-Products-pill-no-picker-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-footer-products-flow--b0e3a--no-Products-pill-no-picker-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-footer-products-flow--b0e3a--no-Products-pill-no-picker-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  58) [mobile-chromium-pixel7-live-public] › tests\e2e\live-header-ping-and-ai-chip.spec.ts:17:5 › Live viewer header · white ping lines · red tower · AI chip without parens 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: 0
+
+      51 |
+      52 |   // 3 concentric ping rings.
+    > 53 |   expect(probe.waveCount).toBe(3);
+         |                           ^
+      54 |   // All 3 are WHITE.
+      55 |   for (const c of probe.waveBorders) {
+      56 |     expect(c).toBe("rgb(255, 255, 255)");
+        at C:\Users\Victus\nexapp\tests\e2e\live-header-ping-and-ai-chip.spec.ts:53:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-header-ping-and-ai-ch-ecbca-er-·-AI-chip-without-parens-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-header-ping-and-ai-ch-ecbca-er-·-AI-chip-without-parens-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-header-ping-and-ai-ch-ecbca-er-·-AI-chip-without-parens-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-header-ping-and-ai-ch-ecbca-er-·-AI-chip-without-parens-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  59) [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:44:7 › Live Library · 3-tile control panel › renders Go Live + Create + Studio tiles · no retired Record/Draft/Insights 
+
+    TimeoutError: locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]') to be visible
+
+
+      32 |     '[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]',
+      33 |   );
+    > 34 |   await avatar.waitFor({ state: "visible", timeout: 10_000 });
+         |                ^
+      35 |   // `force: true` sidesteps any inflight pointer-handler races in the
+      36 |   // viewer-main swipe tracker that mounts siblings around the avatar.
+      37 |   await avatar.click({ force: true });
+        at openLibrary (C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:34:16)
+        at C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:45:5
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-64\traces\214ea39613e8b3a684b3-6df5e4c669c88c62e0f4-recording1.network' -> 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-64\traces\214ea39613e8b3a684b3-6df5e4c669c88c62e0f4-recording1-pwnetcopy-1.network'
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-64\traces\214ea39613e8b3a684b3-6df5e4c669c88c62e0f4.trace'
+
+    Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-64\d86f19e401fa8523488fa93b96a46641.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-library-tiles-Live-Li-fec3f-tired-Record-Draft-Insights-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  60) [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:74:7 › Live Library · 3-tile control panel › Create tile routes to /nex-native/create and the 5-card entry renders 
+
+    TimeoutError: locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]') to be visible
+
+
+      32 |     '[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]',
+      33 |   );
+    > 34 |   await avatar.waitFor({ state: "visible", timeout: 10_000 });
+         |                ^
+      35 |   // `force: true` sidesteps any inflight pointer-handler races in the
+      36 |   // viewer-main swipe tracker that mounts siblings around the avatar.
+      37 |   await avatar.click({ force: true });
+        at openLibrary (C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:34:16)
+        at C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:80:5
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-65\traces\214ea39613e8b3a684b3-ee058792874041365766-recording1.network' -> 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-65\traces\214ea39613e8b3a684b3-ee058792874041365766-recording1-pwnetcopy-1.network'
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-65\traces\resources\2384974c71d3806e09c8c9944c93d9bb.jsonl'
+
+    Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-65\a296d2f57f201ba1ddbdd0462486883e.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-library-tiles-Live-Li-b365f-nd-the-5-card-entry-renders-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  61) [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:121:7 › Live Library · 3-tile control panel › Studio tile routes to /nex-native/live-commerce/studio and surface renders 
+
+    TimeoutError: locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]') to be visible
+
+
+      32 |     '[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]',
+      33 |   );
+    > 34 |   await avatar.waitFor({ state: "visible", timeout: 10_000 });
+         |                ^
+      35 |   // `force: true` sidesteps any inflight pointer-handler races in the
+      36 |   // viewer-main swipe tracker that mounts siblings around the avatar.
+      37 |   await avatar.click({ force: true });
+        at openLibrary (C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:34:16)
+        at C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:122:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-library-tiles-Live-Li-9d48d--studio-and-surface-renders-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-library-tiles-Live-Li-9d48d--studio-and-surface-renders-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-library-tiles-Live-Li-9d48d--studio-and-surface-renders-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-library-tiles-Live-Li-9d48d--studio-and-surface-renders-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  62) [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:148:7 › Live Library · 3-tile control panel › Go Live tile routes to /nex-native/live-commerce/welcome 
+
+    TimeoutError: locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]') to be visible
+
+
+      32 |     '[data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"]',
+      33 |   );
+    > 34 |   await avatar.waitFor({ state: "visible", timeout: 10_000 });
+         |                ^
+      35 |   // `force: true` sidesteps any inflight pointer-handler races in the
+      36 |   // viewer-main swipe tracker that mounts siblings around the avatar.
+      37 |   await avatar.click({ force: true });
+        at openLibrary (C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:34:16)
+        at C:\Users\Victus\nexapp\tests\e2e\live-library-tiles.spec.ts:149:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\live-library-tiles-Live-Li-2f89c-ative-live-commerce-welcome-mobile-chromium-pixel7-live-public\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\live-library-tiles-Live-Li-2f89c-ative-live-commerce-welcome-mobile-chromium-pixel7-live-public\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\live-library-tiles-Live-Li-2f89c-ative-live-commerce-welcome-mobile-chromium-pixel7-live-public\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\live-library-tiles-Live-Li-2f89c-ative-live-commerce-welcome-mobile-chromium-pixel7-live-public\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  62 failed
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target 
+    [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:45:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › sanity · signed-in home is reachable (not bounced to /sign-in) 
+    [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-comments-behind.spec.ts:4:5 › CAPTURE · panel paints above comments overlay in root stacking 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-counts.spec.ts:4:5 › CAPTURE · counts on Like / Share / Save 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-dev-roles.spec.ts:7:7 › CAPTURE · dev role URLs › desktop shows mobile-sized frame · banner under Broadcasted · roles differ 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-feed-prefs.spec.ts:4:5 › CAPTURE · Live Feed Preferences in 3-dot panel 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-heart-right.spec.ts:4:5 › CAPTURE · Like heart back on composer right · enlarged · count below 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-overlay-pref.spec.ts:4:5 › CAPTURE · Promotional overlays tri-state 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\_capture-products-flow.spec.ts:4:5 › CAPTURE · products flow walk 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 320px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 360px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 375px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 390px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-3 › 412px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 320px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 360px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 375px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 390px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\composer-overflow-regression.spec.ts:32:11 › Composer overflow · live-viewer-dev-video-1 › 412px · textarea stays inside the viewport right edge 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\create-page-visual.spec.ts:22:5 › diagnostic · /create at desktop viewport 1440x900 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-public-surfaces.spec.ts:73:7 › NEX Live · public surfaces · fail-open shape › directory landing · no live sessions · renders without live chips 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:44:7 › NEX Live · uploaded-video viewer · in-browser journey › drawer landing redirects to the first video 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:51:7 › NEX Live · uploaded-video viewer · in-browser journey › video element has src + is playing 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:76:7 › NEX Live · uploaded-video viewer · in-browser journey › video fits full-bleed mobile viewport · objectFit cover (portrait) or contain (landscape) 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:118:7 › NEX Live · uploaded-video viewer · in-browser journey › sound · tries unmuted autoplay first · falls back to muted + chip only when browser blocks 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:155:7 › NEX Live · uploaded-video viewer · in-browser journey › header · Live {Country} title + magnifying glass + 3-dot drawer visible top-row 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:190:7 › NEX Live · uploaded-video viewer · in-browser journey › magnifying glass opens 12-tile category grid overlay 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:207:7 › NEX Live · uploaded-video viewer · in-browser journey › category chain · tapping Travel tile routes to first temple video with chain context 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:233:7 › NEX Live · uploaded-video viewer · in-browser journey › category chain · swipe up advances temple → volcano → beach 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:286:7 › NEX Live · uploaded-video viewer · in-browser journey › 3-dot drawer trigger · ControlDrawer mounted (same as /contacts) 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:304:7 › NEX Live · uploaded-video viewer · in-browser journey › Like button · toggles aria-pressed on click 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:315:7 › NEX Live · uploaded-video viewer · in-browser journey › Big CTA · uploaded video with no business → View Market, routes to directory 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:336:7 › NEX Live · uploaded-video viewer · in-browser journey › Go Live · anchor renders in footer · routes to broadcaster surface 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:351:7 › NEX Live · uploaded-video viewer · in-browser journey › footer actions · all 4 buttons visible without overflow on 412px viewport 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:375:7 › NEX Live · uploaded-video viewer · in-browser journey › Share · fallback popover opens when navigator.share is unavailable 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:400:7 › NEX Live · uploaded-video viewer · in-browser journey › Share · bottom sheet · NEX contact mode renders contact rows 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:414:7 › NEX Live · uploaded-video viewer · in-browser journey › Posted date · uploaded video chip shows 'Posted {localized date}' 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:428:7 › NEX Live · uploaded-video viewer · in-browser journey › Send button · gated by non-empty composer text 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:458:7 › NEX Live · uploaded-video viewer · in-browser journey › swipe up (synthesised pointer drag) navigates to the next video 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:504:7 › NEX Live · uploaded-video viewer · in-browser journey › mouse drag up (desktop · real page.mouse API) navigates to the next video 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:529:7 › NEX Live · uploaded-video viewer · in-browser journey › mouse wheel down · navigates to next · cooldown prevents double-skip 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:546:7 › NEX Live · uploaded-video viewer · in-browser journey › keyboard ArrowDown mirrors swipe up · navigates to next 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:590:7 › NEX Live · uploaded-video viewer · in-browser journey › full viewer screenshot · owner-reviewable artifact 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-video-journey.spec.ts:607:7 › NEX Live · explicit non-claims › does NOT require a separate streaming app · browser-only 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-viewer-footer.spec.ts:32:7 › NEX Live viewer footer · visibility verification › guest viewer redirects to sign-in (auth-gated · no footer visible to anon) 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:23:7 › NEX Live · visual verification · mobile viewport › feed renders at mobile viewport · guest sees list + no Go Live CTA 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:46:7 › NEX Live · visual verification · mobile viewport › viewer page redirects guests to sign-in · artifact captured 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:62:7 › NEX Live · visual verification · mobile viewport › feed empty-state is honestly labelled when no live sessions exist 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-commerce-visual-verify.spec.ts:77:7 › NEX Live · visual verification · mobile viewport › Shop Contacts page redirects guests to sign-in 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-3-dots-container.spec.ts:21:5 › Live viewer · 3-dot panel adopts Category-tile palette + closes on outside tap 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-products-flow.spec.ts:22:5 › Live viewer · broadcaster · 3-dot panel + products flow 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-footer-products-flow.spec.ts:140:5 › Live viewer · non-broadcaster · no Products pill, no picker 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-header-ping-and-ai-chip.spec.ts:17:5 › Live viewer header · white ping lines · red tower · AI chip without parens 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:44:7 › Live Library · 3-tile control panel › renders Go Live + Create + Studio tiles · no retired Record/Draft/Insights 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:74:7 › Live Library · 3-tile control panel › Create tile routes to /nex-native/create and the 5-card entry renders 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:121:7 › Live Library · 3-tile control panel › Studio tile routes to /nex-native/live-commerce/studio and surface renders 
+    [mobile-chromium-pixel7-live-public] › tests\e2e\live-library-tiles.spec.ts:148:7 › Live Library · 3-tile control panel › Go Live tile routes to /nex-native/live-commerce/welcome 
+  50 skipped
+  15 did not run
+  179 passed (27.7m)
+EXIT=1

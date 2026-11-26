@@ -38,6 +38,14 @@ import {
   openMessageEventsChannel,
   type MessageEventsChannel,
 } from "@/lib/nex-native/realtime/message-events";
+// Phase B.7 · NEX Universal Locale Foundation · the resolved
+// viewer `lang` from I18nProvider (mounted in nex-native/layout.tsx
+// with initialLang from resolveServerLocale) · used by the pending-
+// product chip to format the price with the viewer's NEX locale on
+// both SSR and CSR so hydration is deterministic. Closes the Cycle 10
+// hydration-mismatch root cause without forcing en-US on Indonesian
+// users.
+import { useLang } from "@/lib/nex/i18n/I18nProvider";
 
 const BIZ_CATEGORY_ICON: Record<string, string> = {
   "product-brand": "👜",
@@ -165,6 +173,15 @@ export function BusinessConversationClient({
   viewerAccountId: _viewerAccountId,
 }: Props): React.JSX.Element {
   const router = useRouter();
+  // Phase B.7 · NEX Universal Locale Foundation · the resolved
+  // viewer `lang` (`"id"` | `"en"` | …). I18nProvider is mounted
+  // on every nex-native route (layout.tsx:263) with initialLang
+  // from resolveServerLocale({accountLocale, acceptLanguage}) so
+  // the FIRST paint on server and client uses the SAME value.
+  // Only an explicit URL `?lang=` or localStorage override can
+  // flip it after mount (sealed Phase B.7 behaviour) · the chip's
+  // initial render is therefore hydration-safe.
+  const { lang } = useLang();
   const [draft, setDraft] = React.useState("");
   const [sendState, setSendState] = React.useState<
     "idle" | "sending" | "error"
@@ -941,25 +958,38 @@ export function BusinessConversationClient({
               }}
             >
               {(() => {
-                // Owner directive 2026-11-24 (Cycle 10 · root cause) ·
-                // PIN the locale. Previously this passed `undefined`,
-                // which resolves to the Node OS locale on the server
-                // and the browser locale on the client. On the Indonesia-
-                // based dev host that produced "Rp 4.500" (id-ID) server-
-                // side vs "IDR 4,500" (en-US) client-side · a text-level
-                // HYDRATION MISMATCH inside the pending-product chip.
-                // React 19 regenerates the mismatched subtree on the
-                // client, which detaches the originally-hydrated Send
-                // button from its React fiber · Playwright's click lands
-                // on the detached DOM node, the onClick never fires, no
-                // network POST is issued, and the chip appears to hang
-                // with no observable terminal state. Pinning the locale
-                // to "en-US" (matches Playwright's default and is the
-                // stable fallback Node.js ships with) eliminates the
-                // mismatch so React can hydrate the subtree once and
-                // keep the Send handler attached.
+                // Phase B.7 · NEX Universal Locale Foundation · 2026-11-25
+                // (Cycle 10 · Founder-sealed deterministic locale strategy).
+                //
+                // Format the product price with the VIEWER's resolved
+                // NEX `lang` (from I18nProvider → resolveServerLocale).
+                // SSR and first-paint CSR use the same resolved value,
+                // so the chip subtree hydrates identically on both sides.
+                // Currency stays SELLER-sourced per the sealed commercial
+                // doctrine (src/lib/nex/i18n/format.ts:19-22):
+                //
+                //   locale   ← viewer       (e.g. "id" for an Indonesian
+                //                            buyer, "en" for an English
+                //                            buyer)
+                //   currency ← seller/product (IDR for a Yogyakarta
+                //                              handbag shop, regardless
+                //                              of the viewer's locale)
+                //
+                // Historical root cause (Cycle 10 trace): this call-site
+                // previously passed `undefined`, which resolves to the
+                // host locale per runtime (Node id-ID OS vs en-US Chrome
+                // → "Rp 4.500" vs "IDR 4,500"). React 19 responded to
+                // the text-level mismatch by regenerating the subtree
+                // on the client · detaching the Send button's React
+                // fiber so onClick never fired. A short-lived fix
+                // pinned the formatter to "en-US", which closed the
+                // mismatch but forced "IDR 4,500" on Indonesian users
+                // in violation of the sealed locale doctrine. Threading
+                // the viewer's resolved `lang` is the Founder-approved
+                // permanent fix: hydration is deterministic AND
+                // Indonesian viewers continue to see "Rp 4.500".
                 try {
-                  return new Intl.NumberFormat("en-US", {
+                  return new Intl.NumberFormat(lang, {
                     style: "currency",
                     currency: pendingProduct.currency,
                     maximumFractionDigits: 0,

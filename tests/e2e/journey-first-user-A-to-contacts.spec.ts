@@ -30,15 +30,28 @@ test.describe.serial("T-4.1 · first-user A → contacts → first thread", () =
   // never fires within the navigation window. We swap to
   // `domcontentloaded` + body-attached and assert the real observable
   // elements · the test intent is preserved exactly.
-  test("sanity · signed-in /home reachable", async ({ page }) => {
+  test("sanity · signed-in /home reachable (follows sealed /home → /contacts 308)", async ({
+    page,
+  }) => {
+    // L-026 remediation 2026-11-26 · `/nex-native/home` was retired
+    // 2026-10-19 (see `src/app/nex-native/home/page.tsx` ·
+    // `permanentRedirect("/nex-native/contacts")` · 308). The sealed
+    // semantic is that signed-in roots and legacy bookmarks that land
+    // on /home transparently complete at /contacts. We preserve the
+    // test intent (navigating to /home under a signed-in storageState
+    // responds 200) and update the URL assertion to accept the sealed
+    // redirect target. This is NOT a weakening: the 308 is part of
+    // the sealed retirement decision, not a product defect.
     const response = await page.goto("/nex-native/home", {
       waitUntil: "domcontentloaded",
     });
-    expect(response?.status(), "signed-in home responds 200").toBe(200);
+    expect(response?.status(), "signed-in /home chain responds 200").toBe(200);
     await page.waitForFunction(() => Boolean(document.body), null, {
       timeout: 10_000,
     });
-    await expect(page).toHaveURL(/\/nex-native\/home(?:[/?#]|$)/);
+    await expect(page).toHaveURL(
+      /\/nex-native\/(?:home|contacts)(?:[/?#]|$)/,
+    );
   });
 
   test("home · first-visit invitation renders iff conversationCount === 0", async ({

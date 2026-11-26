@@ -1,0 +1,57 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:146:7 › account-active · unauthenticated › A · redirects guest to /sign-in (3.5s)
+  -  2 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:167:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie
+  -  3 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:215:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts
+  ✘  4 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:245:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust (30.3s)
+  -  5 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:282:7 › account-active · authenticated (dev-pass real Supabase) › E · /manage/shop/start?from=signup Skip-for-now link resolves to welcome
+
+
+  1) [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:245:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust 
+
+    TimeoutError: page.waitForURL: Timeout 20000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation until "load"
+      navigated to "http://localhost:3008/nex-native/free-chat?show-themes=1"
+      navigated to "http://localhost:3008/nex-native/free-chat?show-themes=1"
+      navigated to "http://localhost:3008/nex-native/free-chat?show-themes=1"
+      navigated to "http://localhost:3008/nex-native/free-chat?show-themes=1"
+    ============================================================
+
+       96 |   // failure banner. We don't know which will happen until the server
+       97 |   // responds · race both and inspect the result.
+    >  98 |   await page.waitForURL(
+          |              ^
+       99 |     (url) => url.pathname === SIGN_IN_PATH || url.pathname.includes(CONTACTS_PATH),
+      100 |     { timeout: NAV_TIMEOUT_MS },
+      101 |   );
+        at signInViaDevPass (C:\Users\Victus\nexapp\tests\e2e\welcome-account-active-one-time-gate.spec.ts:98:14)
+        at C:\Users\Victus\nexapp\tests\e2e\welcome-account-active-one-time-gate.spec.ts:250:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-99b90--cannot-bypass-server-trust-nex-welcome-account-active-one-time-gate\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-99b90--cannot-bypass-server-trust-nex-welcome-account-active-one-time-gate\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-99b90--cannot-bypass-server-trust-nex-welcome-account-active-one-time-gate\test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\welcome-account-active-one-99b90--cannot-bypass-server-trust-nex-welcome-account-active-one-time-gate\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-99b90--cannot-bypass-server-trust-nex-welcome-account-active-one-time-gate\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\welcome-account-active-one-99b90--cannot-bypass-server-trust-nex-welcome-account-active-one-time-gate\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:245:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust 
+  3 skipped
+  1 passed (46.0s)

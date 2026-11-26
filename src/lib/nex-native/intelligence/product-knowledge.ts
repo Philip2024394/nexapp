@@ -301,10 +301,10 @@ export const NEX_WORKFLOWS: readonly ProductKnowledgeEntry[] = [
     kind: "workflow",
     title: "Sign up for NEX",
     content:
-      "Go to /nex-native/create-account. Enter full name, email, phone (country code + digits), password (6+ chars). Phone is a credential attribute only · other users never see it. Your NEX ID (nex-XXXXX) is auto-assigned. NEX Assistant sends you a welcome message.",
+      "Go to /nex-native/sign-in?mode=signup. Enter full name, email, phone (country code + digits), password (6+ chars). Phone is a credential attribute only · other users never see it. Your NEX ID (nex-XXXXX) is auto-assigned. NEX Assistant sends you a welcome message.",
     keywords: ["signup", "register", "create", "account", "new"],
-    sealed_at: "2026-09-29",
-    entry_href: "/nex-native/create-account",
+    sealed_at: "2026-11-25",
+    entry_href: "/nex-native/sign-in?mode=signup",
   },
   {
     id: "workflow.add_friend",
@@ -410,15 +410,34 @@ export function findProductEntry(id: string): ProductKnowledgeEntry | null {
 
 /** Currency-aware plan-name lookup for account-context questions
  *  ("what does my plan include?"). Maps the NexSubscriptionPlan enum
- *  values recorded on nex_account to plan entries in this catalogue. */
+ *  values recorded on nex_account to plan entries in this catalogue.
+ *
+ *  2026-11-25 reconciliation: the 2026-11-08 catalogue rename retired
+ *  the per-tier Indonesia-era entries (`plan.bisnis`, `plan.themes_
+ *  ringan`, `plan.buy_theme`, `plan.own_theme_request`, `plan.gratis`)
+ *  and replaced them with three global entries (`plan.chat_free`,
+ *  `plan.chat_themes`, `plan.nex_shop`). The `NexSubscriptionPlan`
+ *  enum values stored on `nex_account` were not renamed · this
+ *  function is the translation layer between the stored enum and the
+ *  current catalogue. Without this mapping the LLM returned null for
+ *  every paying-user context lookup since 2026-11-08.
+ *
+ *  Mapping:
+ *    plan === "bisnis"              → plan.nex_shop (paid Shop)
+ *    plan === "ringan"              → plan.chat_themes
+ *    plan === "buy"                 → plan.chat_themes
+ *    plan === "custom"              → plan.chat_themes
+ *    tier ∈ { "bisnis", "pro" }     → plan.nex_shop
+ *    default (free user)            → plan.chat_free
+ */
 export function planEntryForSubscription(
   plan: NexSubscriptionPlan | null,
   tier: NexAccountTier,
 ): ProductKnowledgeEntry | null {
-  if (plan === "bisnis") return findProductEntry("plan.bisnis");
-  if (plan === "ringan") return findProductEntry("plan.themes_ringan");
-  if (plan === "buy") return findProductEntry("plan.buy_theme");
-  if (plan === "custom") return findProductEntry("plan.own_theme_request");
-  if (tier === "bisnis" || tier === "pro") return findProductEntry("plan.bisnis");
-  return findProductEntry("plan.gratis");
+  if (plan === "bisnis") return findProductEntry("plan.nex_shop");
+  if (plan === "ringan") return findProductEntry("plan.chat_themes");
+  if (plan === "buy") return findProductEntry("plan.chat_themes");
+  if (plan === "custom") return findProductEntry("plan.chat_themes");
+  if (tier === "bisnis" || tier === "pro") return findProductEntry("plan.nex_shop");
+  return findProductEntry("plan.chat_free");
 }

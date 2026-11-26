@@ -1,0 +1,12 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.9s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating (747ms)
+  ✓  3 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/sign-in · every discovered anchor responds <500 and respects gating (4.1s)
+  ✓  4 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/install · every discovered anchor responds <500 and respects gating (969ms)
+  ✓  5 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/emergency-help · every discovered anchor responds <500 and respects gating (1.0s)
+  ✓  6 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:161:7 › T-5.5 · owner-corrected NAV reachability crawl › direct shop + product routes respond <500 when owner-seeded fixtures are present (1.6s)
+  ✓  7 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:195:7 › T-5.5 · owner-corrected NAV reachability crawl › documented direct-URL-only routes are NOT orphaned by the allowlist (394ms)
+
+  7 passed (29.0s)

@@ -1,0 +1,38 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (8.1s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:132:9 › L-035 · merchant order-detail state-transition UI journey › merchant can transition created→paid→completed via sealed detail UI; ownership gate blocks cross-merchant access (46.5s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:132:9 › L-035 · merchant order-detail state-transition UI journey › merchant can transition created→paid→completed via sealed detail UI; ownership gate blocks cross-merchant access 
+
+    Error: Contract D · nex_order.state must transition to "paid" within poll window · got created
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "paid"
+    Received: "created"
+
+      235 |           paidState,
+      236 |           `Contract D · nex_order.state must transition to "paid" within poll window · got ${paidState}`,
+    > 237 |         ).toBe("paid");
+          |           ^
+      238 |
+      239 |         // Contract D (ledger) · a nex_ledger_entry row exists for
+      240 |         // this order (sealed commerce-service.markOrderPaid side-
+        at C:\Users\Victus\nexapp\tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:237:11
+
+    Error Context: test-results\journey-merchant-order-det-e2e96-locks-cross-merchant-access-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-merchant-order-det-e2e96-locks-cross-merchant-access-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-merchant-order-det-e2e96-locks-cross-merchant-access-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-merchant-order-detail-state-transitions-ui.spec.ts:132:9 › L-035 · merchant order-detail state-transition UI journey › merchant can transition created→paid→completed via sealed detail UI; ownership gate blocks cross-merchant access 
+  1 passed (59.4s)

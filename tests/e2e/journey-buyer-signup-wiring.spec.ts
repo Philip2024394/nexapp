@@ -32,11 +32,55 @@
 //     sandbox buyer which does not exist (see decision brief).
 
 import { expect, test } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  createTestBusiness,
+  createTestProduct,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
-const PRODUCT_ID = process.env.NEX_E2E_SEED_PRODUCT_ID;
-const PRODUCT_READY = typeof PRODUCT_ID === "string" && PRODUCT_ID.length > 0;
+// 2026-11-26 remediation · env-var `NEX_E2E_SEED_PRODUCT_ID` still
+// honoured when owner pins a fixture; otherwise the harness seeds
+// one. The spec is purely URL-shape + form-wiring inspection — no
+// submit — so it does not require a browsable product rendering;
+// only a valid id string in the query. We still mint a real product
+// so the inspected `next` value points at a valid canonical route.
+let PRODUCT_ID: string;
+let FIXTURE_HANDLES: FixtureHandle[] = [];
 
 test.describe("Cycle 9 · signup form wiring (non-mutating)", () => {
+  test.beforeAll(async () => {
+    assertSandboxRef();
+    const envProductId = process.env.NEX_E2E_SEED_PRODUCT_ID;
+    if (envProductId) {
+      PRODUCT_ID = envProductId;
+      return;
+    }
+    const merchant = await createTestAccount("signup-wiring-merchant");
+    FIXTURE_HANDLES.push(merchant);
+    const biz = await createTestBusiness(merchant, {
+      label: "signup-wiring-shop",
+    });
+    FIXTURE_HANDLES.push(biz);
+    const prod = await createTestProduct(biz, {
+      name: "e2e-fixture-signup-wiring-widget",
+      pricePence: 999,
+      currency: "GBP",
+      status: "live",
+    });
+    FIXTURE_HANDLES.push(prod);
+    PRODUCT_ID = prod.productId;
+  });
+
+  test.afterAll(async () => {
+    await teardownAll(FIXTURE_HANDLES);
+    await assertNoResidualFixtures(FIXTURE_HANDLES);
+    FIXTURE_HANDLES = [];
+  });
+
   test.beforeEach(async ({ context }) => {
     await context.clearCookies();
   });
@@ -44,11 +88,6 @@ test.describe("Cycle 9 · signup form wiring (non-mutating)", () => {
   test("signup form · wiring + next-preservation · NO submit", async ({
     page,
   }) => {
-    test.skip(
-      !PRODUCT_READY,
-      "BLOCKED-PENDING-SEED-FIXTURE · NEX_E2E_SEED_PRODUCT_ID required",
-    );
-
     const nextPath = `/nex-native/product/${PRODUCT_ID}`;
     const resp = await page.goto(
       `/nex-native/sign-in?mode=signup&next=${encodeURIComponent(nextPath)}`,
@@ -101,11 +140,6 @@ test.describe("Cycle 9 · signup form wiring (non-mutating)", () => {
   test("signup mode toggle · ?mode=signup round-trips the `next` to sign-in form when mode is cleared", async ({
     page,
   }) => {
-    test.skip(
-      !PRODUCT_READY,
-      "BLOCKED-PENDING-SEED-FIXTURE · NEX_E2E_SEED_PRODUCT_ID required",
-    );
-
     const nextPath = `/nex-native/product/${PRODUCT_ID}`;
 
     // 1. Load signup mode and confirm signup wiring OR record

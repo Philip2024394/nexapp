@@ -33,7 +33,18 @@ function getPool(): Pool {
       "local-directory-service: NEX_POSTGRES_URL not set — cannot reach local Postgres directory",
     );
   }
-  pool = new Pool({ connectionString: url, max: 4 });
+  // L-003 fix 2026-11-26 · bound the TCP connect wait so an unreachable
+  // host (classic case: Supabase direct `db.<proj>.supabase.co` IPv6 not
+  // routable from the dev machine) fails fast and `fetchCanonicalRows`'s
+  // existing `try/catch { return []; }` degrades the feed in ~2 s instead
+  // of ~21 s. Previously every /nex-native/directory request paid the
+  // full OS TCP-connect timeout and blocked `domcontentloaded`, breaking
+  // the Pixel 7 full-viewport test and the user-visible load.
+  pool = new Pool({
+    connectionString: url,
+    max: 4,
+    connectionTimeoutMillis: 2_000,
+  });
   return pool;
 }
 

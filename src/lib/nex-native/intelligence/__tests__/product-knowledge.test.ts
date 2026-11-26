@@ -53,34 +53,71 @@ describe("Bridge 92 · Product knowledge catalogue", () => {
 
   it("findProductEntry returns null for unknown ids", () => {
     expect(findProductEntry("feature.nope")).toBeNull();
-    expect(findProductEntry("plan.gratis")).not.toBeNull();
+    // 2026-11-08 catalogue rename retired plan.gratis in favour of
+    // plan.chat_free. See product-knowledge.ts §NEX_PLANS header.
+    expect(findProductEntry("plan.chat_free")).not.toBeNull();
+  });
+
+  // Cycle-14 F3 · 2026-11-25 · the `/nex-native/create-account` route
+  // was retired on this date. The signup workflow entry's content and
+  // entry_href must point at the sealed one-URL auth signup mode or
+  // the LLM will route users to a 404.
+  it("workflow.signup points at the sealed one-URL auth signup mode, not the retired route", () => {
+    const e = findProductEntry("workflow.signup");
+    expect(e).not.toBeNull();
+    expect(e!.entry_href).toBe("/nex-native/sign-in?mode=signup");
+    expect(e!.content).toContain("/nex-native/sign-in?mode=signup");
+    expect(e!.content).not.toContain("/nex-native/create-account");
+    expect(e!.entry_href).not.toContain("/nex-native/create-account");
+  });
+
+  // Cycle-14 F3 · 2026-11-25 · defence in depth against any other
+  // catalogue entry re-introducing the retired route.
+  it("no catalogue entry references the retired /nex-native/create-account route", () => {
+    for (const entry of NEX_PRODUCT_KNOWLEDGE) {
+      expect(
+        entry.content,
+        `entry ${entry.id} content leaks retired route`,
+      ).not.toContain("/nex-native/create-account");
+      expect(
+        entry.entry_href ?? "",
+        `entry ${entry.id} entry_href leaks retired route`,
+      ).not.toContain("/nex-native/create-account");
+    }
   });
 });
 
 describe("Bridge 92 · planEntryForSubscription mapping", () => {
-  it("maps bisnis subscription plan to Bisnis plan entry", () => {
+  // 2026-11-08 catalogue rename retired the per-tier IDs (plan.bisnis,
+  // plan.themes_ringan, plan.buy_theme, plan.own_theme_request,
+  // plan.gratis) in favour of three global entries (plan.chat_free,
+  // plan.chat_themes, plan.nex_shop). These assertions match the
+  // current translation in `planEntryForSubscription`. The stored
+  // NexSubscriptionPlan enum values on nex_account were NOT renamed ·
+  // this function is the live translation layer.
+  it("maps bisnis subscription plan to NEX Shop plan entry", () => {
     const e = planEntryForSubscription("bisnis", "bisnis");
-    expect(e?.id).toBe("plan.bisnis");
+    expect(e?.id).toBe("plan.nex_shop");
   });
 
-  it("maps ringan subscription plan to Ringan entry", () => {
+  it("maps ringan subscription plan to Chat Themes entry", () => {
     const e = planEntryForSubscription("ringan", "gratis");
-    expect(e?.id).toBe("plan.themes_ringan");
+    expect(e?.id).toBe("plan.chat_themes");
   });
 
-  it("maps buy subscription plan to Buy-a-theme entry", () => {
+  it("maps buy subscription plan to Chat Themes entry", () => {
     const e = planEntryForSubscription("buy", "gratis");
-    expect(e?.id).toBe("plan.buy_theme");
+    expect(e?.id).toBe("plan.chat_themes");
   });
 
-  it("falls back to bisnis when tier is bisnis but plan is null", () => {
+  it("falls back to NEX Shop when tier is bisnis but plan is null", () => {
     const e = planEntryForSubscription(null, "bisnis");
-    expect(e?.id).toBe("plan.bisnis");
+    expect(e?.id).toBe("plan.nex_shop");
   });
 
-  it("defaults to gratis when nothing else applies", () => {
+  it("defaults to Chat Free when nothing else applies", () => {
     const e = planEntryForSubscription(null, "gratis");
-    expect(e?.id).toBe("plan.gratis");
+    expect(e?.id).toBe("plan.chat_free");
   });
 });
 
@@ -105,12 +142,19 @@ describe("Bridge 92 · Product knowledge retriever · natural questions", () => 
     expect(hitsTrial).toBe(true);
   });
 
-  it("finds the Bisnis plan when the user asks about pricing", () => {
+  it("surfaces a pricing-answer entry when the user asks 'How much is Bisnis?'", () => {
+    // 2026-11-08 catalogue rename: paid Shop plan is now `plan.nex_shop`.
+    // The Indonesian name "Bisnis" is still the stored enum value and
+    // still appears as the keyword route via `workflow.subscribe_bisnis`.
+    // Either surfacing is a valid answer path for the LLM.
     const r = retrieveProductKnowledge({
       question: "How much is Bisnis?",
     });
     const ids = r.items.map((i) => i.id);
-    expect(ids).toContain("plan.bisnis");
+    const hitsPricingAnswer = ids.some(
+      (id) => id === "plan.nex_shop" || id === "workflow.subscribe_bisnis",
+    );
+    expect(hitsPricingAnswer).toBe(true);
   });
 
   it("finds the peer-chat feature when the user asks about privacy", () => {
@@ -144,18 +188,23 @@ describe("Bridge 92 · Product knowledge retriever · natural questions", () => 
     }
   });
 
-  it("emits IDR currency figures in the whitelist for plan entries", () => {
+  it("emits currency figures in the whitelist for plan entries", () => {
+    // 2026-11-08 catalogue rename: paid Shop plan is `plan.nex_shop`.
+    // `extractFigures` reads only entry.content. The nex_shop content
+    // carries €-denominated upgrade-pack prices (storage/bandwidth);
+    // the base monthly price lives in the title. The whitelist's job
+    // is to let the validator accept price mentions in model output ·
+    // any currency-prefixed figure satisfies that for the plan entry.
     const r = retrieveProductKnowledge({
-      question: "how much does bisnis cost",
+      question: "how much does nex shop cost in rupiah",
     });
-    const bisnis = r.items.find((i) => i.id === "plan.bisnis");
-    expect(bisnis).toBeTruthy();
-    // Some Rp figure should show up in the whitelist so the validator
-    // doesn't flag price mentions in the model output as fabricated.
-    expect(bisnis!.figures.length).toBeGreaterThan(0);
-    for (const f of bisnis!.figures) {
-      expect(f).toMatch(/^Rp\s?\d/);
-    }
+    const nexShop = r.items.find((i) => i.id === "plan.nex_shop");
+    expect(nexShop).toBeTruthy();
+    expect(nexShop!.figures.length).toBeGreaterThan(0);
+    const currencyFigures = nexShop!.figures.filter((f) =>
+      /^(?:[£$€¥]|Rp|GBP|USD|EUR|JPY|IDR)\s?\d/.test(f),
+    );
+    expect(currencyFigures.length).toBeGreaterThan(0);
   });
 
   it("caps results at maxItems", () => {

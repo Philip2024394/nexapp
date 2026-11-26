@@ -1,0 +1,135 @@
+
+Running 14 tests using 1 worker
+
+  ✓   1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (8.3s)
+  ✘   2 [stage-a-pixel7] › tests\e2e\journey-guest-chat-signup-cta.spec.ts:34:5 › guest-chat signup CTA · href targets sealed signup URL with next preserved (19.3s)
+  ✓   3 [stage-a-pixel7] › tests\e2e\journey-kind-select-signup.spec.ts:31:5 › kind-select error handler · sealed signup URL serves and preserves (e,m) params (747ms)
+  ✓   4 [stage-a-pixel7] › tests\e2e\journey-theme-viewer-organic-signup.spec.ts:25:5 › guest on theme viewer · GuestSignupBanner CTA targets sealed signup URL · destination is live (4.4s)
+  ✓   5 [stage-a-pixel7] › tests\e2e\journey-unauth-checkout-signup-return.spec.ts:28:5 › unauth buyer clicking checkout · sealed signup URL with next preserved (6.4s)
+  ✘   6 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:165:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid vault_tier + no shop · entitled · redirect to /vault/setup (1.2s)
+  -   7 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:191:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid shop_tier + null vault entitlement · NOT entitled · paywall
+  -   8 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:219:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › no shop + no vault entitlement · NOT entitled · paywall
+  -   9 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:235:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › active vault_trial_used_at (3 days old) · entitled · redirect to /vault/setup
+  -  10 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:258:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › expired vault_trial_used_at (8 days old) · NOT entitled · paywall
+  -  11 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:278:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › vault_tier='gratis' with no trial · NOT entitled · paywall
+  ✘  12 [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:34:5 › visitor interact popup · claim CTA preserves claim param, targets sealed signup URL (11.4s)
+  ✓  13 [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:65:5 › control-drawer visitor-claim pill · links to sealed signup URL with claim param preserved (789ms)
+  ✓  14 [stage-a-pixel7] › tests\e2e\journey-welcome-intent-pick-theme.spec.ts:28:5 › welcome-intent branch · redirect target serves sealed signup URL with intent=pick-theme (1.8s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-guest-chat-signup-cta.spec.ts:34:5 › guest-chat signup CTA · href targets sealed signup URL with next preserved 
+
+    Error: guest-chat surface must emit at least one sealed-signup CTA
+
+    expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href^=\'/nex-native/sign-in?mode=signup\']').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - guest-chat surface must emit at least one sealed-signup CTA locator('a[href^=\'/nex-native/sign-in?mode=signup\']').first() with timeout 10000ms
+      - waiting for locator('a[href^=\'/nex-native/sign-in?mode=signup\']').first()
+        - waiting for "http://localhost:3008/nex-native/home" navigation to finish...
+
+
+      52 |       fallback,
+      53 |       "guest-chat surface must emit at least one sealed-signup CTA",
+    > 54 |     ).toBeVisible({ timeout: 10_000 });
+         |       ^
+      55 |     const href = await fallback.getAttribute("href");
+      56 |     expect(href).toMatch(/^\/nex-native\/sign-in\?mode=signup/);
+      57 |     expect(href).toContain("next=");
+        at C:\Users\Victus\nexapp\tests\e2e\journey-guest-chat-signup-cta.spec.ts:54:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-guest-chat-signup--386f3-nup-URL-with-next-preserved-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-guest-chat-signup--386f3-nup-URL-with-next-preserved-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-guest-chat-signup--386f3-nup-URL-with-next-preserved-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-guest-chat-signup--386f3-nup-URL-with-next-preserved-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:165:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid vault_tier + no shop · entitled · redirect to /vault/setup 
+
+    error: column "shop_status" of relation "nex_account" does not exist
+
+      112 | async function setEntitlement(state: EntitlementState): Promise<void> {
+      113 |   await withPgClient(async (c) => {
+    > 114 |     await c.query(
+          |     ^
+      115 |       `UPDATE nex_account
+      116 |           SET shop_tier = $2,
+      117 |               shop_status = $3,
+        at C:\Users\Victus\nexapp\node_modules\pg\lib\client.js:694:17
+        at C:\Users\Victus\nexapp\tests\e2e\journey-vault-standalone-access.spec.ts:114:5
+        at withPgClient (C:\Users\Victus\nexapp\tests\e2e\journey-vault-standalone-access.spec.ts:80:12)
+        at setEntitlement (C:\Users\Victus\nexapp\tests\e2e\journey-vault-standalone-access.spec.ts:113:3)
+        at C:\Users\Victus\nexapp\tests\e2e\journey-vault-standalone-access.spec.ts:156:5
+
+    Error: read ECONNRESET
+
+    Error Context: test-results\journey-vault-standalone-a-bcee8-d-·-redirect-to-vault-setup-stage-a-pixel7\error-context.md
+
+    Error Context: test-results\journey-vault-standalone-a-bcee8-d-·-redirect-to-vault-setup-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-vault-standalone-a-bcee8-d-·-redirect-to-vault-setup-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-vault-standalone-a-bcee8-d-·-redirect-to-vault-setup-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:34:5 › visitor interact popup · claim CTA preserves claim param, targets sealed signup URL 
+
+    Error: popup must mount on the sealed event
+
+    expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-visitor-interact-popup]')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - popup must mount on the sealed event locator('[data-nex-visitor-interact-popup]') with timeout 10000ms
+      - waiting for locator('[data-nex-visitor-interact-popup]')
+
+
+      49 |
+      50 |   const popup = page.locator("[data-nex-visitor-interact-popup]");
+    > 51 |   await expect(popup, "popup must mount on the sealed event").toBeVisible({
+         |                                                               ^
+      52 |     timeout: 10_000,
+      53 |   });
+      54 |
+        at C:\Users\Victus\nexapp\tests\e2e\journey-visitor-claim-signup.spec.ts:51:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-visitor-claim-sign-a805d-m-targets-sealed-signup-URL-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-visitor-claim-sign-a805d-m-targets-sealed-signup-URL-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-visitor-claim-sign-a805d-m-targets-sealed-signup-URL-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-visitor-claim-sign-a805d-m-targets-sealed-signup-URL-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [stage-a-pixel7] › tests\e2e\journey-guest-chat-signup-cta.spec.ts:34:5 › guest-chat signup CTA · href targets sealed signup URL with next preserved 
+    [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:165:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid vault_tier + no shop · entitled · redirect to /vault/setup 
+    [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:34:5 › visitor interact popup · claim CTA preserves claim param, targets sealed signup URL 
+  5 did not run
+  6 passed (1.6m)

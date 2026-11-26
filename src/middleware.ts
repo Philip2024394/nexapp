@@ -53,6 +53,12 @@ import {
   KNOWN_DEVICE_MAX_AGE_SECONDS,
   KNOWN_DEVICE_VALUE,
 } from "@/lib/nex-native/app/known-device-cookie";
+// L-008 (2026-11-26) · the NEX-024 "account-active seen" cookie is
+// NOT written in middleware · see the comment block below where the
+// handler was removed. The write lives in the Route Handler
+// `/api/nex-native/welcome/mark-seen` so Set-Cookie is applied by a
+// separate HTTP transaction, avoiding Next.js 16's same-request
+// cookie propagation.
 
 // ── CID injection ──────────────────────────────────────────────────
 // Edge runtime cannot resolve node:async_hooks even transitively, so
@@ -178,6 +184,21 @@ async function refreshNexAuthSession(
   return res;
 }
 
+// L-008 (2026-11-26) · NEX-024 one-time-gate cookie writer moved
+// OUT of middleware. Next.js 16 propagates `res.cookies.set` back
+// into the current request's cookie jar for downstream Server
+// Components; writing here would redirect every first-ever visitor
+// straight to /contacts (observed defect · <template data-dgst="
+// NEXT_REDIRECT;replace;/nex-native/contacts;307;"> in the SSR HTML).
+// Raw `res.headers.append("set-cookie", ...)` is silently stripped by
+// Next.js middleware (verified empirically). The write is now done
+// by the Route Handler at
+//   `src/app/api/nex-native/welcome/mark-seen/route.ts`
+// which the `WelcomeShell` client component pings on mount. Route
+// Handler responses are separate HTTP transactions, so their
+// Set-Cookie headers land in the browser without affecting the
+// current page's SSR.
+
 /** Owner directive 2026-10-18 · P1 · ensure the directory sort seed
  *  cookie exists and extend its TTL on every directory render. The
  *  cookie is 15 minutes · active browsing keeps the same seed · a
@@ -295,6 +316,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (pathname.startsWith("/nex-native/directory")) {
     ensureDirectorySeedCookie(req, base);
   }
+  // L-008 (2026-11-26) · set the NEX-024 one-time-gate cookie here
+  // because Next.js 16 Server Components cannot write cookies. Exact
+  // L-008 (2026-11-26) · the one-time-gate cookie write was moved to
+  // the Route Handler `/api/nex-native/welcome/mark-seen` to escape
+  // the middleware cookie-propagation pitfall. Nothing to do here.
   const refreshed = await refreshNexAuthSession(req, base);
   return attachCid(refreshed, cid);
 }

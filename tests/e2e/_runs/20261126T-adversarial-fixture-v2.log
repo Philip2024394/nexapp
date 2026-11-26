@@ -1,0 +1,47 @@
+
+Running 7 tests using 1 worker
+
+[1/7] [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json
+[2/7] [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:87:7 › Cycle 9 · adversarial regression · buyer purchase-intent › tampered `?next=` · hidden sign-in input must NOT render for any malicious shape
+[3/7] [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:125:7 › Cycle 9 · adversarial regression · buyer purchase-intent › direct-link deep entry · guest Add-to-Cart preserves `next=` to sign-in
+[4/7] [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:160:7 › Cycle 9 · adversarial regression · buyer purchase-intent › reload on sign-in with `?next=` preserves the hidden `next` input value
+[5/7] [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:191:7 › Cycle 9 · adversarial regression · buyer purchase-intent › duplicate guest Add-to-Cart taps · single auth-gate banner · idempotent
+[6/7] [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:238:9 › Cycle 9 · adversarial regression · buyer purchase-intent › signed-in cart dedup › tapping Add-to-Cart repeatedly dedupes to a single cart row
+[7/7] [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:334:9 › Cycle 9 · adversarial regression · buyer purchase-intent › back-nav after resumed sign-in › goBack from a second route returns to product without re-mounting auth-gate
+  1) [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:334:9 › Cycle 9 · adversarial regression · buyer purchase-intent › back-nav after resumed sign-in › goBack from a second route returns to product without re-mounting auth-gate 
+
+    Error: page.goto: net::ERR_ABORTED at http://localhost:3008/nex-native/contacts
+    Call log:
+      - navigating to "http://localhost:3008/nex-native/contacts", waiting until "domcontentloaded"
+
+
+      343 |       });
+      344 |
+    > 345 |       await page.goto("/nex-native/contacts", {
+          |                  ^
+      346 |         waitUntil: "domcontentloaded",
+      347 |       });
+      348 |
+        at C:\Users\Victus\nexapp\tests\e2e\journey-buyer-adversarial.spec.ts:345:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-buyer-adversarial--ea16b-thout-re-mounting-auth-gate-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-buyer-adversarial--ea16b-thout-re-mounting-auth-gate-stage-a-pixel7\error-context.md
+
+    Error Context: test-results\journey-buyer-adversarial--ea16b-thout-re-mounting-auth-gate-stage-a-pixel7\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-buyer-adversarial--ea16b-thout-re-mounting-auth-gate-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-buyer-adversarial--ea16b-thout-re-mounting-auth-gate-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:334:9 › Cycle 9 · adversarial regression · buyer purchase-intent › back-nav after resumed sign-in › goBack from a second route returns to product without re-mounting auth-gate 
+  1 skipped
+  5 passed (47.4s)

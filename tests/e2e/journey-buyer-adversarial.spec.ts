@@ -23,16 +23,58 @@
 // (Dev Pass sign-in path).
 
 import { expect, test } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  createTestBusiness,
+  createTestProduct,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
-const PRODUCT_ID = process.env.NEX_E2E_SEED_PRODUCT_ID;
-const SHOP_SLUG = process.env.NEX_E2E_SEED_SHOP_SLUG;
-const SEEDED =
-  typeof PRODUCT_ID === "string" &&
-  PRODUCT_ID.length > 0 &&
-  typeof SHOP_SLUG === "string" &&
-  SHOP_SLUG.length > 0;
+// 2026-11-26 remediation · harness-backed seeding. Env-var override
+// (NEX_E2E_SEED_PRODUCT_ID + NEX_E2E_SEED_SHOP_SLUG) still honoured
+// when owner pins a sealed fixture; otherwise `beforeAll` mints a
+// real merchant + shop + live product via service-role, and
+// `afterAll` tears everything down.
+let PRODUCT_ID: string;
+let SHOP_SLUG: string;
+let FIXTURE_HANDLES: FixtureHandle[] = [];
 
 test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () => {
+  test.beforeAll(async () => {
+    assertSandboxRef();
+    const envProductId = process.env.NEX_E2E_SEED_PRODUCT_ID;
+    const envShopSlug = process.env.NEX_E2E_SEED_SHOP_SLUG;
+    if (envProductId && envShopSlug) {
+      PRODUCT_ID = envProductId;
+      SHOP_SLUG = envShopSlug;
+      return;
+    }
+    const merchant = await createTestAccount("adversarial-merchant");
+    FIXTURE_HANDLES.push(merchant);
+    const biz = await createTestBusiness(merchant, {
+      label: "adversarial-shop",
+    });
+    FIXTURE_HANDLES.push(biz);
+    const prod = await createTestProduct(biz, {
+      name: "e2e-fixture-adversarial-widget",
+      pricePence: 1799,
+      currency: "GBP",
+      status: "live",
+    });
+    FIXTURE_HANDLES.push(prod);
+    PRODUCT_ID = prod.productId;
+    SHOP_SLUG = biz.slug;
+  });
+
+  test.afterAll(async () => {
+    await teardownAll(FIXTURE_HANDLES);
+    await assertNoResidualFixtures(FIXTURE_HANDLES);
+    FIXTURE_HANDLES = [];
+  });
+
   test.beforeEach(async ({ context }) => {
     await context.clearCookies();
   });
@@ -83,8 +125,6 @@ test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () =
   test("direct-link deep entry · guest Add-to-Cart preserves `next=` to sign-in", async ({
     page,
   }) => {
-    test.skip(!SEEDED, "BLOCKED-PENDING-SEED-FIXTURE · product id required");
-
     const resp = await page.goto(`/nex-native/product/${PRODUCT_ID}`, {
       waitUntil: "domcontentloaded",
       referer: "",
@@ -120,7 +160,6 @@ test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () =
   test("reload on sign-in with `?next=` preserves the hidden `next` input value", async ({
     page,
   }) => {
-    test.skip(!SEEDED, "BLOCKED-PENDING-SEED-FIXTURE");
     const nextPath = `/nex-native/product/${PRODUCT_ID}`;
     const r = await page.goto(
       `/nex-native/sign-in?next=${encodeURIComponent(nextPath)}`,
@@ -152,8 +191,6 @@ test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () =
   test("duplicate guest Add-to-Cart taps · single auth-gate banner · idempotent", async ({
     page,
   }) => {
-    test.skip(!SEEDED, "BLOCKED-PENDING-SEED-FIXTURE");
-
     const resp = await page.goto(`/nex-native/product/${PRODUCT_ID}`, {
       waitUntil: "domcontentloaded",
     });
@@ -185,12 +222,22 @@ test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () =
   // ────────────────────────────────────────────────────────────────
   test.describe("signed-in cart dedup", () => {
     test.use({ storageState: "tests/e2e/.auth/state.json" });
+    test.beforeEach(async ({ context }) => {
+      // 2026-11-26 remediation · outer `beforeEach` clears cookies for
+      // guest tests; this inner authed describe needs to re-seat the
+      // admin cookies that `test.use({ storageState })` loaded at
+      // context creation. Playwright hooks are additive, so inner
+      // beforeEach runs AFTER outer beforeEach — order: outer clears,
+      // inner re-adds.
+      const state = JSON.parse(
+        require("fs").readFileSync("tests/e2e/.auth/state.json", "utf8"),
+      );
+      await context.addCookies(state.cookies);
+    });
 
     test("tapping Add-to-Cart repeatedly dedupes to a single cart row", async ({
       page,
     }) => {
-      test.skip(!SEEDED, "BLOCKED-PENDING-SEED-FIXTURE");
-
       const resp = await page.goto(`/nex-native/product/${PRODUCT_ID}`, {
         waitUntil: "domcontentloaded",
       });
@@ -275,12 +322,18 @@ test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () =
   // ────────────────────────────────────────────────────────────────
   test.describe("back-nav after resumed sign-in", () => {
     test.use({ storageState: "tests/e2e/.auth/state.json" });
+    test.beforeEach(async ({ context }) => {
+      // Same reason as sibling inner describe: outer `beforeEach`
+      // cleared cookies for guest tests, so re-seat admin state here.
+      const state = JSON.parse(
+        require("fs").readFileSync("tests/e2e/.auth/state.json", "utf8"),
+      );
+      await context.addCookies(state.cookies);
+    });
 
     test("goBack from a second route returns to product without re-mounting auth-gate", async ({
       page,
     }) => {
-      test.skip(!SEEDED, "BLOCKED-PENDING-SEED-FIXTURE");
-
       const r = await page.goto(`/nex-native/product/${PRODUCT_ID}`, {
         waitUntil: "domcontentloaded",
       });
@@ -288,6 +341,16 @@ test.describe("Cycle 9 · adversarial regression · buyer purchase-intent", () =
       await page.waitForSelector("[data-nex-product-page]", {
         timeout: 10_000,
       });
+
+      // 2026-11-26 remediation · Cycle-7 hydration-race workaround ·
+      // product page fires mount-time RSC prefetches that abort the
+      // next hard navigation with `net::ERR_ABORTED`. Let them settle
+      // before the second goto, same pattern as
+      // journey-buyer-checkout.spec.ts and other product-page journeys.
+      await page
+        .waitForLoadState("networkidle", { timeout: 15_000 })
+        .catch(() => {});
+      await page.waitForTimeout(1500);
 
       await page.goto("/nex-native/contacts", {
         waitUntil: "domcontentloaded",

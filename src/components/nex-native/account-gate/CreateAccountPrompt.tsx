@@ -49,7 +49,9 @@ export interface CreateAccountPromptProps {
   readonly variant: CreateAccountPromptVariant;
   readonly onClose: () => void;
   /**
-   * Canonical onboarding route. Defaults to `/nex-native/create-account`.
+   * Canonical onboarding route. Defaults to the sealed one-URL auth
+   * target `/nex-native/sign-in?mode=signup` (Cycle-14 F2 · the retired
+   * `/nex-native/create-account` route was replaced 2026-11-25).
    * Override only in tests / fixtures.
    */
   readonly onboardingHref?: string;
@@ -60,7 +62,11 @@ export interface CreateAccountPromptProps {
   readonly returnFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
-const DEFAULT_ONBOARDING_HREF = "/nex-native/create-account";
+// Exported so the Cycle-14 F2 regression test can assert the default
+// did not regress back to the retired `/nex-native/create-account`
+// route (sealed 2026-11-25). Runtime callers can still override via
+// the `onboardingHref` prop.
+export const DEFAULT_ONBOARDING_HREF = "/nex-native/sign-in?mode=signup";
 
 export function CreateAccountPrompt({
   open,

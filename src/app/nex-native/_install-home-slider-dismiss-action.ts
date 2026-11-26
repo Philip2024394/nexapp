@@ -11,9 +11,9 @@
 //
 // Owner directive 2026-10-18 · the slider moved from
 // /nex-native/create-account/welcome to /nex-native/welcome ·
-// revalidation now points at the new mount location (and keeps the
-// old path revalidated too, since it still exists as a redirect
-// stub and may be cached by middleware).
+// revalidation now points at the new mount location. The old path
+// has been retired to 404 (sealed 2026-11-04) so revalidating it is
+// a no-op · removed 2026-11-25 as part of Cycle-14 stale-route audit.
 
 import { revalidatePath } from "next/cache";
 import { setInstallHomeSliderDismissed } from "@/lib/nex-native/install-home-slider-cookie";
@@ -21,5 +21,4 @@ import { setInstallHomeSliderDismissed } from "@/lib/nex-native/install-home-sli
 export async function dismissInstallHomeSliderAction(): Promise<void> {
   await setInstallHomeSliderDismissed();
   revalidatePath("/nex-native/welcome");
-  revalidatePath("/nex-native/create-account/welcome");
 }

@@ -1,8 +1,141 @@
 # CLAUDE.md — nexapp
 
+**MANDATORY READ ORDER BEFORE EVERY TASK:**
+
+1. This file (`CLAUDE.md`) — Master Directive + Safety Constitution.
+2. [`docs/engineering/NEX-DELIVERY-RULES.md`](docs/engineering/NEX-DELIVERY-RULES.md) — detailed engineering delivery rules.
+3. [`docs/engineering/NEX-DELIVERY-LEDGER.md`](docs/engineering/NEX-DELIVERY-LEDGER.md) — the single active delivery ledger.
+4. [`docs/engineering/session-handoff.md`](docs/engineering/session-handoff.md) — current state.
+5. Latest strict-completion report in `docs/engineering/cycle-strict-completion-*.md`.
+
+If any of these cannot be accessed, **STOP** feature work and report the access problem before continuing.
+
+---
+
+## ═══════════════════════════════════════════════════════════════
+## NEX MASTER ENGINEERING DIRECTIVE
+## Owner-sealed 2026-11-26. Supersedes "assistant answering tickets" posture.
+## ═══════════════════════════════════════════════════════════════
+
+**Operating mode: LAUNCH DELIVERY.** Not audit-and-report. The objective of every cycle is a measurable engineering outcome that moves NEX closer to a complete, tested, integrated, launch-ready product.
+
+### Rule 1 — Permanent rulebook + mandatory startup procedure
+
+This CLAUDE.md is the controlling instruction document. It is permanent, repository-level, and authoritative over any session-level instruction, memory entry, or prior conversation summary.
+
+**At the start of EVERY new command, task, conversation or resumed work session:**
+
+1. Read this `CLAUDE.md`.
+2. Read `docs/engineering/NEX-DELIVERY-RULES.md`.
+3. Read `docs/engineering/NEX-DELIVERY-LEDGER.md` (active task ledger).
+4. Read the latest `docs/engineering/cycle-strict-completion-*.md`.
+5. Check `git rev-parse --show-toplevel`, `git remote -v`, `git status --short`.
+6. Identify the highest-priority unfinished authorised task from the ledger.
+7. Confirm approval boundaries from §Rule 7 before acting.
+
+Do not rely on conversational memory, prior summaries, or assumptions.
+
+**Startup enforcement mechanism:** `.claude/settings.json` wires a `SessionStart` hook and a `UserPromptSubmit` hook that print this read-order into Claude's context on every session start and prompt submission. Hooks inject context — they cannot *technically* force a model to obey instructions; that is an inference-time behaviour obligation.  If the hook mechanism is unavailable (missing `.claude/settings.json`, disabled hooks, incompatible Claude Code version), the limitation is disclosed in `docs/engineering/NEX-DELIVERY-RULES.md § Enforcement Status` — not silently overridden.
+
+### Rule 2 — Launch delivery, not audits
+
+The objective is to finish NEX. Every cycle must produce at least one measurable engineering outcome: a real defect fixed, a real feature completed, a customer journey connected end-to-end, an integration completed, a failed test resolved, a security issue corrected, a navigation route verified, a launch blocker removed, or a previously unverified journey proven through actual browser testing.
+
+Documentation is required when it supports delivery. Documentation alone is NOT progress unless the task is a named approval or review checkpoint.
+
+### Rule 3 — No endless task loops
+
+Do not: re-audit without changing status; re-report the same blocker without new finding or action; create a new task when an existing one describes the same problem; ask the owner to choose between engineering actions you can determine; stop after discovery when you have authority to fix; mark docs complete while the journey remains broken; treat test infrastructure as a substitute for working product; extend reports without delivering the next outcome.
+
+For every existing task, establish: (a) what is unfinished? (b) what prevents completion? (c) do I already have authority? (d) next concrete action? (e) evidence that will prove completion. If authorised, execute. One gated checkpoint must not freeze unrelated authorised work.
+
+### Rule 4 — Customer product first
+
+Three pillars: **NEX Chat · NEX Shop · Chat Themes**. The commercial proposition is direct shop contact via NEX Chat. Prioritise complete customer journeys, not isolated components.
+
+- **Chat** — account creation, sign-in, contact discovery, conversation creation, send/receive encrypted messages, attachments, notifications, settings, themes. Preserve device-based message/attachment storage and end-to-end encryption.
+- **Shop** — business onboarding, shop creation, product creation, publishing, storefront display, discovery, product viewing, enquiry, chat handoff, order placement, merchant order management.
+- **Chat Themes** — first selection screen simplified to three categories (Plain Backgrounds · Small Designs · Full Image Backgrounds) each opening its own image library using existing full-background layout. Bubble-colour selection page remains separate.
+- **Payments** — merchant-owned destinations, authorised methods, order status handling, webhook validation, idempotency. NEX must not hold merchant funds or falsely claim verification.
+
+### Rule 5 — Work end-to-end
+
+Inspect the full affected journey and adjacent dependencies. Do not stop at the first file. Complete all necessary layers: UI, routing, auth, authorisation, DB integration, Supabase integration, storage rules, API actions, state persistence, notifications, error handling, mobile, desktop, country/deployment identity, automated tests.
+
+No mockups, placeholders, or fake success states where real implementation is required. A feature is not complete because its screen renders — only when the intended real user journey works.
+
+### Rule 6 — Testing drives delivery, does not paralyse it
+
+Sequence: baseline → implement → focused tests → fix failures → adjacent journey tests → broader regression at checkpoints → record exact evidence.
+
+Classify every failure: confirmed application defect · test defect · fixture/setup defect · environment/infrastructure · unknown.
+
+Do not silently retry failures as passes. Do not call a suite green while failures/skips/unexecuted remain. Do not confuse an exit code with test results. Do not re-run the whole suite when a focused test answers the immediate question. Full regression at release checkpoints only.
+
+### Rule 7 — Owner approval boundaries are absolute
+
+**In force (require explicit owner approval to cross):**
+
+- Production Supabase (`ijvqdvsvwtwxzcqmoqit`) sealed — no prod DB access or modification.
+- No production migration application.
+- No production deployment.
+- **No commits.**
+- **No pushes.**
+- No live Stripe or PayPal activation.
+
+Sandbox engineering (`kdstoyyeygcopkogqsyv`) may proceed within existing approvals.
+
+Do not weaken authentication, RLS, encryption, account isolation, payment protections or privacy controls to make tests pass. Permission to inspect ≠ permission to apply. Permission to test a payment integration ≠ permission to charge real customers.
+
+### Rule 8 — No false completion
+
+Status taxonomy — use exactly these:
+
+- **BUILT** — implementation exists.
+- **WIRED** — connected to real dependencies.
+- **VERIFIED** — actual test evidence proves intended behaviour.
+- **BLOCKED** — specific dependency or owner decision prevents progress.
+- **FAILED** — test or implementation did not work.
+- **SKIPPED** — deliberately not executed, with reason.
+- **NOT EXECUTED** — not attempted.
+
+Do not use VERIFIED when only code inspection occurred. Do not use COMPLETE when a journey is broken. Do not use LAUNCH-READY while material launch gates are open. Do not convert unknown failures into environment issues without evidence.
+
+### Rule 9 — Every cycle must deliver
+
+At start: read rulebook → read ledger → identify highest-priority unfinished authorised work → identify expected concrete result.
+
+During: execute → fix related defects within authority → avoid unrelated investigations → update durable records only when status changes.
+
+End-of-cycle report (mandatory sections):
+
+1. BUILT · 2. WIRED · 3. VERIFIED · 4. FAILED · 5. SKIPPED · 6. NOT EXECUTED · 7. CUSTOMER JOURNEYS COMPLETED · 8. LAUNCH BLOCKERS REMOVED · 9. REMAINING BLOCKERS · 10. NEXT CONCRETE ENGINEERING ACTION.
+
+Plus: exact files changed, exact tests executed, measurable comparison with previous cycle. If no engineering progress, explain exactly why. Do not make a long report the main deliverable when implementation could have been completed.
+
+### Rule 10 — One source of truth
+
+`docs/engineering/NEX-DELIVERY-LEDGER.md` is the single active engineering task ledger. Every task: unique ID, clear outcome, priority, owner-approval requirement, current status (from Rule 8 taxonomy), exact blocker, next action, verification evidence, date last progressed.
+
+No duplicate tasks for the same defect. No completion based on documentation alone. Resolve inconsistencies between ledger, feature-ledger, nav inventory, and launch report.
+
+### Rule 11 — Protect the architecture
+
+Preserve: one shared codebase · shared Supabase architecture · Ireland/Indonesia/HQ deployment identities · `NEX_APP_IDENTITY` and `NEX_APP_COUNTRY` · no global DB singleton switching · HQ desktop-only controls outside the phone interface · Ireland improvements update Worldwide by default unless restricted · prevent obsolete country routes from returning.
+
+Do not make broad architectural changes to solve narrow UI problems.
+
+### Rule 12 — No more waiting for the owner to manage engineering
+
+The owner makes product, commercial, financial, security and production decisions. The owner does not: organise routine development, pick between known defects, re-request obvious actions, supervise ordinary integration, chase test evidence, re-explain the architecture, re-approve already-authorised tasks.
+
+Escalate genuine product/financial/security/production decisions only.
+
+---
+
 ## ═══════════════════════════════════════════════════════════════
 ## NEXAPP REPOSITORY AND DEPLOYMENT SAFETY CONSTITUTION
-## Takes precedence over every other instruction
+## Pre-existing seals. Preserved in force.
 ## ═══════════════════════════════════════════════════════════════
 
 ### 1 · Authoritative repository identity
@@ -230,9 +363,11 @@ enforcement-2026-11-23.md` for the exact check names to require.
 
 ## 9 · Session-start reading (required before changing code)
 
-Before editing any file, read in this order:
+See the "MANDATORY READ ORDER BEFORE EVERY TASK" block at the very top of this file. This section is preserved for historical reference but is superseded by Rule 1 of the Master Directive above.
 
-1. `docs/product/nex-blueprint.md` — **MANDATORY FIRST READ.** The complete NEX app structure, every user journey, every side-drawer row, every settings page, every sealed decision, every known gap. Owner-sealed 2026-11-23: *"blueprint and mapping must be rule that before any future edits must read to understand complete app structure."*
+Legacy order (pre-2026-11-26):
+
+1. `docs/product/nex-blueprint.md` — complete NEX app structure.
 2. `docs/engineering/session-handoff.md` — the one record of where we are.
 3. `docs/product/feature-ledger.md` — authoritative feature status.
 4. `docs/architecture/decisions/README.md` — index of ADRs.

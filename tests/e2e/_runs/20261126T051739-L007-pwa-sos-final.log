@@ -1,0 +1,425 @@
+
+Running 51 tests using 1 worker
+
+  ✓   1 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:203:5 › A · install page renders and leaves 'detecting' (7.0s)
+  -   2 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:223:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓   3 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:248:5 › C · display-mode: standalone yields 'installed' state (3.9s)
+  -   4 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:279:5 › D · desktop settles on either the install card OR an honest fallback
+  ✘   5 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:303:5 › E · mobile without beforeinstallprompt lands on 'unsupported' honest copy (5.4s)
+  ✓   6 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › F · emergency-help does not request geolocation on initial load (1.4s)
+  ✘   7 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call (11.6s)
+  ✓   8 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:356:5 › H · Not Now returns to idle without invoking geolocation (1.7s)
+  ✓   9 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:373:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (1.4s)
+  ✓  10 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › K · denied geo surfaces retry and a coord-free sms: fallback (3.7s)
+  ✓  11 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:451:5 › L · landing WITHOUT engagement cookie hides the install slot (5.3s)
+  ✓  12 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:466:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (2.4s)
+  ✓  13 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:489:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.4s)
+  ✓  14 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:513:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.3s)
+  ✘  15 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests (11.3s)
+  -  16 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:552:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -  17 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:561:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✘  18 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:203:5 › A · install page renders and leaves 'detecting' (5.8s)
+  -  19 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:223:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓  20 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:248:5 › C · display-mode: standalone yields 'installed' state (3.5s)
+  ✓  21 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:279:5 › D · desktop settles on either the install card OR an honest fallback (5.1s)
+  -  22 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:303:5 › E · mobile without beforeinstallprompt lands on 'unsupported' honest copy
+  ✓  23 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › F · emergency-help does not request geolocation on initial load (1.7s)
+  ✘  24 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call (11.2s)
+  ✓  25 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:356:5 › H · Not Now returns to idle without invoking geolocation (1.5s)
+  ✘  26 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:373:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (14.0s)
+  ✓  27 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › K · denied geo surfaces retry and a coord-free sms: fallback (1.8s)
+  ✓  28 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:451:5 › L · landing WITHOUT engagement cookie hides the install slot (3.4s)
+  ✓  29 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:466:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (5.1s)
+  ✓  30 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:489:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.9s)
+  ✓  31 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:513:5 › O · an unauthenticated landing visit does not write the eligibility cookie (3.1s)
+  ✘  32 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests (11.6s)
+  -  33 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:552:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -  34 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:561:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓  35 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:203:5 › A · install page renders and leaves 'detecting' (5.4s)
+  ✓  36 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:223:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path (4.2s)
+  ✓  37 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:248:5 › C · display-mode: standalone yields 'installed' state (3.3s)
+  -  38 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:279:5 › D · desktop settles on either the install card OR an honest fallback
+  -  39 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:303:5 › E · mobile without beforeinstallprompt lands on 'unsupported' honest copy
+  ✓  40 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › F · emergency-help does not request geolocation on initial load (1.6s)
+  ✘  41 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call (11.5s)
+  ✘  42 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:356:5 › H · Not Now returns to idle without invoking geolocation (11.7s)
+  ✓  43 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:373:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (1.2s)
+  ✓  44 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › K · denied geo surfaces retry and a coord-free sms: fallback (1.7s)
+  ✓  45 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:451:5 › L · landing WITHOUT engagement cookie hides the install slot (3.4s)
+  ✓  46 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:466:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (3.2s)
+  ✓  47 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:489:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (3.5s)
+  ✓  48 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:513:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.8s)
+  ✓  49 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests (2.0s)
+  -  50 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:552:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -  51 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:561:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+
+
+  1) [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:303:5 › E · mobile without beforeinstallprompt lands on 'unsupported' honest copy 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: /install not available here/i })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: /install not available here/i }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: /install not available here/i })
+
+
+      315 |   await expect(
+      316 |     page.getByRole("heading", { name: /install not available here/i }),
+    > 317 |   ).toBeVisible({ timeout: 5_000 });
+          |     ^
+      318 | });
+      319 |
+      320 | // ---------------------------------------------------------------------------
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:317:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-20d9c--on-unsupported-honest-copy-nex-pwa-install-and-location-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-20d9c--on-unsupported-honest-copy-nex-pwa-install-and-location-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-20d9c--on-unsupported-honest-copy-nex-pwa-install-and-location-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-20d9c--on-unsupported-honest-copy-nex-pwa-install-and-location-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:344:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:542:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:203:5 › A · install page renders and leaves 'detecting' 
+
+    Error: expect(locator).toBeHidden() failed
+
+    Locator:  getByText(/checking your device/i)
+    Expected: hidden
+    Received: visible
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeHidden" getByText(/checking your device/i) with timeout 5000ms
+      - waiting for getByText(/checking your device/i)
+        14 × locator resolved to <p>Checking your device…</p>
+           - unexpected value "visible"
+
+
+      211 |   // After the client runs, we leave "Checking your device…" within the
+      212 |   // 1.2s detection timeout the component uses.
+    > 213 |   await expect(page.getByText(/checking your device/i)).toBeHidden({
+          |                                                         ^
+      214 |     timeout: 5_000,
+      215 |   });
+      216 |   expect(errors, "no runtime page errors").toEqual([]);
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:213:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-baf2b-nders-and-leaves-detecting--nex-pwa-install-and-location-desktop\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-baf2b-nders-and-leaves-detecting--nex-pwa-install-and-location-desktop\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-baf2b-nders-and-leaves-detecting--nex-pwa-install-and-location-desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-baf2b-nders-and-leaves-detecting--nex-pwa-install-and-location-desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:344:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-desktop\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-desktop\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:373:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:378:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-b2e57-ef-includes-coords-maps-url-nex-pwa-install-and-location-desktop\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-b2e57-ef-includes-coords-maps-url-nex-pwa-install-and-location-desktop\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-b2e57-ef-includes-coords-maps-url-nex-pwa-install-and-location-desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-b2e57-ef-includes-coords-maps-url-nex-pwa-install-and-location-desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:542:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-desktop\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-desktop\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-a8fdb-n-outbound-network-requests-nex-pwa-install-and-location-desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:344:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-iphone-emulated\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-iphone-emulated\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-iphone-emulated\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-7d18b-before-any-geolocation-call-nex-pwa-install-and-location-iphone-emulated\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:356:5 › H · Not Now returns to idle without invoking geolocation 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: /begin location permission flow/i })
+    Expected: enabled
+    Received: disabled
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: /begin location permission flow/i }) with timeout 10000ms
+      - waiting for getByRole('button', { name: /begin location permission flow/i })
+        23 × locator resolved to <button disabled type="button" aria-label="Begin location permission flow">Enable location + prepare SMS</button>
+           - unexpected value "disabled"
+
+
+      193 |   // 10s cap: the iPhone-emulated project under the dev server is
+      194 |   // slower to settle React state than the Pixel 7 or desktop projects.
+    > 195 |   await expect(enableButton).toBeEnabled({ timeout: 10_000 });
+          |                              ^
+      196 |   await enableButton.click();
+      197 | }
+      198 |
+        at beginLocationFlow (C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:195:30)
+        at C:\Users\Victus\nexapp\tests\e2e\nex-pwa-install-and-location.spec.ts:361:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-cedc4-ithout-invoking-geolocation-nex-pwa-install-and-location-iphone-emulated\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\nex-pwa-install-and-locati-cedc4-ithout-invoking-geolocation-nex-pwa-install-and-location-iphone-emulated\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\nex-pwa-install-and-locati-cedc4-ithout-invoking-geolocation-nex-pwa-install-and-location-iphone-emulated\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\nex-pwa-install-and-locati-cedc4-ithout-invoking-geolocation-nex-pwa-install-and-location-iphone-emulated\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9 failed
+    [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:303:5 › E · mobile without beforeinstallprompt lands on 'unsupported' honest copy 
+    [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call 
+    [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests 
+    [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:203:5 › A · install page renders and leaves 'detecting' 
+    [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call 
+    [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:373:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url 
+    [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:528:5 › P · trusted-contact phone never appears in outbound network requests 
+    [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:339:5 › G · explanation card appears before any geolocation call 
+    [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:356:5 › H · Not Now returns to idle without invoking geolocation 
+  12 skipped
+  30 passed (3.5m)
+EXIT=1

@@ -1,0 +1,46 @@
+
+Running 3 tests using 1 worker
+
+[1/3] [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json
+[2/3] [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:36:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps
+[3/3] [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:66:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details
+  1) [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:66:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details 
+
+    TimeoutError: page.waitForURL: Timeout 20000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation until "domcontentloaded"
+      navigated to "http://localhost:3008/nex-native/sign-in"
+      navigated to "http://localhost:3008/nex-native/sign-in"
+      navigated to "http://localhost:3008/nex-native/sign-in"
+    ============================================================
+
+       at _fixtures\sandbox-test-harness.ts:324
+
+      322 |   // Submit via the sealed submit button and wait for redirect off sign-in.
+      323 |   await Promise.all([
+    > 324 |     page.waitForURL(
+          |          ^
+      325 |       (u) => !/\/nex-native\/sign-in(?:[/?#]|$)/.test(u.pathname),
+      326 |       { timeout: 20_000, waitUntil: "domcontentloaded" },
+      327 |     ),
+        at signInAsFixtureInBrowser (C:\Users\Victus\nexapp\tests\e2e\_fixtures\sandbox-test-harness.ts:324:10)
+        at C:\Users\Victus\nexapp\tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:91:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-mid-shop-setup-int-46408-ds-back-on-business-details-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-mid-shop-setup-int-46408-ds-back-on-business-details-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-mid-shop-setup-int-46408-ds-back-on-business-details-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-mid-shop-setup-int-46408-ds-back-on-business-details-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:66:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details 
+  2 passed (49.7s)

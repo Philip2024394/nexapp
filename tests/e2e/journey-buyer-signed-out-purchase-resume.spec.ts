@@ -29,13 +29,61 @@
 //   4. Browser back after resumed sign-in does not break cart state.
 
 import { expect, test } from "@playwright/test";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  createTestBusiness,
+  createTestProduct,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
 
-const SLUG = process.env.NEX_E2E_SEED_SHOP_SLUG;
-const PRODUCT_ID = process.env.NEX_E2E_SEED_PRODUCT_ID;
+// 2026-11-26 remediation · the historical env-var gate (`SEEDED`)
+// kept every test in this file skipped unless the owner manually
+// pinned a sandbox fixture. The harness is now proven to seed real
+// nex_account + nex_business + nex_product rows via service-role
+// (same pattern as `journey-ask-seller-nonowner-full.spec.ts`).
+// Env-var overrides remain honoured so an owner-pinned fixture wins.
+//
+// A single describe-level fixture backs all four tests so we don't
+// explode sandbox rows. teardown runs in afterAll.
 
-const SEEDED = typeof SLUG === "string" && typeof PRODUCT_ID === "string";
+let SLUG: string;
+let PRODUCT_ID: string;
+let FIXTURE_HANDLES: FixtureHandle[] = [];
 
 test.describe("Cycle 8 · signed-out buyer · purchase intent preservation", () => {
+  test.beforeAll(async () => {
+    assertSandboxRef();
+    const envSlug = process.env.NEX_E2E_SEED_SHOP_SLUG;
+    const envProductId = process.env.NEX_E2E_SEED_PRODUCT_ID;
+    if (envSlug && envProductId) {
+      SLUG = envSlug;
+      PRODUCT_ID = envProductId;
+      return;
+    }
+    const merchant = await createTestAccount("resume-merchant");
+    FIXTURE_HANDLES.push(merchant);
+    const biz = await createTestBusiness(merchant, { label: "resume-shop" });
+    FIXTURE_HANDLES.push(biz);
+    const prod = await createTestProduct(biz, {
+      name: "e2e-fixture-resume-widget",
+      pricePence: 2999,
+      currency: "GBP",
+      status: "live",
+    });
+    FIXTURE_HANDLES.push(prod);
+    SLUG = biz.slug;
+    PRODUCT_ID = prod.productId;
+  });
+
+  test.afterAll(async () => {
+    await teardownAll(FIXTURE_HANDLES);
+    await assertNoResidualFixtures(FIXTURE_HANDLES);
+    FIXTURE_HANDLES = [];
+  });
+
   test.beforeEach(async ({ context }) => {
     // Every case in this describe begins as a fresh guest · cookies
     // and localStorage are cleared so cart state is observable from
@@ -46,10 +94,7 @@ test.describe("Cycle 8 · signed-out buyer · purchase intent preservation", () 
   test("end-to-end · guest → Add to Cart gate → Dev Pass → return to product → add → survive refresh", async ({
     page,
   }) => {
-    test.skip(
-      !SEEDED,
-      "BLOCKED-PENDING-SEED-FIXTURE · NEX_E2E_SEED_SHOP_SLUG + NEX_E2E_SEED_PRODUCT_ID required",
-    );
+    test.setTimeout(90_000);
 
     // Step 1 · guest lands on a shared product link.
     const resp = await page.goto(`/nex-native/product/${PRODUCT_ID}`, {
@@ -154,31 +199,37 @@ test.describe("Cycle 8 · signed-out buyer · purchase intent preservation", () 
 
     // Step 8 · persistence across refresh (Founder requirement #2 ·
     // actual cart state, not just a product page reopening).
+    //
+    // 2026-11-26 remediation · the prior pattern was:
+    //   reload({domcontentloaded}) → waitForSelector → page.evaluate
+    // which races against a secondary client-side navigation that
+    // fires AFTER DOMContentLoaded on the product page (Playwright
+    // then throws `Execution context was destroyed`). `waitForFunction`
+    // auto-retries across navigations · we fold the DOM-mounted check
+    // and the localStorage assertion into a single predicate so the
+    // execution-context is read fresh each retry.
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForSelector("[data-nex-product-page]", { timeout: 10_000 });
-    const cartAfterRefresh = await page.evaluate(() => {
-      try {
-        const raw = window.localStorage.getItem("nex_cart_v1");
-        return raw ? JSON.parse(raw) : null;
-      } catch { return null; }
-    });
-    expect(cartAfterRefresh, "cart survives refresh").toBeTruthy();
-    expect(
-      (cartAfterRefresh as Array<{ id?: string }> | null)?.some(
-        (x) => x.id === PRODUCT_ID,
-      ),
-      "exact product id survives refresh",
-    ).toBe(true);
+    await page.waitForFunction(
+      (pid) => {
+        try {
+          if (!document.querySelector("[data-nex-product-page]")) return false;
+          const raw = window.localStorage.getItem("nex_cart_v1");
+          if (!raw) return false;
+          const arr = JSON.parse(raw) as Array<{ id?: string; quantity?: number }>;
+          return (
+            Array.isArray(arr) &&
+            arr.some((x) => x && x.id === pid && (x.quantity ?? 0) >= 1)
+          );
+        } catch { return false; }
+      },
+      PRODUCT_ID,
+      { timeout: 15_000 },
+    );
   });
 
   test("new-account creation · signup form wiring preserves ?next= (URL-level only · end-to-end BLOCKED without approved buyer)", async ({
     page,
   }) => {
-    test.skip(
-      !SEEDED,
-      "BLOCKED-PENDING-SEED-FIXTURE · NEX_E2E_SEED_PRODUCT_ID required",
-    );
-
     const next = encodeURIComponent(`/nex-native/product/${PRODUCT_ID}`);
     await page.goto(
       `/nex-native/sign-in?mode=signup&next=/nex-native/product/${PRODUCT_ID}`,
@@ -215,11 +266,6 @@ test.describe("Cycle 8 · signed-out buyer · purchase intent preservation", () 
   test("Ask Seller sealed contract · ?open-chat=1&product=<id> redirects signed-in non-owner to product-context conversation", async ({
     page,
   }) => {
-    test.skip(
-      !SEEDED,
-      "BLOCKED-PENDING-SEED-FIXTURE · NEX_E2E_SEED_SHOP_SLUG + NEX_E2E_SEED_PRODUCT_ID required",
-    );
-
     // Admin storageState: not the owner of handbags-direct (admin
     // account id dd21eb50-... vs Rosa 11111111-...-1113 per Cycle 8
     // fixture research), so the sealed server-redirect in
@@ -260,10 +306,7 @@ test.describe("Cycle 8 · signed-out buyer · purchase intent preservation", () 
   test("independent challenge · browser back after resumed sign-in does not resurrect auth-gate", async ({
     page,
   }) => {
-    test.skip(
-      !SEEDED,
-      "BLOCKED-PENDING-SEED-FIXTURE · fixture env required",
-    );
+    test.setTimeout(90_000);
 
     // Short adversarial probe: after a successful resume, go back
     // in history. The sign-in page should be in the stack · the

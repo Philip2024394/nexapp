@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "url": "postgresql://postgres.kdstoyyeygcopkogqsyv:***@aws-1-eu-west-3.pooler.supabase.com:5432/postgres",
+  "total_elapsed_ms": 1455,
+  "select_one_ms": 1043,
+  "canonical": {
+    "count": 0,
+    "error": null
+  },
+  "nex_business": {
+    "count": 32,
+    "error": null
+  }
+}

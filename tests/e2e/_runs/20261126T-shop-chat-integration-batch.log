@@ -1,0 +1,19 @@
+
+Running 13 tests using 1 worker
+
+  ✓   1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (9.7s)
+  ✓   2 [stage-a-pixel7] › tests\e2e\journey-ask-seller-nonowner-full.spec.ts:51:7 › Cycle 9 · non-owner Ask Seller · observable send › SUCCESS · non-owner lands on conversation · Send to shop · chip clears + DB confirms conversation/participants/message (39.2s)
+  -   3 [stage-a-pixel7] › tests\e2e\journey-ask-seller-nonowner-full.spec.ts:344:7 › Cycle 9 · non-owner Ask Seller · observable send › ERROR PATH · Ask Seller surfaces honest error label when send fails
+  ✓   4 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:45:7 › T-1.1 · chat send end-to-end › sanity · /chat redirects to /contacts (retired hub) (10.8s)
+  -   5 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:59:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route
+  -   6 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:78:7 › T-1.1 · chat send end-to-end › offline outbox · send under forced-offline reflects pending state
+  -   7 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:92:7 › T-1.1 · chat send end-to-end › retract · sender-side retract affordance renders in the message menu
+  -   8 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:100:7 › T-1.1 · chat send end-to-end › delete-for-me · distinct label from retract
+  -   9 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:64:7 › T-2.2 · create shop journey › baseline · /manage redirects to setup dispatcher iff the account has no business
+  -  10 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:95:7 › T-2.2 · create shop journey › setup dispatcher routes an empty account to business-details first
+  ✓  11 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:123:7 › T-2.2 · create shop journey › harness · fresh fixture account can own a nex_business row with correct FK + slug + teardown (3.3s)
+  ✓  12 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:204:7 › T-2.2 · create shop journey › real browser journey · shop-less account → /manage → business-details → submit → nex_business row persists (44.8s)
+  ✓  13 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8-ui-loop.spec.ts:112:7 › T-8 · merchant order full UI loop › merchant signs in · sees order · opens detail · marks paid · marks completed · ownership gate holds · zero residuals (1.2m)
+
+  7 skipped
+  6 passed (3.2m)

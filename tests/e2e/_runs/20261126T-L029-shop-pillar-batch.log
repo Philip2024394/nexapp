@@ -1,0 +1,25 @@
+
+Running 19 tests using 1 worker
+
+  ✓   1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.1s)
+  ✓   2 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:45:7 › T-2.5 · buyer checkout + price validation › direct shop → direct product · add-to-cart affordance surfaces (28.2s)
+  -   3 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:123:7 › T-2.5 · buyer checkout + price validation › checkout · cart JSONB snapshot shape persisted in nex_order
+  -   4 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:133:7 › T-2.5 · buyer checkout + price validation › price-tamper rejection · modified unit_price must be refused server-side
+  ✓   5 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:94:7 › Cycle 8 · signed-out buyer · purchase intent preservation › end-to-end · guest → Add to Cart gate → Dev Pass → return to product → add → survive refresh (8.1s)
+  ✓   6 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:230:7 › Cycle 8 · signed-out buyer · purchase intent preservation › new-account creation · signup form wiring preserves ?next= (URL-level only · end-to-end BLOCKED without approved buyer) (1.3s)
+  ✓   7 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:266:7 › Cycle 8 · signed-out buyer · purchase intent preservation › Ask Seller sealed contract · ?open-chat=1&product=<id> redirects signed-in non-owner to product-context conversation (16.0s)
+  ✓   8 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:306:7 › Cycle 8 · signed-out buyer · purchase intent preservation › independent challenge · browser back after resumed sign-in does not resurrect auth-gate (6.6s)
+  ✓   9 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8-ui-loop.spec.ts:112:7 › T-8 · merchant order full UI loop › merchant signs in · sees order · opens detail · marks paid · marks completed · ownership gate holds · zero residuals (1.1m)
+  ✓  10 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8.spec.ts:71:7 › T-8 · merchant order journey › created order persists · event row written · state transition observable (6.7s)
+  ✓  11 [stage-a-pixel7] › tests\e2e\journey-product-publish-to-storefront.spec.ts:70:7 › L-029 · product-publish → storefront journey › A · positive · live product owned by business A renders on /<slug> (10.7s)
+  ✓  12 [stage-a-pixel7] › tests\e2e\journey-product-publish-to-storefront.spec.ts:140:7 › L-029 · product-publish → storefront journey › B · status gate · draft product does NOT appear on /<slug> (10.4s)
+  ✓  13 [stage-a-pixel7] › tests\e2e\journey-product-publish-to-storefront.spec.ts:219:7 › L-029 · product-publish → storefront journey › C · ownership gate · product belongs to business A, business B's /<slug> MUST NOT render it (19.5s)
+  ✓  14 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating (881ms)
+  ✓  15 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/sign-in · every discovered anchor responds <500 and respects gating (2.3s)
+  ✓  16 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/install · every discovered anchor responds <500 and respects gating (1.3s)
+  ✓  17 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/emergency-help · every discovered anchor responds <500 and respects gating (1.4s)
+  ✓  18 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:161:7 › T-5.5 · owner-corrected NAV reachability crawl › direct shop + product routes respond <500 when owner-seeded fixtures are present (1.6s)
+  ✓  19 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:195:7 › T-5.5 · owner-corrected NAV reachability crawl › documented direct-URL-only routes are NOT orphaned by the allowlist (474ms)
+
+  2 skipped
+  17 passed (3.5m)

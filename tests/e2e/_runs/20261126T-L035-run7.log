@@ -1,0 +1,15 @@
+Error: This module cannot be imported from a Client Component module. It should only be used from a Server Component.
+
+   at ..\..\src\lib\nex-native\commerce-service.ts:25
+
+  23 | // through the order_id FK on the ledger entry.
+  24 |
+> 25 | import "server-only";
+     | ^
+  26 | import { nexSupabaseAdmin } from "./supabase-admin";
+  27 | import * as orderService from "./order-service";
+  28 | import * as ledgerService from "./ledger-service";
+    at Object.<anonymous> (C:\Users\Victus\nexapp\node_modules\server-only\index.js:1:7)
+    at Object.<anonymous> (C:\Users\Victus\nexapp\src\lib\nex-native\commerce-service.ts:25:1)
+    at Object.<anonymous> (C:\Users\Victus\nexapp\tests\e2e\regression-order-state-transitions.spec.ts:46:1)
+

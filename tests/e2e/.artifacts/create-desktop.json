@@ -4,21 +4,11 @@
     "width": 1440,
     "height": 900
   },
-  "panel_bbox": {
-    "x": 556,
-    "y": 76,
-    "width": 328,
-    "height": 586.9375
-  },
-  "main_bbox": {
-    "x": 540,
-    "y": 60,
-    "width": 360,
-    "height": 780
-  },
-  "cards_count": 5,
-  "html_bg": "rgb(2, 9, 20) url(\"http://localhost:3008/nex-desktop-hero.png\") no-repeat fixed 50% 50% / cover padding-box border-box",
-  "body_bg": "rgb(2, 9, 20) url(\"http://localhost:3008/nex-desktop-hero.png\") no-repeat fixed 50% 50% / cover padding-box border-box",
+  "panel_bbox": null,
+  "main_bbox": null,
+  "cards_count": 0,
+  "html_bg": "rgb(245, 237, 211) url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\") no-repeat fixed 50% 50% / 100% 100% padding-box border-box",
+  "body_bg": "rgb(245, 237, 211) url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\") no-repeat fixed 50% 50% / 100% 100% padding-box border-box",
   "stage_bbox": {
     "bbox": {
       "x": 0,
@@ -27,27 +17,19 @@
       "h": 900
     },
     "overflow": "hidden",
-    "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
-    "bg_image": "none"
+    "background": "rgb(245, 237, 211) url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\") no-repeat fixed 50% 50% / 100% 100% padding-box border-",
+    "bg_image": "url(\"http://localhost:3008/nex-native/desktop-bg-nex-chat-shop-banner.png\")"
   },
   "frame_bbox": {
     "bbox": {
-      "x": 540,
-      "y": 60,
-      "w": 360,
-      "h": 780
+      "x": 576,
+      "y": 138,
+      "w": 288,
+      "h": 624
     },
     "overflow": "hidden auto"
   },
-  "panel_computed": {
-    "display": "block",
-    "visibility": "visible",
-    "opacity": "1",
-    "width": "328px",
-    "height": "586.938px",
-    "zIndex": "auto",
-    "inside_viewport": true
-  },
+  "panel_computed": null,
   "console_errors": [],
   "page_errors": []
 }

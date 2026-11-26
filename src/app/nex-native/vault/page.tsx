@@ -2,17 +2,26 @@
 //
 // NEX Vault · entry doorway.
 //
-// Owner-sealed 2026-11-09 gate rules:
+// Owner-sealed 2026-11-25 gate rules (supersedes 2026-11-09 Shop-tied
+// gate · Cycle-14 F1 seal-violation fix):
 //   · NO sign-in redirect. The page renders for signed-in and signed-
 //     out visitors alike.
-//   · Vault is gated on paid NEX Shop plan ownership. A visitor without
-//     an entitled `nex_account.shop_tier` sees the "Vault requires NEX
-//     Shop" surface with a pricing CTA; they never see the PIN entry
-//     or setup wizard.
+//   · Vault is gated on INDEPENDENT Vault entitlement · paid vault_tier
+//     (anything other than 'gratis') OR an active 7-day
+//     `vault_trial_used_at` window. Shop subscription is NOT a gate
+//     (owner seal 2026-11-25: "Customers who want Vault purchase it
+//     separately"). The entitlement check is delegated to
+//     `effectiveVaultAccess` in src/lib/nex-native/vault/vault-service.ts
+//     so this page and the service share one definition of "entitled".
 //   · Entitled visitor + no vault configured → setup wizard at
 //     /nex-native/vault/setup (6-digit PIN entered twice).
 //   · Entitled visitor + vault configured → PIN unlock + user-id
 //     container (reminds the user which NEX account owns this vault).
+//   · Not-entitled visitor → the "requires NEX Vault" surface with a
+//     pricing CTA. Vault standalone checkout is a separate commercial
+//     decision (2026-11-25); until that ships the CTA takes the user
+//     to the general `/nex-native/pricing` page which already covers
+//     Vault alongside other plans.
 //
 // The page is locked to viewport (no page-level scrolling) per owner
 // directive. All inner shells are flex-sized against the available
@@ -23,6 +32,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { effectiveVaultAccess } from "@/lib/nex-native/vault/vault-service";
 import { SKIN_NEX } from "./_doorway-skin";
 import { VaultLockedBootstrap } from "./_vault-locked-bootstrap";
 import { VaultLandingHeader } from "./_vault-landing-header";
@@ -35,42 +45,51 @@ const VAULT_BG = "#061710";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Paid Shop-plan tiers accepted today. Any non-null value from mig 310
-// (`'shop' | 'standard' | 'unlimited'`) counts as entitled. NULL means
-// the user has not subscribed and must upgrade to access vault.
-function isShopEntitled(shopTier: string | null | undefined): boolean {
-  if (shopTier === null || shopTier === undefined) return false;
-  const trimmed = String(shopTier).trim().toLowerCase();
-  return trimmed === "shop" || trimmed === "standard" || trimmed === "unlimited";
-}
-
 export default async function VaultEntryPage() {
   const session = await resolveNexAppSessionFromContext();
 
-  // Resolve shop entitlement + vault-configured state in a single pass.
-  // Both are null for unauthenticated visitors — they land on the
-  // "requires NEX Shop" screen below.
-  let shopTier: string | null = null;
+  // Resolve Vault entitlement + vault-configured state in a single pass.
+  // Unauthenticated visitors land on the "requires NEX Vault" screen.
+  // Columns read:
+  //   · `vault_tier` (mig 257) · paid tier OR 'gratis'
+  //   · `vault_trial_used_at` (mig 207) · opens 7-day trial window
+  // If `vault_tier` is absent (mig 257 not yet applied to the active
+  // DB) the select will error · we catch, log at the service boundary,
+  // and treat the user as not entitled so the paywall renders safely.
+  let vaultTier: string | null = null;
+  let vaultTrialUsedAt: string | null = null;
   let hasVaultSetup = false;
   if (session) {
-    const { data: acc } = await nexSupabaseAdmin
+    const { data: acc, error } = await nexSupabaseAdmin
       .from("nex_account")
-      .select("shop_tier")
+      .select("vault_tier, vault_trial_used_at")
       .eq("id", session.account.id)
       .maybeSingle();
-    shopTier = ((acc as { shop_tier: string | null } | null)?.shop_tier) ?? null;
-
-    if (isShopEntitled(shopTier)) {
-      const { data: setup } = await nexSupabaseAdmin
-        .from("nex_vault_setup")
-        .select("account_id")
-        .eq("account_id", session.account.id)
-        .maybeSingle();
-      hasVaultSetup = !!setup;
+    if (!error && acc) {
+      const row = acc as {
+        vault_tier: string | null;
+        vault_trial_used_at: string | null;
+      };
+      vaultTier = row.vault_tier ?? null;
+      vaultTrialUsedAt = row.vault_trial_used_at ?? null;
     }
   }
 
-  const entitled = isShopEntitled(shopTier);
+  const entitled = session
+    ? effectiveVaultAccess({
+        vault_tier: vaultTier,
+        vault_trial_used_at: vaultTrialUsedAt,
+      })
+    : false;
+
+  if (entitled && session) {
+    const { data: setup } = await nexSupabaseAdmin
+      .from("nex_vault_setup")
+      .select("account_id")
+      .eq("account_id", session.account.id)
+      .maybeSingle();
+    hasVaultSetup = !!setup;
+  }
 
   if (entitled && !hasVaultSetup) {
     // First-time setup wizard (6-digit PIN entered twice + popup).
@@ -156,7 +175,7 @@ export default async function VaultEntryPage() {
           }}
         >
           {!entitled ? (
-            <ShopRequiredSurface />
+            <VaultEntitlementRequiredSurface />
           ) : (
             <>
               <VaultLockedBootstrap skin={SKIN_NEX} />
@@ -172,10 +191,13 @@ export default async function VaultEntryPage() {
 }
 
 // -----------------------------------------------------------------------------
-// Not-entitled surface · "Vault is part of the NEX Shop package"
+// Not-entitled surface · "NEX Vault is a separate optional subscription"
+// Owner-sealed 2026-11-25 · Cycle-14 F1 seal-violation fix · Vault is
+// not tied to Shop. CTA takes the visitor to the general pricing page
+// (Vault standalone checkout is a separate commercial decision).
 // -----------------------------------------------------------------------------
 
-function ShopRequiredSurface() {
+function VaultEntitlementRequiredSurface() {
   // Owner directive 2026-11-09 · landing image must fit the full page
   // height AND width of the vault surface · no gaps, no letterbox.
   // `objectFit: fill` stretches the image to exactly the container
@@ -184,7 +206,7 @@ function ShopRequiredSurface() {
   // whole image · brand + rooms + feature badges · is always visible.
   return (
     <main
-      data-nex-vault-shop-gate
+      data-nex-vault-entitlement-gate
       style={{
         position: "relative",
         flex: 1,
@@ -237,7 +259,7 @@ function ShopRequiredSurface() {
             pointerEvents: "auto",
           }}
         >
-          See NEX Shop plans
+          See NEX Vault plans
         </Link>
       </div>
     </main>

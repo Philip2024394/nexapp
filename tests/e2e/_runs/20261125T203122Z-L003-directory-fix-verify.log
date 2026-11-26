@@ -1,0 +1,11 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (17.9s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin (799ms)
+  ✓  3 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/sign-in · body occupies full viewport with zero margin (1.3s)
+  ✓  4 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin (4.6s)
+  ✓  5 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:107:7 › T-5.1 · full-viewport rule · Pixel 7 › sealed viewport meta is present on the root layout (907ms)
+
+  5 passed (29.1s)
+EXIT=0

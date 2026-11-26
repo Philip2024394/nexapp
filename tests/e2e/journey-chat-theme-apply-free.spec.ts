@@ -30,7 +30,9 @@ test.describe.serial("T-3.1 · apply free chat theme", () => {
     // returns [] on empty sandbox tables. If the sandbox has no active
     // theme records, we report BLOCKED-PENDING-SEED instead of
     // weakening the assertion or manufacturing records.
-    const response = await page.goto("/nex-native/chat-themes-library", {
+    // L-011 2026-11-26 · root is now the three-category hub.
+    // The library grid lives at /full-image (and /plain, /small).
+    const response = await page.goto("/nex-native/chat-themes-library/full-image", {
       waitUntil: "domcontentloaded",
     });
     expect(response?.status(), "theme library responds 200").toBe(200);
@@ -47,7 +49,7 @@ test.describe.serial("T-3.1 · apply free chat theme", () => {
   });
 
   test("applying a free theme does not surface a paywall", async ({ page }) => {
-    await page.goto("/nex-native/chat-themes-library", {
+    await page.goto("/nex-native/chat-themes-library/full-image", {
       waitUntil: "domcontentloaded",
     });
 
@@ -66,7 +68,13 @@ test.describe.serial("T-3.1 · apply free chat theme", () => {
     );
 
     await freeCard.click();
-    await page.waitForLoadState("networkidle");
+    // L-011 2026-11-26 · chat-themes-library carries long-lived
+    // realtime subscriptions that prevent `networkidle` from firing
+    // (same remediation already applied to
+    // journey-chat-theme-region-unsupported-waitlist.spec.ts).
+    await page.waitForFunction(() => Boolean(document.body), null, {
+      timeout: 10_000,
+    });
 
     const applyBtn = page.getByRole("button", { name: /apply|use theme|activate/i });
     test.skip(

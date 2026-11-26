@@ -1,0 +1,8 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (6.8s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-theme-viewer-organic-signup.spec.ts:25:5 › guest on theme viewer · GuestSignupBanner CTA targets sealed signup URL · destination is live (4.5s)
+
+  2 passed (13.7s)
+EXIT=0

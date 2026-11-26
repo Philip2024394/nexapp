@@ -154,7 +154,7 @@ export default defineConfig({
       // present and sandbox-scoped.
       dependencies: ["auth-setup"],
       testMatch:
-        /journey-returning-signed-out-D-to-signin\.spec\.ts|journey-directory-browse-and-filter\.spec\.ts|journey-signed-out-browse-buy-auth-gate\.spec\.ts|full-viewport-chrome\.spec\.ts|pwa-install-cadence\.spec\.ts|location-permission-explanation-card\.spec\.ts|nav-dead-link-crawl\.spec\.ts|journey-first-user-A-to-contacts\.spec\.ts|journey-chat-send-e2e\.spec\.ts|journey-chat-attachment-encrypted-image\.spec\.ts|journey-chat-attachment-encrypted-document\.spec\.ts|journey-chat-attachment-fail-safe-503\.spec\.ts|journey-chat-attachment-non-participant-404\.spec\.ts|journey-chat-attachment-legacy-public-envelope-resolve\.spec\.ts|journey-create-shop\.spec\.ts|journey-buyer-checkout\.spec\.ts|journey-chat-theme-apply-free\.spec\.ts|journey-chat-theme-first-free-apply\.spec\.ts|journey-chat-theme-region-unsupported-waitlist\.spec\.ts|journey-mid-shop-setup-interrupt-resume\.spec\.ts|journey-mid-checkout-session-expired\.spec\.ts|journey-buyer-signed-out-purchase-resume\.spec\.ts|journey-buyer-ordinary-signin\.spec\.ts|journey-ask-seller-nonowner-full\.spec\.ts|journey-buyer-signup-wiring\.spec\.ts|journey-buyer-adversarial\.spec\.ts|diagnostic-ask-seller-send-handler\.spec\.ts/,
+        /journey-returning-signed-out-D-to-signin\.spec\.ts|journey-directory-browse-and-filter\.spec\.ts|journey-signed-out-browse-buy-auth-gate\.spec\.ts|full-viewport-chrome\.spec\.ts|pwa-install-cadence\.spec\.ts|location-permission-explanation-card\.spec\.ts|nav-dead-link-crawl\.spec\.ts|journey-first-user-A-to-contacts\.spec\.ts|journey-chat-send-e2e\.spec\.ts|journey-chat-attachment-encrypted-image\.spec\.ts|journey-chat-attachment-encrypted-document\.spec\.ts|journey-chat-attachment-fail-safe-503\.spec\.ts|journey-chat-attachment-non-participant-404\.spec\.ts|journey-chat-attachment-legacy-public-envelope-resolve\.spec\.ts|journey-create-shop\.spec\.ts|journey-buyer-checkout\.spec\.ts|journey-chat-theme-apply-free\.spec\.ts|journey-chat-theme-first-free-apply\.spec\.ts|journey-chat-theme-region-unsupported-waitlist\.spec\.ts|journey-mid-shop-setup-interrupt-resume\.spec\.ts|journey-mid-checkout-session-expired\.spec\.ts|journey-buyer-signed-out-purchase-resume\.spec\.ts|journey-buyer-ordinary-signin\.spec\.ts|journey-ask-seller-nonowner-full\.spec\.ts|journey-buyer-signup-wiring\.spec\.ts|journey-buyer-adversarial\.spec\.ts|diagnostic-ask-seller-send-handler\.spec\.ts|smoke-why-nex\.spec\.ts|smoke-switch-calculator\.spec\.ts|security-account-isolation\.spec\.ts|why-nex-editorial-verification\.spec\.ts|full-viewport-extended-coverage\.spec\.ts|journey-post-signup-apply-theme\.spec\.ts|journey-full-guest-signup-pick-theme\.spec\.ts|journey-pending-wall-race-conditions\.spec\.ts|journey-selected-theme-cookie-signup\.spec\.ts|journey-pending-wall-security-regressions\.spec\.ts|journey-vault-standalone-access\.spec\.ts|journey-theme-viewer-organic-signup\.spec\.ts|journey-visitor-claim-signup\.spec\.ts|journey-unauth-checkout-signup-return\.spec\.ts|journey-welcome-intent-pick-theme\.spec\.ts|journey-kind-select-signup\.spec\.ts|journey-guest-chat-signup-cta\.spec\.ts|fixture-harness-smoke\.spec\.ts|journey-merchant-order-t8\.spec\.ts|journey-merchant-order-t8-ui-loop\.spec\.ts|journey-payment-status-t10\.spec\.ts|journey-stripe-webhook-t10\.spec\.ts|journey-paypal-webhook-t10\.spec\.ts|journey-manage-shopless-redirect\.spec\.ts|journey-chat-themes-three-category-hub\.spec\.ts|regression-l013-canonical-connectivity\.spec\.ts|journey-product-publish-to-storefront\.spec\.ts|journey-merchant-onboarding-full-ui\.spec\.ts|journey-merchant-edit-product-archive-ui\.spec\.ts|regression-identity-chrome-contract\.spec\.ts|journey-merchant-orders-centre-ui\.spec\.ts|regression-spec-payload-helper\.spec\.ts|journey-merchant-product-spec-editor-ownership-ui\.spec\.ts|journey-merchant-menu-item-ownership-ui\.spec\.ts|journey-merchant-accommodation-room-ownership-ui\.spec\.ts|journey-merchant-product-edit-ownership-ui\.spec\.ts|journey-merchant-product-interest-ownership-ui\.spec\.ts|regression-l036-order-detail-hydration\.spec\.ts|journey-drawer-rows-signed-in-merchant-ie\.spec\.ts|regression-l042-orders-list-hydration\.spec\.ts/,
     },
     {
       // Stage A Cycle 4 · 2026-11-24 · wire `pwa-install-cadence.spec
@@ -179,15 +179,26 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       testMatch: /pwa-install-cadence\.spec\.ts/,
     },
-    {
-      // Phase 2 · G2 · Live Commerce public surfaces (no auth,
-      // no applied migrations). Verifies the fail-open contract on
-      // the public routes: central feed renders, viewer gates to
-      // sign-in for guests, directory landing renders with zero
-      // live chips when Migration 219 is unapplied.
-      name: "mobile-chromium-pixel7-live-public",
-      use: { ...devices["Pixel 7"] },
-      testMatch: /live-commerce-public-surfaces\.spec\.ts|live-commerce-viewer-footer\.spec\.ts|live-commerce-visual-verify\.spec\.ts|live-commerce-video-journey\.spec\.ts|live-footer-3-dots-container\.spec\.ts|composer-overflow-diag\.spec\.ts|composer-overflow-regression\.spec\.ts|live-header-ping-and-ai-chip\.spec\.ts|live-footer-products-flow\.spec\.ts|sign-in-composer-overflow\.spec\.ts|live-library-tiles\.spec\.ts|create-page-visual\.spec\.ts|_capture-products-flow\.spec\.ts|_capture-dev-roles\.spec\.ts|_capture-counts\.spec\.ts|_capture-feed-prefs\.spec\.ts|_capture-overlay-pref\.spec\.ts|_capture-heart-right\.spec\.ts|_capture-comments-behind\.spec\.ts|_capture-live-persona-bayu\.spec\.ts|_capture-live-persona-hendra\.spec\.ts/,
-    },
+    // L-027 2026-11-26 · "mobile-chromium-pixel7-live-public" project
+    // REMOVED. All 21 specs it matched target the Live Commerce
+    // surface that was deleted by owner-sealed scope reduction in
+    // commit 2619f8ca on 2026-11-06 ("Phase 1c Batch 4 · Delete Live
+    // Commerce surface · 89 files"). The specs' target routes
+    // (`/nex-native/live-commerce/feed`, `/nex-native/live-commerce/
+    // [sessionId]`, `/nex-native/videos/dev-video-*`) now 404, and
+    // their data-attribute selectors (`data-nex-live-footer-*`,
+    // `data-nex-live-viewer-*`) only exist on orphan components that
+    // nothing under `src/app/*` imports. Running these specs produced
+    // 55 false-positive regression failures per the L-012 regression
+    // envelope. `create-page-visual.spec.ts` is also stale — the
+    // `/nex-native/create` landing page has no page.tsx; the drawer
+    // links go direct to `/nex-native/create/product/category`.
+    //
+    // This is NOT a test-weakening: no assertion is loosened. The
+    // config is being brought in line with the already-sealed scope
+    // decision. Spec files remain on disk pending a separate owner-
+    // approved deletion commit (same disposition as L-024 followup).
+    // If Live Commerce is ever resurrected, the original project
+    // block is in git history at `playwright.config.ts@HEAD~1`.
   ],
 });

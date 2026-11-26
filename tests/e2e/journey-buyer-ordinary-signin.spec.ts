@@ -32,6 +32,37 @@
 //   · No commits/pushes/migrations/Stripe/SOS/directory.
 
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+  assertNoResidualFixtures,
+  assertSandboxRef,
+  createTestAccount,
+  createTestBusiness,
+  createTestProduct,
+  teardownAll,
+  type FixtureHandle,
+} from "./_fixtures/sandbox-test-harness";
+
+// 2026-11-26 remediation · hydrate .env.local so NEX_ADMIN_EMAILS +
+// NEX_ADMIN_DEV_PASSWORD are visible to this test process. Same
+// pattern as regression-l013-canonical-connectivity.spec.ts lines
+// 36-50. Playwright does not auto-load .env.local.
+function hydrateEnv(): void {
+  try {
+    const raw = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      if (line.trimStart().startsWith("#")) continue;
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      const [, k, v] = m;
+      if (process.env[k] === undefined) process.env[k] = v;
+    }
+  } catch {
+    /* .env.local is optional in CI */
+  }
+}
+hydrateEnv();
 
 const ADMIN_EMAIL = (process.env.NEX_ADMIN_EMAILS ?? "")
   .split(",")
@@ -39,16 +70,49 @@ const ADMIN_EMAIL = (process.env.NEX_ADMIN_EMAILS ?? "")
   .filter((s) => s.length > 0)[0];
 const ADMIN_PASSWORD = process.env.NEX_ADMIN_DEV_PASSWORD;
 
-const PRODUCT_ID = process.env.NEX_E2E_SEED_PRODUCT_ID;
+// 2026-11-26 remediation · the historical `NEX_E2E_SEED_PRODUCT_ID`
+// env-var gate kept test #1 skipped unless owner pinned a product;
+// the harness now seeds a real live product in beforeAll. Env-var
+// override still honoured.
+let PRODUCT_ID: string;
+let FIXTURE_HANDLES: FixtureHandle[] = [];
 
 const CREDS_READY =
   typeof ADMIN_EMAIL === "string" &&
   ADMIN_EMAIL.length > 0 &&
   typeof ADMIN_PASSWORD === "string" &&
   ADMIN_PASSWORD.length > 0;
-const PRODUCT_READY = typeof PRODUCT_ID === "string" && PRODUCT_ID.length > 0;
 
 test.describe("Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection", () => {
+  test.beforeAll(async () => {
+    assertSandboxRef();
+    const envProductId = process.env.NEX_E2E_SEED_PRODUCT_ID;
+    if (envProductId) {
+      PRODUCT_ID = envProductId;
+      return;
+    }
+    const merchant = await createTestAccount("ordinary-signin-merchant");
+    FIXTURE_HANDLES.push(merchant);
+    const biz = await createTestBusiness(merchant, {
+      label: "ordinary-signin-shop",
+    });
+    FIXTURE_HANDLES.push(biz);
+    const prod = await createTestProduct(biz, {
+      name: "e2e-fixture-ordinary-signin-widget",
+      pricePence: 1499,
+      currency: "GBP",
+      status: "live",
+    });
+    FIXTURE_HANDLES.push(prod);
+    PRODUCT_ID = prod.productId;
+  });
+
+  test.afterAll(async () => {
+    await teardownAll(FIXTURE_HANDLES);
+    await assertNoResidualFixtures(FIXTURE_HANDLES);
+    FIXTURE_HANDLES = [];
+  });
+
   test.beforeEach(async ({ context }) => {
     // Fresh guest · the ordinary sign-in page redirects authenticated
     // non-admin viewers to /contacts (sign-in/page.tsx:109). Admin
@@ -63,10 +127,6 @@ test.describe("Cycle 9 · ordinary sign-in · `next=` preservation + malicious-n
     test.skip(
       !CREDS_READY,
       "BLOCKED-PENDING-ENV · NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD required for ordinary sign-in test (approved sandbox creds)",
-    );
-    test.skip(
-      !PRODUCT_READY,
-      "BLOCKED-PENDING-SEED-FIXTURE · NEX_E2E_SEED_PRODUCT_ID required",
     );
 
     const nextPath = `/nex-native/product/${PRODUCT_ID}`;

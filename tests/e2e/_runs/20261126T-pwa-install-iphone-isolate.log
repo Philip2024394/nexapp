@@ -1,0 +1,12 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (727ms)
+  ✓  2 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render (1.2s)
+  ✓  3 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render (1.5s)
+  ✓  4 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render (1.2s)
+  ✓  5 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform (599ms)
+  -  6 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+
+  1 skipped
+  5 passed (6.9s)

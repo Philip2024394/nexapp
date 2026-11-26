@@ -1,0 +1,37 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.9s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:100:7 › L-030 · merchant onboarding full UI journey › shop-less merchant signs in → fills business-details UI → dispatcher advances → product publishes → public storefront renders (41.5s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:100:7 › L-030 · merchant onboarding full UI journey › shop-less merchant signs in → fills business-details UI → dispatcher advances → product publishes → public storefront renders 
+
+    Error: post-save read-back has no error
+
+    expect(received).toBeNull()
+
+    Received: {"code": "42703", "details": null, "hint": null, "message": "column nex_business.business_subtype does not exist"}
+
+      216 |         )
+      217 |         .eq("owner_account_id", merchant.nexAccountId);
+    > 218 |       expect(postErr, "post-save read-back has no error").toBeNull();
+          |                                                           ^
+      219 |       expect(
+      220 |         postBusinesses?.length,
+      221 |         "exactly one business row persisted for fixture merchant",
+        at C:\Users\Victus\nexapp\tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:218:59
+
+    Error Context: test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-merchant-onboardin-cb7b0-→-public-storefront-renders-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-merchant-onboarding-full-ui.spec.ts:100:7 › L-030 · merchant onboarding full UI journey › shop-less merchant signs in → fills business-details UI → dispatcher advances → product publishes → public storefront renders 
+  1 passed (53.6s)

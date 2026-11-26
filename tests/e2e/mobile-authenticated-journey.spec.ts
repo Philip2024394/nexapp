@@ -39,9 +39,51 @@
 
 import { expect, test } from "@playwright/test";
 
-// ─── Pre-flight · sanity check that storage state is valid ─────────
+// ─── 2026-11-26 remediation · whole-file SKIP (honest status) ─────
+//
+// This spec was authored 2026-10-14 against two surfaces that have
+// since been sealed-removed:
+//   · `/nex-native/home` · RETIRED 2026-10-19 · now a permanent 307
+//     to `/nex-native/contacts` (src/app/nex-native/home/page.tsx:
+//     31-33). The "Welcome home" hero copy this spec asserts (line
+//     59 original) no longer exists in the codebase. The orphan
+//     `_first-visit-invitation.tsx` under the retired `/home` tree
+//     is effectively unreachable via the redirect.
+//   · `/nex-native/chat/first-visit` + `/shop` + `/personalize` ·
+//     DELETED FOREVER 2026-11-06 commit `28f79500` (owner directive
+//     "fully deleted from repo and nex app for ever" per L-006).
+//     Every test after the sanity check in this file depends on
+//     one of those three deleted routes.
+//
+// All 10 runnable tests in this file either (a) assert an element
+// that no longer renders, or (b) navigate to a deleted route. Per
+// Rule 8 (no false completion) the honest classification is
+// SKIPPED pointing at the sealed retirement decisions, not
+// FAILED (which would imply a product defect) and not deletion
+// (which is inside the F2 batch tracked at L-006).
+//
+// Journeys this spec was intended to cover are now exercised by:
+//   · `journey-first-user-A-to-contacts.spec.ts` · signed-in
+//     /home redirect + /contacts landing + add-contact affordance.
+//   · `journey-chat-themes-three-category-hub.spec.ts` · Chat
+//     Themes first-selection screen (owner-sealed 3-category hub
+//     supersedes the first-visit themes card).
+//
+// Remove the describe-level skip once L-006 F2 migration lands
+// (restore `welcome/page.tsx` + migrate `/create-account` + decide
+// the fate of the orphan first-visit-invitation component) OR
+// this file is retired as part of the F2 batch.
 
 test.describe.serial("NEX mobile · signed-in first-user journey · Pixel 7 (412×915)", () => {
+  test.skip(
+    true,
+    "STALE-AGAINST-SEALED-RETIREMENT · all assertions depend on routes " +
+      "retired 2026-10-19 (/home → /contacts) or deleted 2026-11-06 " +
+      "(/chat/first-visit*). Honest status is SKIPPED pending L-006 F2 " +
+      "batch which decides whether to retire this spec or rewrite it " +
+      "against the new sealed surfaces. See NEX-DELIVERY-LEDGER.md L-006 " +
+      "+ L-024 for full chain of custody.",
+  );
   test("sanity · signed-in home is reachable (not bounced to /sign-in)", async ({
     page,
   }) => {

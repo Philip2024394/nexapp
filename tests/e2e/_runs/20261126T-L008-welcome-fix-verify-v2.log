@@ -1,0 +1,48 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:157:7 › account-active · unauthenticated › A · redirects guest to /sign-in (3.1s)
+  -  2 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:178:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie
+  ✘  3 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:234:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts (19.6s)
+  -  4 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:264:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust
+  ✓  5 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:301:7 › account-active · authenticated (dev-pass real Supabase) › E · /manage/shop/start?from=signup Skip-for-now link resolves to welcome (15.3s)
+
+
+  1) [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:234:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts 
+
+    Error: page.goto: net::ERR_ABORTED at http://localhost:3008/nex-native/welcome/account-active
+    Call log:
+      - navigating to "http://localhost:3008/nex-native/welcome/account-active", waiting until "domcontentloaded"
+
+
+      247 |
+      248 |     // Second visit · must redirect to contacts.
+    > 249 |     await page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" });
+          |                ^
+      250 |     await waitForUrlContains(page, CONTACTS_PATH);
+      251 |     expect(
+      252 |       page.url(),
+        at C:\Users\Victus\nexapp\tests\e2e\welcome-account-active-one-time-gate.spec.ts:249:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:234:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts 
+  2 skipped
+  2 passed (46.8s)

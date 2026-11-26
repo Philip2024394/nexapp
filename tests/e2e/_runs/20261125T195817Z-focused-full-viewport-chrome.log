@@ -1,0 +1,45 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.8s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin (766ms)
+  ✓  3 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/sign-in · body occupies full viewport with zero margin (1.6s)
+  ✘  4 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin (20.8s)
+  -  5 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:107:7 › T-5.1 · full-viewport rule · Pixel 7 › sealed viewport meta is present on the root layout
+
+
+  1) [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin 
+
+    TimeoutError: page.goto: Timeout 20000ms exceeded.
+    Call log:
+      - navigating to "http://localhost:3008/nex-native/directory", waiting until "domcontentloaded"
+
+
+      53 |       // code, the full-viewport body contract, zero margin, and no
+      54 |       // horizontal scroll.
+    > 55 |       const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+         |                                   ^
+      56 |       expect(response?.status(), `${route} responds 200`).toBe(200);
+      57 |       await page.waitForFunction(() => Boolean(document.body), null, {
+      58 |         timeout: 10_000,
+        at C:\Users\Victus\nexapp\tests\e2e\full-viewport-chrome.spec.ts:55:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\full-viewport-chrome-T-5-1-1f5da-l-viewport-with-zero-margin-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\full-viewport-chrome-T-5-1-1f5da-l-viewport-with-zero-margin-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\full-viewport-chrome-T-5-1-1f5da-l-viewport-with-zero-margin-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\full-viewport-chrome-T-5-1-1f5da-l-viewport-with-zero-margin-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin 
+  1 did not run
+  3 passed (39.5s)
+EXIT=1

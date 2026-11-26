@@ -34,9 +34,17 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 
 const WELCOME_PATH = "/nex-native/welcome/account-active";
+const MARK_SEEN_ENDPOINT = "/api/nex-native/welcome/mark-seen";
 const CONTACTS_PATH = "/nex-native/contacts";
 const SIGN_IN_PATH = "/nex-native/sign-in";
 const SHOP_START_FROM_SIGNUP = "/nex-native/manage/shop/start?from=signup";
+// 2026-11-26 (L-008) · owner-sealed sign-in destination for already-
+// signed-up users with a known device is `/nex-native/free-chat?show-
+// themes=1` per `src/app/nex-native/_actions.ts:1004,1038` (sealed
+// 2026-10-21 iteration 58). The original helper comment claiming
+// `/contacts` is the dev-pass destination was authored before that
+// seal landed; this spec now accepts either terminal destination.
+const FREE_CHAT_PATH = "/nex-native/free-chat";
 
 const COOKIE_NAME = "nex_account_active_seen";
 const EXPECTED_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -80,7 +88,18 @@ async function readSeenCookie(context: BrowserContext): Promise<
  * PASSWORD, in which case this spec cannot run honestly.
  */
 async function signInViaDevPass(page: Page): Promise<void> {
-  await page.goto(SIGN_IN_PATH, { waitUntil: "domcontentloaded" });
+  // 2026-11-26 (L-008 · test-fixture fix) · wait for networkidle, not
+  // domcontentloaded. Before React hydration completes the dev-pass
+  // form's `action` attribute is the React placeholder
+  // `javascript:throw new Error('A React form was unexpectedly
+  // submitted ...')` · a deliberate fail-closed marker. Clicking the
+  // button in that window is a no-op: no POST fires, no redirect
+  // happens, the page simply stays on /sign-in with no `e=` query
+  // param. The helper then saw bare `/sign-in` and tripped its
+  // skip branch, leaving B and D unexecuted every run. Waiting
+  // for networkidle means the hydration fetch chain has settled and
+  // the form has been rewired to call the server action.
+  await page.goto(SIGN_IN_PATH, { waitUntil: "networkidle" });
   const devPass = page.locator('[data-nex-dev-pass-button]');
   const count = await devPass.count();
   test.skip(
@@ -91,20 +110,47 @@ async function signInViaDevPass(page: Page): Promise<void> {
       "Supabase session. Owner must either populate those env vars " +
       "or provision a different test-account mechanism.",
   );
+  // Note on hydration: the dev-pass <form>'s `action` attribute
+  // keeps React's `javascript:throw ...` placeholder even post-
+  // hydration · the Server Action is wired by intercepting the form
+  // submit event, not by replacing the attribute. The `networkidle`
+  // wait on goto is what ensures the submit handler is installed;
+  // once that returns, clicking the button fires the server POST.
   await devPass.first().click();
-  // Wait for either a successful redirect to /contacts OR a sign-in
-  // failure banner. We don't know which will happen until the server
-  // responds · race both and inspect the result.
+  // Wait for a TERMINAL URL. The predicate must not match the bare
+  // starting URL (`/sign-in` with no error params) because the Server
+  // Action POST chain renders RSC payloads that transiently keep the
+  // URL on `/sign-in` before the final navigation to `/free-chat` (or
+  // `/contacts` on the legacy path). Matching too eagerly caused the
+  // helper to exit before the real redirect, then skip the test on
+  // the (misinterpreted) bare `/sign-in` URL.
+  //   Terminal states:
+  //     · /nex-native/free-chat?...                (success · sealed destination)
+  //     · /nex-native/contacts?...                 (success · legacy path)
+  //     · /nex-native/sign-in?e=<code>&m=<msg>     (failure · server rejected)
   await page.waitForURL(
-    (url) => url.pathname === SIGN_IN_PATH || url.pathname.includes(CONTACTS_PATH),
+    (url) => {
+      if (url.pathname.includes(CONTACTS_PATH)) return true;
+      if (url.pathname.includes(FREE_CHAT_PATH)) return true;
+      if (url.pathname === SIGN_IN_PATH && url.searchParams.has("e")) {
+        return true;
+      }
+      return false;
+    },
     { timeout: NAV_TIMEOUT_MS },
   );
   const settled = page.url();
-  // If we were bounced back to sign-in with an error, the dev-pass
-  // path is not operational in this environment · skip honestly
-  // rather than pretend the authenticated journey ran.
-  if (settled.includes(SIGN_IN_PATH)) {
-    const urlObj = new URL(settled);
+  // If we were bounced back to sign-in WITH an error param, the dev-
+  // pass path is not operational in this environment · skip honestly
+  // rather than pretend the authenticated journey ran. (Bare
+  // `/sign-in` never reaches here · the waitForURL predicate above
+  // only accepts `/sign-in?e=<code>` as a terminal state.)
+  const settledUrl = new URL(settled);
+  if (
+    settledUrl.pathname === SIGN_IN_PATH &&
+    settledUrl.searchParams.has("e")
+  ) {
+    const urlObj = settledUrl;
     const errorCode = urlObj.searchParams.get("e") ?? "";
     const errorMsg = urlObj.searchParams.get("m") ?? "";
     test.skip(
@@ -120,6 +166,37 @@ async function signInViaDevPass(page: Page): Promise<void> {
         `HANDLE for local testing. Until then B/C/D/E cannot run ` +
         `honestly on this dev environment.`,
     );
+  }
+}
+
+/**
+ * 2026-11-26 (L-008) · navigate to the celebration page AND await the
+ * client-side `MarkSeenPinger` POST to `/api/nex-native/welcome/mark-
+ * seen` before returning. Without this await the context cookie read
+ * races the Set-Cookie response · observed flakes where the test read
+ * the cookie jar <50 ms after goto returned and saw no cookie.
+ *
+ * We await the response itself (not just the request) so that by the
+ * time this helper returns the Playwright context has already applied
+ * the Set-Cookie header. The predicate accepts any POST completion ·
+ * if the Route Handler returns 401/503 (fail-closed cases) the test
+ * will proceed and the subsequent cookie assertion will catch it.
+ */
+async function visitWelcomeAndAwaitMarkSeen(
+  page: Page,
+  options: { expectCookieSet: boolean } = { expectCookieSet: true },
+): Promise<void> {
+  if (options.expectCookieSet) {
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes(MARK_SEEN_ENDPOINT) && r.request().method() === "POST",
+        { timeout: NAV_TIMEOUT_MS },
+      ),
+      page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" }),
+    ]);
+  } else {
+    await page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" });
   }
 }
 
@@ -176,7 +253,9 @@ test.describe("account-active · authenticated (dev-pass real Supabase)", () => 
     const pre = await readSeenCookie(ctx);
     expect(pre, "pre-visit · seen cookie must not be set").toBeNull();
 
-    await page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" });
+    // L-008 · await the client mark-seen POST so the Set-Cookie has
+    // been applied before we read the context jar.
+    await visitWelcomeAndAwaitMarkSeen(page, { expectCookieSet: true });
     // Give the page a moment · if it was going to redirect we would
     // land elsewhere. We assert it did NOT redirect.
     expect(page.url()).toContain(WELCOME_PATH);
@@ -186,7 +265,15 @@ test.describe("account-active · authenticated (dev-pass real Supabase)", () => 
 
     const seen = await readSeenCookie(ctx);
     expect(seen, "seen cookie must be set after first visit").not.toBeNull();
-    expect(seen!.value).toBe("1");
+    // 2026-11-26 (L-008) · the cookie value is HMAC-signed: envelope
+    // `v1.<base64url-hmac-sha256>`. The prior literal `"1"` assertion
+    // described the pre-fix (forgery-vulnerable) implementation · the
+    // signed envelope is the stronger correct behaviour. We assert the
+    // structure here; the forgery-resistance assertion belongs to test
+    // D below.
+    expect(seen!.value, "cookie must carry the v1 HMAC envelope").toMatch(
+      /^v1\.[A-Za-z0-9_-]{32,}$/,
+    );
     expect(seen!.httpOnly, "cookie must be HttpOnly").toBe(true);
     // Playwright normalises SameSite to "Strict" | "Lax" | "None".
     expect(seen!.sameSite).toBe("Lax");
@@ -221,12 +308,14 @@ test.describe("account-active · authenticated (dev-pass real Supabase)", () => 
 
     // First visit · establish the seen cookie honestly through the
     // real route (we do NOT inject a cookie into the context).
-    await page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" });
+    await visitWelcomeAndAwaitMarkSeen(page, { expectCookieSet: true });
     expect(page.url()).toContain(WELCOME_PATH);
     const firstSeen = await readSeenCookie(ctx);
     expect(firstSeen, "first visit must set the seen cookie").not.toBeNull();
 
-    // Second visit · must redirect to contacts.
+    // Second visit · must redirect to contacts. No mark-seen POST is
+    // expected here because the server redirects before WelcomeShell
+    // ever mounts.
     await page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" });
     await waitForUrlContains(page, CONTACTS_PATH);
     expect(
@@ -258,7 +347,7 @@ test.describe("account-active · authenticated (dev-pass real Supabase)", () => 
       document.cookie = `${name}=1; path=/`;
     }, COOKIE_NAME);
 
-    await page.goto(WELCOME_PATH, { waitUntil: "domcontentloaded" });
+    await visitWelcomeAndAwaitMarkSeen(page, { expectCookieSet: true });
     expect(
       page.url(),
       "forged JS cookie must not cause server to skip onboarding",

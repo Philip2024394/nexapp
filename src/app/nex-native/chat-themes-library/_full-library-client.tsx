@@ -58,6 +58,10 @@ interface FullLibraryClientProps {
    *  signed-in viewer. Optional for backward compatibility; when
    *  omitted the modal falls back to its legacy "Apply" single CTA. */
   readonly entitlement?: LibraryEntitlementProps;
+  /** Owner directive 2026-11-26 (L-011) · override the header title so
+   *  the three category routes (Plain / Small / Full Image) render
+   *  their own identity. Omitted = "Full Library" (legacy /all). */
+  readonly title?: string;
 }
 
 export function FullLibraryClient({
@@ -65,6 +69,7 @@ export function FullLibraryClient({
   viewerCreatorBadges,
   themesOverride,
   entitlement,
+  title,
 }: FullLibraryClientProps): React.JSX.Element {
   const ACTIVE_THEMES: readonly LibraryTheme[] =
     themesOverride && themesOverride.length > 0 ? themesOverride : LIBRARY_THEMES;
@@ -251,7 +256,7 @@ export function FullLibraryClient({
               textShadow: "0 2px 10px rgba(0, 0, 0, 0.6)",
             }}
           >
-            Full Library
+            {title ?? "Full Library"}
           </h1>
           <p
             style={{

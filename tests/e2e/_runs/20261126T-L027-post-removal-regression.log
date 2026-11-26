@@ -1,0 +1,471 @@
+
+Running 234 tests using 1 worker
+
+  ✓    1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (7.1s)
+  ✓    2 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:38:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page renders at phone viewport without horizontal overflow (775ms)
+  ✘    3 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances (6.2s)
+  ✓    4 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:73:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › sign-in page loads at phone viewport without horizontal overflow (1.5s)
+  ✓    5 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:87:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › create-account page loads at phone viewport without horizontal overflow (2.1s)
+  ✘    6 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome (1.2s)
+  ✘    7 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome (1.1s)
+  ✘    8 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome (1.1s)
+  ✘    9 [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target (5.8s)
+  -   10 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:87:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › sanity · signed-in home is reachable (not bounced to /sign-in)
+  -   11 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:106:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-visit invitation visibility matches conversationCount === 0
+  -   12 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:140:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home → first-visit · tap invitation navigates correctly
+  -   13 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:161:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → chat-themes-library · live catalogue opens
+  -   14 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:180:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → shop · honest preview opens, no commerce bypass
+  -   15 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:204:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › first-visit → personalize · honest preview opens, no fake upload
+  -   16 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:232:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › themes library · select a free theme and verify navigation
+  -   17 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:262:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › send first message · BLOCKED pending known test peer
+  -   18 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:288:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · invitation absent when conversationCount ≥ 1
+  -   19 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:325:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-contact panel renders for eligible new users
+  -   20 [mobile-chromium-pixel7-authed] › tests\e2e\mobile-authenticated-journey.spec.ts:377:7 › NEX mobile · signed-in first-user journey · Pixel 7 (412×915) › home · first-contact action cards point at sealed destinations when visible
+  ✓   21 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (9.7s)
+  -   22 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓   23 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (5.1s)
+  -   24 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback
+  ✓   25 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback (5.2s)
+  ✓   26 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.6s)
+  ✓   27 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (6.6s)
+  ✓   28 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.8s)
+  ✓   29 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.4s)
+  ✓   30 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (5.7s)
+  ✓   31 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.4s)
+  ✓   32 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (2.7s)
+  ✓   33 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.3s)
+  ✓   34 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (8.8s)
+  ✓   35 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.9s)
+  -   36 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -   37 [nex-pwa-install-and-location-pixel7] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓   38 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (5.7s)
+  -   39 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path
+  ✓   40 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (5.3s)
+  ✓   41 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback (5.3s)
+  -   42 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback
+  ✓   43 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.7s)
+  ✓   44 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (6.6s)
+  ✓   45 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.8s)
+  ✓   46 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (5.9s)
+  ✓   47 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (6.1s)
+  ✓   48 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (7.0s)
+  ✓   49 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (2.8s)
+  ✓   50 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.0s)
+  ✓   51 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.9s)
+  ✓   52 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (7.3s)
+  -   53 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -   54 [nex-pwa-install-and-location-desktop] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓   55 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:207:5 › A · install page renders and leaves 'detecting' (5.6s)
+  ✓   56 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:238:5 › B · iPhone-emulated viewport shows Share → Add to Home Screen path (5.2s)
+  ✓   57 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:265:5 › C · display-mode: standalone yields 'installed' state (5.0s)
+  -   58 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:298:5 › D · desktop settles on either the install card OR an honest fallback
+  -   59 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:324:5 › E · mobile without beforeinstallprompt lands on an honest fallback
+  ✓   60 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:367:5 › F · emergency-help does not request geolocation on initial load (1.5s)
+  ✓   61 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:382:5 › G · explanation card appears before any geolocation call (6.1s)
+  ✓   62 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:399:5 › H · Not Now returns to idle without invoking geolocation (5.3s)
+  ✓   63 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:416:5 › I + J · Allow invokes geolocation and sms: href includes coords + maps url (10.8s)
+  ✓   64 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:442:5 › K · denied geo surfaces retry and a coord-free sms: fallback (6.0s)
+  ✓   65 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:494:5 › L · landing WITHOUT engagement cookie hides the install slot (3.3s)
+  ✓   66 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:509:5 › M · landing WITH nex_install_eligible=1 cookie shows the install slot (3.6s)
+  ✓   67 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:532:5 › N · cookie value '0' / stray text is treated as absent (fail-closed) (2.0s)
+  ✓   68 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:556:5 › O · an unauthenticated landing visit does not write the eligibility cookie (2.3s)
+  ✓   69 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:571:5 › P · trusted-contact phone never appears in outbound network requests (6.9s)
+  -   70 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:595:6 › Q · real iOS Safari behaviour (navigator.standalone, Share menu, no beforeinstallprompt) is NOT covered
+  -   71 [nex-pwa-install-and-location-iphone-emulated] › tests\e2e\nex-pwa-install-and-location.spec.ts:604:6 › R · real Android Chrome beforeinstallprompt path is NOT covered
+  ✓   72 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:223:7 › account-active · unauthenticated › A · redirects guest to /sign-in (3.1s)
+  ✘   73 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:244:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie (16.9s)
+  ✘   74 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:302:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts (30.2s)
+  ✓   75 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:334:7 › account-active · authenticated (dev-pass real Supabase) › D · client-JS cookie forgery cannot bypass server trust (22.7s)
+  ✓   76 [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:371:7 › account-active · authenticated (dev-pass real Supabase) › E · /manage/shop/start?from=signup Skip-for-now link resolves to welcome (12.7s)
+  ✓   77 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (9.5s)
+  ✓   78 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render (6.5s)
+  ✓   79 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render (6.7s)
+  ✓   80 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render (11.3s)
+  ✓   81 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform (552ms)
+  -   82 [pwa-install-cadence-iphone-emulated] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+  ✓   83 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (5.4s)
+  ✓   84 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render (6.0s)
+  ✓   85 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render (5.4s)
+  ✓   86 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render (5.5s)
+  ✓   87 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform (529ms)
+  -   88 [pwa-install-cadence-desktop] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+  -   89 [stage-a-pixel7] › tests\e2e\diagnostic-ask-seller-send-handler.spec.ts:23:5 › DIAGNOSTIC · capture send-path state
+  ✓   90 [stage-a-pixel7] › tests\e2e\fixture-harness-smoke.spec.ts:22:5 › fixture harness · create+teardown round-trip (6.5s)
+  ✓   91 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native · body occupies full viewport with zero margin (3.6s)
+  ✓   92 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/sign-in · body occupies full viewport with zero margin (1.5s)
+  ✓   93 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:44:9 › T-5.1 · full-viewport rule · Pixel 7 › /nex-native/directory · body occupies full viewport with zero margin (5.8s)
+  ✓   94 [stage-a-pixel7] › tests\e2e\full-viewport-chrome.spec.ts:107:7 › T-5.1 · full-viewport rule · Pixel 7 › sealed viewport meta is present on the root layout (1.4s)
+  ✓   95 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native · full-viewport CSS contract + post-scroll stability (1.2s)
+  ✓   96 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/sign-in · full-viewport CSS contract + post-scroll stability (1.9s)
+  ✓   97 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/directory · full-viewport CSS contract + post-scroll stability (6.0s)
+  ✓   98 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/why-nex · full-viewport CSS contract + post-scroll stability (1.3s)
+  ✓   99 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/switch · full-viewport CSS contract + post-scroll stability (1.4s)
+  ✓  100 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:71:9 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › /nex-native/pricing · full-viewport CSS contract + post-scroll stability (1.1s)
+  ✓  101 [stage-a-pixel7] › tests\e2e\full-viewport-extended-coverage.spec.ts:137:7 › C11-NEX-021 · extended full-viewport coverage · Pixel 7 › none of the public pillar surfaces leak overflow:scroll on <html> (blocks the full-bleed splash contract) (1.1s)
+  ✓  102 [stage-a-pixel7] › tests\e2e\journey-ask-seller-nonowner-full.spec.ts:51:7 › Cycle 9 · non-owner Ask Seller · observable send › SUCCESS · non-owner lands on conversation · Send to shop · chip clears + DB confirms conversation/participants/message (26.7s)
+  -  103 [stage-a-pixel7] › tests\e2e\journey-ask-seller-nonowner-full.spec.ts:344:7 › Cycle 9 · non-owner Ask Seller · observable send › ERROR PATH · Ask Seller surfaces honest error label when send fails
+  ✓  104 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:87:7 › Cycle 9 · adversarial regression · buyer purchase-intent › tampered `?next=` · hidden sign-in input must NOT render for any malicious shape (5.1s)
+  ✓  105 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:125:7 › Cycle 9 · adversarial regression · buyer purchase-intent › direct-link deep entry · guest Add-to-Cart preserves `next=` to sign-in (2.1s)
+  ✓  106 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:160:7 › Cycle 9 · adversarial regression · buyer purchase-intent › reload on sign-in with `?next=` preserves the hidden `next` input value (5.2s)
+  ✓  107 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:191:7 › Cycle 9 · adversarial regression · buyer purchase-intent › duplicate guest Add-to-Cart taps · single auth-gate banner · idempotent (3.7s)
+  -  108 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:238:9 › Cycle 9 · adversarial regression · buyer purchase-intent › signed-in cart dedup › tapping Add-to-Cart repeatedly dedupes to a single cart row
+  ✓  109 [stage-a-pixel7] › tests\e2e\journey-buyer-adversarial.spec.ts:334:9 › Cycle 9 · adversarial regression · buyer purchase-intent › back-nav after resumed sign-in › goBack from a second route returns to product without re-mounting auth-gate (25.1s)
+  ✓  110 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:45:7 › T-2.5 · buyer checkout + price validation › direct shop → direct product · add-to-cart affordance surfaces (25.8s)
+  -  111 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:123:7 › T-2.5 · buyer checkout + price validation › checkout · cart JSONB snapshot shape persisted in nex_order
+  -  112 [stage-a-pixel7] › tests\e2e\journey-buyer-checkout.spec.ts:133:7 › T-2.5 · buyer checkout + price validation › price-tamper rejection · modified unit_price must be refused server-side
+  ✓  113 [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:124:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · valid credentials with `next=/product/<id>` returns buyer to the product (8.7s)
+  ✓  114 [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:174:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · `?next=` is URL-level rejected by safeNext when the form POSTS without the hidden field (defence-in-depth) (5.3s)
+  ✓  115 [stage-a-pixel7] › tests\e2e\journey-buyer-ordinary-signin.spec.ts:233:7 › Cycle 9 · ordinary sign-in · `next=` preservation + malicious-next rejection › ordinary sign-in · absent `next` lands on default `/nex-native/contacts` (8.9s)
+  ✓  116 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:94:7 › Cycle 8 · signed-out buyer · purchase intent preservation › end-to-end · guest → Add to Cart gate → Dev Pass → return to product → add → survive refresh (10.2s)
+  ✓  117 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:230:7 › Cycle 8 · signed-out buyer · purchase intent preservation › new-account creation · signup form wiring preserves ?next= (URL-level only · end-to-end BLOCKED without approved buyer) (1.0s)
+  ✓  118 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:266:7 › Cycle 8 · signed-out buyer · purchase intent preservation › Ask Seller sealed contract · ?open-chat=1&product=<id> redirects signed-in non-owner to product-context conversation (9.5s)
+  ✓  119 [stage-a-pixel7] › tests\e2e\journey-buyer-signed-out-purchase-resume.spec.ts:306:7 › Cycle 8 · signed-out buyer · purchase intent preservation › independent challenge · browser back after resumed sign-in does not resurrect auth-gate (6.7s)
+  ✓  120 [stage-a-pixel7] › tests\e2e\journey-buyer-signup-wiring.spec.ts:88:7 › Cycle 9 · signup form wiring (non-mutating) › signup form · wiring + next-preservation · NO submit (1.2s)
+  ✓  121 [stage-a-pixel7] › tests\e2e\journey-buyer-signup-wiring.spec.ts:140:7 › Cycle 9 · signup form wiring (non-mutating) › signup mode toggle · ?mode=signup round-trips the `next` to sign-in form when mode is cleared (3.1s)
+  ✓  122 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-document.spec.ts:21:7 › T-1.2 · encrypted document attachment › POST /api/nex-native/attachment/encrypted · pdf extension accepted (1.4s)
+  ✓  123 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:35:7 › T-1.2 · encrypted image attachment › POST /api/nex-native/attachment/encrypted · returns private bucket path (1.5s)
+  -  124 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-encrypted-image.spec.ts:81:7 › T-1.2 · encrypted image attachment › round-trip decrypt · BLOCKED-PENDING-SECOND-TEST-ACCOUNT
+  -  125 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-fail-safe-503.spec.ts:34:7 › T-1.2 · fail-safe 503 · observable only when private bucket absent › encrypted route: when 503 is returned, body + Retry-After match sealed contract
+  ✓  126 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-fail-safe-503.spec.ts:64:7 › T-1.2 · fail-safe 503 · observable only when private bucket absent › standard route: default 410 Gone under NEX_CHAT_PLAINTEXT_FREEZE (default ON) (927ms)
+  -  127 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-legacy-public-envelope-resolve.spec.ts:31:7 › T-1.2 · legacy public-envelope resolve › resolver returns a playback URL for a legacy row · BLOCKED-PENDING-SEED
+  -  128 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-legacy-public-envelope-resolve.spec.ts:40:7 › T-1.2 · legacy public-envelope resolve › resolver does NOT silently fall back to plaintext for encrypted envelopes
+  ✓  129 [stage-a-pixel7] › tests\e2e\journey-chat-attachment-non-participant-404.spec.ts:32:7 › T-1.2 · signed-URL mint non-participant 404 (non-leaking) › GET with a fabricated storage_path responds 404 · body does not disclose state (1.7s)
+  ✓  130 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:53:7 › T-1.1 · chat send end-to-end › sanity · /chat redirects to /contacts (retired hub) (7.6s)
+  ✓  131 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:67:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route (12.2s)
+  -  132 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:125:7 › T-1.1 · chat send end-to-end › offline outbox · send under forced-offline reflects pending state
+  -  133 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:139:7 › T-1.1 · chat send end-to-end › retract · sender-side retract affordance renders in the message menu
+  -  134 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:147:7 › T-1.1 · chat send end-to-end › delete-for-me · distinct label from retract
+  ✓  135 [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:23:7 › T-3.1 · apply free chat theme › theme library responds and renders at least one card (5.8s)
+  -  136 [stage-a-pixel7] › tests\e2e\journey-chat-theme-apply-free.spec.ts:51:7 › T-3.1 · apply free chat theme › applying a free theme does not surface a paywall
+  -  137 [stage-a-pixel7] › tests\e2e\journey-chat-theme-first-free-apply.spec.ts:27:7 › T-3.1 · first-free apply › first paid-theme apply · completes without paywall
+  -  138 [stage-a-pixel7] › tests\e2e\journey-chat-theme-first-free-apply.spec.ts:37:7 › T-3.1 · first-free apply › second paid-theme apply · triggers Themes+ subscribe prompt
+  -  139 [stage-a-pixel7] › tests\e2e\journey-chat-theme-region-unsupported-waitlist.spec.ts:29:7 › T-3.3 · unsupported region · waitlist, never USD fallback › unsupported region CTA shows WAITLIST + no USD amount
+  ✓  140 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:35:7 › L-011 · chat themes three-category hub › hub renders exactly three cards and each targets its category route (960ms)
+  ✓  141 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:58:7 › L-011 · chat themes three-category hub › each hub card navigates to its library sub-route (7.7s)
+  ✓  142 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:69:9 › L-011 · chat themes three-category hub › /nex-native/chat-themes-library/plain · library shell responds 200 and renders the plain library (1.1s)
+  ✓  143 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:69:9 › L-011 · chat themes three-category hub › /nex-native/chat-themes-library/small · library shell responds 200 and renders the small library (1.1s)
+  ✓  144 [stage-a-pixel7] › tests\e2e\journey-chat-themes-three-category-hub.spec.ts:69:9 › L-011 · chat themes three-category hub › /nex-native/chat-themes-library/full-image · library shell responds 200 and renders the full-image library (1.6s)
+  -  145 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:64:7 › T-2.2 · create shop journey › baseline · /manage redirects to setup dispatcher iff the account has no business
+  -  146 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:95:7 › T-2.2 · create shop journey › setup dispatcher routes an empty account to business-details first
+  ✓  147 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:123:7 › T-2.2 · create shop journey › harness · fresh fixture account can own a nex_business row with correct FK + slug + teardown (3.9s)
+  ✓  148 [stage-a-pixel7] › tests\e2e\journey-create-shop.spec.ts:204:7 › T-2.2 · create shop journey › real browser journey · shop-less account → /manage → business-details → submit → nex_business row persists (32.1s)
+  -  149 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:49:7 › T-4.6 · directory browse + filter (signed-out) › directory landing responds 200 and renders a list surface
+  -  150 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:81:7 › T-4.6 · directory browse + filter (signed-out) › search / filter affordance is present and interactive
+  -  151 [stage-a-pixel7] › tests\e2e\journey-directory-browse-and-filter.spec.ts:113:7 › T-4.6 · directory browse + filter (signed-out) › tapping a business card navigates to a [businessSlug] route (no sign-in bounce)
+  ✓  152 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:33:7 › T-4.1 · first-user A → contacts → first thread › sanity · signed-in /home reachable (follows sealed /home → /contacts 308) (1.6s)
+  ✓  153 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:57:7 › T-4.1 · first-user A → contacts → first thread › home · first-visit invitation renders iff conversationCount === 0 (1.8s)
+  ✓  154 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:74:7 › T-4.1 · first-user A → contacts → first thread › contacts · list surface responds and renders a list region (7.2s)
+  ✓  155 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:90:7 › T-4.1 · first-user A → contacts → first thread › contacts · add-contact affordance is reachable (does not auto-persist) (8.2s)
+  ✓  156 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:108:7 › T-4.1 · first-user A → contacts → first thread › first-thread · opening a conversation route responds (no new row inserted) (13.5s)
+  -  157 [stage-a-pixel7] › tests\e2e\journey-first-user-A-to-contacts.spec.ts:123:7 › T-4.1 · first-user A → contacts → first thread › outbound first message · BLOCKED pending second test account
+  ✓  158 [stage-a-pixel7] › tests\e2e\journey-full-guest-signup-pick-theme.spec.ts:166:5 › full guest→signup→theme journey · pick-theme account-wall handoff applies chosen theme (17.6s)
+  -  159 [stage-a-pixel7] › tests\e2e\journey-guest-chat-signup-cta.spec.ts:66:6 › guest-chat signup CTA · href targets sealed signup URL with next preserved
+  ✓  160 [stage-a-pixel7] › tests\e2e\journey-kind-select-signup.spec.ts:31:5 › kind-select error handler · sealed signup URL serves and preserves (e,m) params (1.0s)
+  ✓  161 [stage-a-pixel7] › tests\e2e\journey-manage-shopless-redirect.spec.ts:53:7 › defect #73 regression · /nex-native/manage shop-less redirect › shop-less fixture visiting /manage redirects to /manage/shop/setup via RSC streaming (18.5s)
+  ✓  162 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8-ui-loop.spec.ts:112:7 › T-8 · merchant order full UI loop › merchant signs in · sees order · opens detail · marks paid · marks completed · ownership gate holds · zero residuals (1.1m)
+  ✓  163 [stage-a-pixel7] › tests\e2e\journey-merchant-order-t8.spec.ts:71:7 › T-8 · merchant order journey › created order persists · event row written · state transition observable (8.1s)
+  ✓  164 [stage-a-pixel7] › tests\e2e\journey-mid-checkout-session-expired.spec.ts:31:7 › T-4.5 · mid-checkout session-expired recovery › manage orders surface responds under a signed-in merchant account (3.0s)
+  -  165 [stage-a-pixel7] › tests\e2e\journey-mid-checkout-session-expired.spec.ts:48:7 › T-4.5 · mid-checkout session-expired recovery › Finish-payment affordance renders for an awaiting_payment order
+  ✓  166 [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:36:7 › T-4.4 · mid-shop-setup resume › dispatcher routes to ONE of the four known steps (13.8s)
+  ✓  167 [stage-a-pixel7] › tests\e2e\journey-mid-shop-setup-interrupt-resume.spec.ts:66:7 › T-4.4 · mid-shop-setup resume › resume cursor is state-driven · phone-kill at business-details lands back on business-details (18.1s)
+  ✓  168 [stage-a-pixel7] › tests\e2e\journey-payment-status-t10.spec.ts:95:7 › T-10 · payment status + notifications › merchant-owned payment method tagged · state transition recorded · no false verification claim (15.0s)
+  ✓  169 [stage-a-pixel7] › tests\e2e\journey-payment-status-t10.spec.ts:182:7 › T-10 · payment status + notifications › duplicate 'order_paid' notification insert dedupes via (recipient, source_ref) UNIQUE (18.5s)
+  ✓  170 [stage-a-pixel7] › tests\e2e\journey-paypal-webhook-t10.spec.ts:80:7 › T-10b · PayPal webhook verification › method guard · GET returns 405 (44ms)
+  ✓  171 [stage-a-pixel7] › tests\e2e\journey-paypal-webhook-t10.spec.ts:89:7 › T-10b · PayPal webhook verification › config branch · creds missing short-circuits before any state change (9.8s)
+  -  172 [stage-a-pixel7] › tests\e2e\journey-paypal-webhook-t10.spec.ts:201:7 › T-10b · PayPal webhook verification › positive-path · live verify-webhook-signature · requires PAYPAL_* creds
+  ✓  173 [stage-a-pixel7] › tests\e2e\journey-pending-wall-race-conditions.spec.ts:234:7 › pending-wall one-shot · race-condition regression › TEST A · direct re-visit to /post-signup-apply after apply must not replay (28.7s)
+  ✓  174 [stage-a-pixel7] › tests\e2e\journey-pending-wall-race-conditions.spec.ts:336:7 › pending-wall one-shot · race-condition regression › TEST B · browser back-navigation after apply must not resurrect cookie or double-apply (33.5s)
+  ✓  175 [stage-a-pixel7] › tests\e2e\journey-pending-wall-security-regressions.spec.ts:174:7 › G-4 P2 · pending-wall security regressions › tampered premium payload · premium_required bounce · no DB write · cookie consumed (5.9s)
+  ✓  176 [stage-a-pixel7] › tests\e2e\journey-pending-wall-security-regressions.spec.ts:245:7 › G-4 P2 · pending-wall security regressions › Origin-only probe (no Sec-Fetch-Site) with foreign Origin · bounce to /contacts · DB untouched · cookie preserved (4.6s)
+  ✓  177 [stage-a-pixel7] › tests\e2e\journey-pending-wall-security-regressions.spec.ts:323:7 › G-4 P2 · pending-wall security regressions › invalid nextUrl variants · each rejected by decode · fallback to /contacts · DB untouched (20.4s)
+  ✓  178 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:168:7 › G-4 · post-signup-apply pick-theme handoff › valid pick-theme cookie → redirect → applied chip (no second Activate) (8.3s)
+  ✓  179 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:244:7 › G-4 · post-signup-apply pick-theme handoff › one-shot · second visit with no cookie redirects to /contacts (9.6s)
+  ✓  180 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:267:7 › G-4 · post-signup-apply pick-theme handoff › REAL one-shot · cookie cleared on consumption · user's intervening theme choice preserved on later visit (19.1s)
+  ✓  181 [stage-a-pixel7] › tests\e2e\journey-post-signup-apply-theme.spec.ts:367:7 › G-4 · post-signup-apply pick-theme handoff › CSRF defence · Sec-Fetch-Site: cross-site must not consume cookie or mutate DB (4.3s)
+  ✓  182 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:62:7 › T-4.3 · State-D returning signed-out user → sign-in › entry · signed-out user hitting the app root lands on welcome, not /home (852ms)
+  ✓  183 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:74:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 signed-out new-device branch · no-JS auto-divert to /free-chat?show-themes=1 EXACT (828ms)
+  -  184 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:139:7 › T-4.3 · State-D returning signed-out user → sign-in › G-2 signed-in SOS-configured branch · real <a href> anchor requirement
+  ✓  185 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:159:7 › T-4.3 · State-D returning signed-out user → sign-in › destination · /sign-in renders and is interactive (unknown device branch) (1.7s)
+  ✓  186 [stage-a-pixel7] › tests\e2e\journey-returning-signed-out-D-to-signin.spec.ts:187:7 › T-4.3 · State-D returning signed-out user → sign-in › known-device branch · face/WebAuthn affordance surfaces when the device-known marker is present (474ms)
+  ✓  187 [stage-a-pixel7] › tests\e2e\journey-selected-theme-cookie-signup.spec.ts:158:5 › SELECTED_THEME_COOKIE · guest previews free theme then signs up · chosen theme is auto-applied (18.3s)
+  ✓  188 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:42:7 › T-4.6 · signed-out buy intent → auth-gate › auth-gate banner renders when a signed-out user taps Buy on a product (6.6s)
+  -  189 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:141:7 › T-4.6 · signed-out buy intent → auth-gate › close dismisses the auth-gate without navigating off the product page
+  -  190 [stage-a-pixel7] › tests\e2e\journey-signed-out-browse-buy-auth-gate.spec.ts:150:7 › T-4.6 · signed-out buy intent → auth-gate › sign-in CTA preserves intent via ?next=
+  ✓  191 [stage-a-pixel7] › tests\e2e\journey-stripe-webhook-t10.spec.ts:81:7 › T-10a · Stripe webhook verification › method guard · GET returns 405 with Allow: POST (43ms)
+  ✓  192 [stage-a-pixel7] › tests\e2e\journey-stripe-webhook-t10.spec.ts:94:7 › T-10a · Stripe webhook verification › unsigned/bad-sig POST never reaches state change · opaque failure surface (7.5s)
+  -  193 [stage-a-pixel7] › tests\e2e\journey-stripe-webhook-t10.spec.ts:246:7 › T-10a · Stripe webhook verification › positive-path · valid signature transitions state · dedup replay same event
+  ✓  194 [stage-a-pixel7] › tests\e2e\journey-theme-viewer-organic-signup.spec.ts:25:5 › guest on theme viewer · GuestSignupBanner CTA targets sealed signup URL · destination is live (5.2s)
+  ✓  195 [stage-a-pixel7] › tests\e2e\journey-unauth-checkout-signup-return.spec.ts:28:5 › unauth buyer clicking checkout · sealed signup URL with next preserved (1.2s)
+  -  196 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:254:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid vault_tier + no shop · entitled · redirect to /vault/setup
+  ✓  197 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:284:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › paid shop_tier + null vault entitlement · NOT entitled · paywall (7.7s)
+  ✓  198 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:312:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › no shop + no vault entitlement · NOT entitled · paywall (5.2s)
+  -  199 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:328:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › active vault_trial_used_at (3 days old) · entitled · redirect to /vault/setup
+  ✓  200 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:359:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › expired vault_trial_used_at (8 days old) · NOT entitled · paywall (6.4s)
+  -  201 [stage-a-pixel7] › tests\e2e\journey-vault-standalone-access.spec.ts:379:7 › Cycle 14 F1 · Vault gate honours vault_tier / vault_trial_used_at only › vault_tier='gratis' with no trial · NOT entitled · paywall
+  ✓  202 [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:34:5 › visitor interact popup · claim CTA preserves claim param, targets sealed signup URL (2.3s)
+  ✓  203 [stage-a-pixel7] › tests\e2e\journey-visitor-claim-signup.spec.ts:71:5 › control-drawer visitor-claim pill · links to sealed signup URL with claim param preserved (1.1s)
+  ✓  204 [stage-a-pixel7] › tests\e2e\journey-welcome-intent-pick-theme.spec.ts:28:5 › welcome-intent branch · redirect target serves sealed signup URL with intent=pick-theme (1.1s)
+  -  205 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:70:7 › T-5.3 · location permission explanation card › Emergency Help landing does NOT auto-request geolocation on load
+  -  206 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:105:7 › T-5.3 · location permission explanation card › sealed explanation copy renders somewhere in the Emergency Help setup surface
+  -  207 [stage-a-pixel7] › tests\e2e\location-permission-explanation-card.spec.ts:128:7 › T-5.3 · location permission explanation card › denial branch · user denying location does NOT block SOS setup progression
+  ✓  208 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native · every discovered anchor responds <500 and respects gating (907ms)
+  ✓  209 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/sign-in · every discovered anchor responds <500 and respects gating (3.1s)
+  ✓  210 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/install · every discovered anchor responds <500 and respects gating (1.2s)
+  ✓  211 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:118:9 › T-5.5 · owner-corrected NAV reachability crawl › /nex-native/emergency-help · every discovered anchor responds <500 and respects gating (2.6s)
+  ✓  212 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:161:7 › T-5.5 · owner-corrected NAV reachability crawl › direct shop + product routes respond <500 when owner-seeded fixtures are present (1.7s)
+  ✓  213 [stage-a-pixel7] › tests\e2e\nav-dead-link-crawl.spec.ts:195:7 › T-5.5 · owner-corrected NAV reachability crawl › documented direct-URL-only routes are NOT orphaned by the allowlist (455ms)
+  ✓  214 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native · install prompt banner MUST NOT render (5.9s)
+  ✓  215 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/sign-in · install prompt banner MUST NOT render (8.7s)
+  ✓  216 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/chat-themes-library · install prompt banner MUST NOT render (5.9s)
+  ✓  217 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:47:9 › T-5.2 · PWA install promotion cadence › /nex-native/emergency-help · install prompt banner MUST NOT render (5.4s)
+  ✓  218 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:72:7 › T-5.2 · PWA install promotion cadence › /nex-native/install · sealed install surface renders instructions for the running platform (425ms)
+  -  219 [stage-a-pixel7] › tests\e2e\pwa-install-cadence.spec.ts:128:7 › T-5.2 · PWA install promotion cadence › dismissing the install prompt enters cooldown · must not re-prompt on next load
+  ✓  220 [stage-a-pixel7] › tests\e2e\regression-l013-canonical-connectivity.spec.ts:76:7 › L-013 · NEX_POSTGRES_URL canonical connectivity › SELECT 1 responds within 3 s (1.1s)
+  ✓  221 [stage-a-pixel7] › tests\e2e\regression-l013-canonical-connectivity.spec.ts:84:7 › L-013 · NEX_POSTGRES_URL canonical connectivity › nex.business_canonical schema is reachable (count is a non-negative int) (221ms)
+  ✓  222 [stage-a-pixel7] › tests\e2e\regression-l013-canonical-connectivity.spec.ts:95:7 › L-013 · NEX_POSTGRES_URL canonical connectivity › public.nex_business (live directory source) has rows (219ms)
+  ✓  223 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:108:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › RSC /conversations/<random-uuid> renders not-found UI (no conversation content leaked) (2.4s)
+  ✓  224 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:151:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › API GET /chat/conversations/<random-uuid> returns a non-success guard response (1.4s)
+  ✓  225 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:185:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › API GET /chat/encrypted/since for a non-participant conversation is rejected (1.2s)
+  ✓  226 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:206:9 › C11-SEC-3 · account-isolation + conversation boundary › signed-in boundary (uses stored auth state) › API POST /chat/encrypted for a non-participant conversation is rejected (1.3s)
+  ✓  227 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:255:9 › C11-SEC-3 · account-isolation + conversation boundary › unauthenticated boundary (no storage state) › unauth POST /chat/encrypted is rejected with 401 before any participant check (63ms)
+  ✓  228 [stage-a-pixel7] › tests\e2e\security-account-isolation.spec.ts:279:9 › C11-SEC-3 · account-isolation + conversation boundary › unauthenticated boundary (no storage state) › unauth GET /chat/encrypted/since is rejected with 401 (58ms)
+  ✓  229 [stage-a-pixel7] › tests\e2e\smoke-switch-calculator.spec.ts:33:7 › NEX-007 · Switch calculator · public smoke › public route renders sealed markers + presets + reactive comparison (15.0s)
+  ✓  230 [stage-a-pixel7] › tests\e2e\smoke-why-nex.spec.ts:30:7 › NEX-006 · Why NEX · public smoke › public route renders sealed markers + LIVE advantage + Switch cross-link (988ms)
+  ✓  231 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:51:7 › C11-NEX-006 · Why NEX · editorial verification › renders exactly 7 advantage cards with sealed LIVE pair and no over-claim (1.1s)
+  ✓  232 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:105:7 › C11-NEX-006 · Why NEX · editorial verification › renders the three sealed CTAs with correct hrefs (1.2s)
+  ✓  233 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:126:7 › C11-NEX-006 · Why NEX · editorial verification › Honest limits footer declares nexapp.app domain + no outage-immunity promise (1.2s)
+  ✓  234 [stage-a-pixel7] › tests\e2e\why-nex-editorial-verification.spec.ts:152:7 › C11-NEX-006 · Why NEX · editorial verification › page does not make 'first / only / best' over-claims in user-facing copy (1.1s)
+
+
+  1) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/create-account"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('a[href*="/nex-native/create-account"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/create-account"]').first()
+
+
+      65 |     const createAccountLink = page.locator('a[href*="/nex-native/create-account"]').first();
+      66 |     const signInLink = page.locator('a[href*="/nex-native/sign-in"]').first();
+    > 67 |     await expect(createAccountLink).toBeVisible();
+         |                                     ^
+      68 |     await expect(signInLink).toBeVisible();
+      69 |   });
+      70 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:67:37
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome 
+
+    Error: redirect chain ends with 200
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      107 |       waitUntil: "networkidle",
+      108 |     });
+    > 109 |     expect(response?.status(), "redirect chain ends with 200").toBe(200);
+          |                                                                ^
+      110 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      111 |   });
+      112 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:109:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      117 |       waitUntil: "networkidle",
+      118 |     });
+    > 119 |     expect(response?.status()).toBe(200);
+          |                                ^
+      120 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      121 |   });
+      122 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:119:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      128 |       { waitUntil: "networkidle" },
+      129 |     );
+    > 130 |     expect(response?.status()).toBe(200);
+          |                                ^
+      131 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      132 |   });
+      133 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:130:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/create-account"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('a[href*="/nex-native/create-account"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/create-account"]').first()
+
+
+      144 |       .locator('a[href*="/nex-native/create-account"]')
+      145 |       .first();
+    > 146 |     await expect(createAccount).toBeVisible();
+          |                                 ^
+      147 |     const box = await createAccount.boundingBox();
+      148 |     expect(box, "create-account CTA has a bounding box").not.toBeNull();
+      149 |     // 24-px floor · we don't police a specific NEX tap-target spec here,
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:146:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:244:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie 
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-9\traces\819e97553900c3ca22f7-1c6d85e4267c641f1b60-recording3.network' -> 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-9\traces\819e97553900c3ca22f7-1c6d85e4267c641f1b60-recording3-pwnetcopy-1.network'
+
+      297 |     ).toBe(false);
+      298 |
+    > 299 |     await ctx.close();
+          |               ^
+      300 |   });
+      301 |
+      302 |   test("C · second visit with seen cookie redirects to /contacts", async ({
+        at C:\Users\Victus\nexapp\tests\e2e\welcome-account-active-one-time-gate.spec.ts:299:15
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-9\traces\819e97553900c3ca22f7-1c6d85e4267c641f1b60-recording2.network'
+
+    Error: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-9\734d6da6c06a89cb396d8aad6dc1ee86.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-b11a3-elcome-sets-HttpOnly-cookie-nex-welcome-account-active-one-time-gate\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:302:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: page.waitForURL: Test ended.
+    =========================== logs ===========================
+    waiting for navigation until "load"
+      navigated to "http://localhost:3008/nex-native/welcome/account-active"
+    ============================================================
+
+      213 |   // Escape slashes for RegExp.
+      214 |   const re = new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    > 215 |   await page.waitForURL(re, { timeout: timeoutMs });
+          |              ^
+      216 | }
+      217 |
+      218 | // ────────────────────────────────────────────────────────────────────
+        at waitForUrlContains (C:\Users\Victus\nexapp\tests\e2e\welcome-account-active-one-time-gate.spec.ts:215:14)
+        at C:\Users\Victus\nexapp\tests\e2e\welcome-account-active-one-time-gate.spec.ts:320:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\welcome-account-active-one-fe94a-ookie-redirects-to-contacts-nex-welcome-account-active-one-time-gate\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7 failed
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target 
+    [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:244:7 › account-active · authenticated (dev-pass real Supabase) › B · first visit renders welcome + sets HttpOnly cookie 
+    [nex-welcome-account-active-one-time-gate] › tests\e2e\welcome-account-active-one-time-gate.spec.ts:302:7 › account-active · authenticated (dev-pass real Supabase) › C · second visit with seen cookie redirects to /contacts 
+  61 skipped
+  166 passed (20.5m)
+EXIT=1

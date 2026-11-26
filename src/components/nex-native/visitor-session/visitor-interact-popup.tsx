@@ -65,9 +65,13 @@ export function VisitorInteractPopup(): React.JSX.Element | null {
 
   if (!mounted || !open) return null;
 
+  // 2026-11-25 · Cycle-14 F2 · retired `/nex-native/create-account` →
+  // sealed one-URL auth on `/nex-native/sign-in?mode=signup`. The
+  // claim param is preserved so the signup action can still link the
+  // provisional nex_account to the new auth user atomically.
   const claimHref = claimAccountId
-    ? `/nex-native/create-account?claim=${encodeURIComponent(claimAccountId)}`
-    : `/nex-native/create-account`;
+    ? `/nex-native/sign-in?mode=signup&claim=${encodeURIComponent(claimAccountId)}`
+    : `/nex-native/sign-in?mode=signup`;
 
   return createPortal(
     <div

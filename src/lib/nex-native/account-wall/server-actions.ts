@@ -6,7 +6,11 @@
 //
 //   · setPendingAndSignUpAction  · the "Create free account" button.
 //       Writes the pending-wall cookie (action id + nextUrl + optional
-//       payload) and redirects to /nex-native/create-account.
+//       payload) and redirects to /nex-native/sign-in?mode=signup
+//       (per owner directive 2026-11-04 · the one-URL sign-in surface
+//       hosts both signup and sign-in tabs; the retired
+//       /nex-native/create-account route catches on the business-slug
+//       not-found surface · Cycle 14 bug fix 2026-11-25).
 //
 //   · setPendingAndSignInAction · the "Already have one? Sign in" link.
 //       Same cookie write, redirect to /nex-native/sign-in.
@@ -52,7 +56,7 @@ export async function setPendingAndSignUpAction(
     // user never sees a dead-end, they just land on a plain signup.
     await clearPendingAccountWall();
   }
-  redirect("/nex-native/create-account");
+  redirect("/nex-native/sign-in?mode=signup");
 }
 
 /** "Already have one? Sign in" from inside an account wall. */

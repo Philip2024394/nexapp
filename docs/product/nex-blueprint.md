@@ -308,14 +308,80 @@ currently BLOCKED on the architectural fork for commerce migration.
 ### G-4 · Theme persistence across pre-auth → auth transition
 
 Visitor picks theme → signs up → does the chosen theme attach to the
-new account? Code path not verified. `_sealed-free-themes.ts` exists,
-`_load-library-data-guest.ts` exists, but the handoff moment (account
-creation server action) is unverified.
+new account?
+
+**Status (Cycle 13 · 2026-11-25):** **PARTIAL** — `pick-theme` handoff
+branch VERIFIED with stale-replay and CSRF regressions closed. The route
+is now `src/app/nex-native/post-signup-apply/route.ts` (Route Handler ·
+supersedes Cycle 12 `page.tsx` which is deleted). The handler consumes
+the one-shot HttpOnly `nex_pending_wall` cookie (set by the sealed
+account-wall primitive immediately before signup completion), replays
+`accountService.updateChatTheme` authoritatively against the authenticated
+account, emits `Set-Cookie: nex_pending_wall=; Max-Age=0` on the SAME
+response (making the one-shot a REAL one-shot · route handlers CAN emit
+response cookies, unlike RSC render functions), and redirects via HTTP 303
+to the theme viewer.
+
+Evidence: `tests/e2e/journey-post-signup-apply-theme.spec.ts` · 5/5 green
+on Pixel 7 sandbox at 2026-11-25 (auth-setup + 4 scenarios in 56.4 s):
+
+1. Valid cookie → applied chip, action bar absent (decisive proof: owner
+   directive 2026-10-28 · `_preview-action-bar.tsx:86-88` returns null
+   when the server-side predicate `account.chat_theme === themeId` is
+   true · the bar's absence proves the write landed on the authenticated
+   viewer's own account · no second Activate press required).
+2. No cookie → `/nex-native/contacts` fall-through.
+3. REAL one-shot regression · after first consumption the pending cookie
+   is cleared from the browser AND a user's intervening theme choice
+   (simulated `writeAdminChatTheme('nex-flat')`) is NOT overwritten by a
+   stale cookie on a later visit · closes BUG-C13-001.
+4. CSRF regression · `Sec-Fetch-Site: cross-site` + cross-origin `Origin`
+   are rejected with a 303 to `/contacts` WITHOUT consuming the cookie
+   and WITHOUT mutating `chat_theme` · closes BUG-C13-002.
+
+Nine Cycle 12 adversarial probes recorded under C12-SEC-1 all remain safe
+(open-redirect rejected · premium-theme defence-in-depth rejects without
+Themes Plus · SQL-injection payload cannot reach the DB · unauth caller
+keeps the cookie for the legit post-sign-in handoff).
+
+**Theme application vs ownership vs entitlement triad** (for the gratis
+live-world theme `nex-bubbles` exercised here): **applied YES / owned N/A
+/ entitled YES**. `nex-bubbles` is registered in code (live-world
+register), not in DB, so the entitlement service's gratis fast-path
+(`canAccessChatTheme` → `allow:true · reason:"free"`) returns before any
+ownership check. No `nex_theme_ownership` row is required or written.
+Migration 342 (`source='first_free'` write for PAID themes claimed via
+Themes Plus first-free) remains explicit deferred scope.
+
+**Out of scope for Cycle 12 (explicitly deferred):**
+- The `SELECTED_THEME_COOKIE` splash path requires driving
+  `createNexAccountAction` which is currently gated to founder emails
+  by the prelaunch access guard.
+- The `source='first_free'` write — migration 342 (adding `'first_free'`
+  to the `acquired_via` CHECK list) is drafted but NOT applied to
+  sandbox; forcing the insert would violate the check constraint.
+- Signup-flow replay from the real account-wall "Create free account"
+  button is blocked by the same prelaunch gate.
+
+**Cycle 13 architectural correction:** The Cycle 12 "RSC cannot emit
+Set-Cookie" limitation was NOT harmless · it was actively enabling
+BUG-C13-001 (stale-cookie replay silently reverting the user's later
+theme choice for the cookie's 20-minute TTL). The Cycle 13 fix converts
+the endpoint from an RSC page to a Route Handler, which CAN emit
+response cookies. The in-flight `cookies().set(...)` inside
+`consumePendingAccountWall` remains best-effort (the try/catch at
+`src/lib/nex-native/account-wall/pending-action.ts:147-160` documents
+this); the real one-shot is now enforced by the handler's own
+`Set-Cookie: nex_pending_wall=; Max-Age=0` on the redirect response.
+Any future non-idempotent pending-wall action should follow the same
+pattern.
 
 **Impact:** critical — owner-flagged as one of four proof requirements.
+Pick-theme sealed; three deferred branches remain gated on named
+Founder authorisation (prelaunch access, migration 342 apply, Stripe
+sandbox).
 
-**Fix option:** targeted file read of the create-account server action
-+ a Playwright journey test.
+**Evidence:** `docs/product/launch-evidence-ledger.md` § 2.1e (Cycle 12 baseline) + § 2.1f (Cycle 13 bug closures).
 
 ### G-5 · Shop offer screen not proven to work
 

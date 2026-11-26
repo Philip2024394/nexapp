@@ -1,0 +1,69 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (12.7s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\regression-l036-order-detail-hydration.spec.ts:123:9 › L-036 · /manage/orders/[orderId] hydration-mismatch regression › no React hydration warnings fire when merchant opens order detail under a different-timezone browser context (34.9s)
+  ✘  3 [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) (24.1s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\regression-l036-order-detail-hydration.spec.ts:123:9 › L-036 · /manage/orders/[orderId] hydration-mismatch regression › no React hydration warnings fire when merchant opens order detail under a different-timezone browser context 
+
+    TimeoutError: page.waitForURL: Timeout 20000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation until "domcontentloaded"
+    ============================================================
+
+       at _fixtures\sandbox-test-harness.ts:324
+
+      322 |   // Submit via the sealed submit button and wait for redirect off sign-in.
+      323 |   await Promise.all([
+    > 324 |     page.waitForURL(
+          |          ^
+      325 |       (u) => !/\/nex-native\/sign-in(?:[/?#]|$)/.test(u.pathname),
+      326 |       { timeout: 20_000, waitUntil: "domcontentloaded" },
+      327 |     ),
+        at signInAsFixtureInBrowser (C:\Users\Victus\nexapp\tests\e2e\_fixtures\sandbox-test-harness.ts:324:10)
+        at C:\Users\Victus\nexapp\tests\e2e\regression-l036-order-detail-hydration.spec.ts:224:9
+
+    Error Context: test-results\regression-l036-order-deta-b9e58-nt-timezone-browser-context-stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-l036-order-deta-b9e58-nt-timezone-browser-context-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-l036-order-deta-b9e58-nt-timezone-browser-context-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+
+    Error: L-042 Contract A · row anchor '#095fb5ab' must appear in SSR visible HTML · a missing row would fail here
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      259 |           rowAnchorIdx,
+      260 |           `L-042 Contract A · row anchor '#${shortId}' must appear in SSR visible HTML · a missing row would fail here`,
+    > 261 |         ).toBeGreaterThanOrEqual(0);
+          |           ^
+      262 |
+      263 |         // Take a bounded window after the anchor · the per-row
+      264 |         // timestamp slot (<ClientRelTime iso={order.created_at} />)
+        at C:\Users\Victus\nexapp\tests\e2e\regression-l042-orders-list-hydration.spec.ts:261:11
+
+    Error Context: test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [stage-a-pixel7] › tests\e2e\regression-l036-order-detail-hydration.spec.ts:123:9 › L-036 · /manage/orders/[orderId] hydration-mismatch regression › no React hydration warnings fire when merchant opens order detail under a different-timezone browser context 
+    [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+  1 passed (1.4m)
