@@ -12,6 +12,9 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import { getBackgroundAsset } from "./library/catalog-service";
+import { updateChatTheme } from "./account-service";
+import type { NexUuid } from "./types";
 
 export type NexChatThemeTier = "gratis" | "bisnis";
 export type NexChatThemeCategory = "standard" | "premium";
@@ -373,4 +376,91 @@ export function groupByCategory(themes: NexChatThemeRow[]): {
     else standard.push(t);
   }
   return { standard, premium };
+}
+
+/** L-052 follow-up · 2026-11-27 · Option B cookie→DB migration on signup.
+ *  Seeds `nex_account.chat_theme` from the `nex-free-chat-wallpaper`
+ *  cookie set by the first-visit three-category cards flow when an
+ *  anonymous viewer picks a free theme before registering. The cookie
+ *  stores the BARE library asset id (`chat:` / `shop:` prefixes
+ *  stripped by ApplyPreviewModal's first-visit branch). First-visit
+ *  three-category cards only open chat-context library sub-routes, so
+ *  the cookie value is always a chat-prefixed asset's bare id — this
+ *  helper re-attaches `chat:` and looks the asset up in
+ *  nex_background_asset, lazy-upserts the matching nex_chat_theme row
+ *  (same discipline as applyFromLibraryChatAction), and writes the
+ *  account's chat_theme via the existing validated updateChatTheme
+ *  pathway.
+ *
+ *  Scope limits (deliberate · entitlement honoured):
+ *   · Chat-context assets only. Shop-origin assets are never seeded
+ *     here because the first-visit cards do not surface them AND
+ *     shop-origin themes carry a bisnis tier whose entitlement must
+ *     be honoured, not silently bypassed at signup.
+ *   · Gratis tier only. Any resolved chat asset whose underlying
+ *     catalog tier != 'gratis' falls through without writing the
+ *     account column; the user still sees their pick in free-chat
+ *     (cookie) and can re-apply later through the full entitlement
+ *     flow in the library's ApplyPreviewModal.
+ *   · Best-effort. Every failure returns a structured
+ *     `{ ok: false, reason }` and never throws into the signup flow.
+ *     A failure degrades to the pre-seed behaviour: cookie still
+ *     wins visually, DB column still reads the sealed default
+ *     'theme-0', user can re-apply later. */
+export async function seedChatThemeFromFreeChatCookie(args: {
+  readonly accountId: NexUuid;
+  readonly bareWallpaperId: string;
+}): Promise<
+  | { readonly ok: true; readonly chatThemeId: string }
+  | { readonly ok: false; readonly reason: string }
+> {
+  const { accountId, bareWallpaperId } = args;
+  // Defensive · defuse any unexpected cookie contents before touching DB.
+  if (
+    typeof bareWallpaperId !== "string" ||
+    !/^[a-z0-9][a-z0-9_-]{1,60}$/i.test(bareWallpaperId)
+  ) {
+    return { ok: false, reason: "invalid-id-format" };
+  }
+
+  const asset = await getBackgroundAsset(`chat:${bareWallpaperId}`);
+  if (!asset) return { ok: false, reason: "asset-not-found" };
+  if (asset.tier !== "gratis") {
+    return { ok: false, reason: `tier-gated:${asset.tier}` };
+  }
+
+  // Chat-origin: bare id is CHECK-constraint compliant per migration 337.
+  const chatThemeId = asset.id.replace(/^chat:/, "");
+
+  // Lazy-upsert nex_chat_theme row · mirrors the apply-from-library
+  // action so updateChatTheme's validator finds the row.
+  const { data: existing } = await nexSupabaseAdmin
+    .from("nex_chat_theme")
+    .select("id,is_active")
+    .eq("id", chatThemeId)
+    .maybeSingle<{ id: string; is_active: boolean }>();
+
+  if (!existing || !existing.is_active) {
+    const { error: upsertErr } = await nexSupabaseAdmin
+      .from("nex_chat_theme")
+      .upsert({
+        id: chatThemeId,
+        name: asset.label,
+        accent_hex: asset.tintHex ?? "#C6A15B",
+        tier: "gratis",
+        category: "standard",
+        hero_image_url: asset.storageUrl,
+        is_active: true,
+      });
+    if (upsertErr) {
+      return { ok: false, reason: `upsert:${upsertErr.message}` };
+    }
+  }
+
+  try {
+    await updateChatTheme(accountId, chatThemeId);
+  } catch (e) {
+    return { ok: false, reason: `update:${(e as Error).message}` };
+  }
+  return { ok: true, chatThemeId };
 }

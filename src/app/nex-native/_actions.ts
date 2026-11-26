@@ -623,6 +623,59 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       }
     }
   }
+  // L-052 follow-up · 2026-11-27 · Option B cookie→DB migration on
+  // signup. If the guest picked a free library wallpaper from the
+  // first-visit three-category cards on /nex-native/free-chat
+  // (sealed by owner directive 2026-11-27 "OWNER DECISION — OPTION B
+  // APPROVED"), the ApplyPreviewModal wrote the bare asset id into
+  // the first-party `nex-free-chat-wallpaper` cookie (JS-writable,
+  // SameSite=Lax, 365-day max-age). The cookie survives registration
+  // and keeps the free-chat canvas painting their pick; this block
+  // closes the half-finished loop by migrating the pick to the DB
+  // column `nex_account.chat_theme` so the signed-in Chat surface
+  // also opens on their chosen theme. Best-effort, non-redirecting,
+  // never blocks signup. Runs BEFORE the nex_selected_theme branch
+  // so the viewer-return redirect (which exits the function) still
+  // owns its control flow if both cookies happen to be set.
+  {
+    try {
+      const jar = await cookies();
+      const raw = jar.get("nex-free-chat-wallpaper")?.value ?? null;
+      if (raw && data.user?.id) {
+        const freshAcc = await accountService.getAccountBySupabaseUserId(
+          data.user.id,
+        );
+        if (freshAcc?.id) {
+          const { seedChatThemeFromFreeChatCookie } = await import(
+            "@/lib/nex-native/chat-theme-service"
+          );
+          const seed = await seedChatThemeFromFreeChatCookie({
+            accountId: freshAcc.id,
+            bareWallpaperId: raw,
+          });
+          if (seed.ok) {
+            // Clear the cookie · DB is now authoritative. Mirror the
+            // sealed `jar.set(..., maxAge:0)` discipline from
+            // selected-theme-cookie handling (jar.delete inside a
+            // server action ending in redirect() was observed to
+            // leave the cookie on the browser · regression caught
+            // by journey-selected-theme-cookie-signup.spec.ts).
+            jar.set("nex-free-chat-wallpaper", "", {
+              path: "/",
+              sameSite: "lax",
+              maxAge: 0,
+            });
+          }
+          // Failure modes (asset-not-found / tier-gated / upsert /
+          // update) all degrade to pre-seed behaviour: cookie stays,
+          // chat_theme remains the sealed theme-0 default, user
+          // still sees their visual pick in free-chat.
+        }
+      }
+    } catch {
+      /* non-fatal · signup proceeds without seeding */
+    }
+  }
   // 2026-10-15 · Theme-return cookie · if the guest previewed a free
   // NEX-brand theme before signing up (nex-bubbles / nex-flat), take
   // them straight back to that exact theme viewer. Hard whitelist in
