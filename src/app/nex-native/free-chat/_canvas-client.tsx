@@ -322,25 +322,10 @@ export function FreeChatCanvasClient({
     setPreviewCountdown(5);
   }, []);
 
-  // Owner-authorised 2026-11-02 · Keep Theme diverts STRAIGHT to the
-  // bubble-customize surface. Prior revisions flipped stage="setup"
-  // before navigating · that briefly rendered the chat-setup form
-  // ("name + Use my location") during the slow `window.location.href`
-  // transition. Owner reported a 1-2s flash of that form between tap
-  // and the customize page. Fix · skip the stage flip entirely + use
-  // Next.js router.push for an instant SPA transition.
-  const handleKeepTheme = React.useCallback(() => {
-    if (!themeId) return;
-    router.push(
-      `/nex-native/free-chat/bubble-customize?themeId=${encodeURIComponent(themeId)}`,
-    );
-  }, [themeId, router]);
-
-  const handleViewAll = React.useCallback(() => {
-    setStage("done");
-    writeCookie(COOKIE_ROW_DISMISSED, "1");
-    // Navigation happens via the <Link> href — no router.push needed.
-  }, []);
+  // Owner directive 2026-11-27 · `handleKeepTheme` + `handleViewAll`
+  // removed with the PickedThemeActionBar. The free-chat wallpaper
+  // cookie preserves the pick through registration; the three
+  // category cards above provide the only re-entry into the library.
 
   // Owner directive 2026-10-21 (iteration 83) · Save advances to the
   // congrats stage first · congrats auto-advances to invite · invite
@@ -472,8 +457,9 @@ export function FreeChatCanvasClient({
           library route (/plain /small /full-image) · the user picks a
           free theme in that library · the library writes the free-chat
           wallpaper cookie + routes back · returning hits land here with
-          `initialThemeId` already resolved so the PickedThemeActionBar
-          below (Keep Theme · View Themes) takes over. */}
+          `initialThemeId` already resolved so the canvas paints their
+          pick. The Keep Theme / View Themes action bar was removed
+          2026-11-27 per owner directive. */}
       {stage === "picker" && previewCountdown === null && (
         <FirstVisitCategoryCards
           onInfo={() => setHowItWorksOpen(true)}
@@ -483,21 +469,11 @@ export function FreeChatCanvasClient({
         <HowItWorksSheet onClose={() => setHowItWorksOpen(false)} />
       ) : null}
 
-      {/* Keep Theme / View Themes action bar · owner directive
-          2026-10-21 (iteration 60) · visible only during the picker
-          stage AND only after a theme is picked. Keep Theme now
-          transitions the picker container into the chat-setup form
-          (iteration 66) · View Themes routes to the library.
-          Owner directive 2026-11-12 · also hidden during the 5-second
-          preview countdown. */}
-      {stage === "picker" &&
-        themeId !== null &&
-        previewCountdown === null && (
-          <PickedThemeActionBar
-            onKeep={handleKeepTheme}
-            onViewAll={handleViewAll}
-          />
-        )}
+      {/* Owner directive 2026-11-27 · Keep Theme / View Themes action
+          bar removed. The three-category cards above are the sole
+          picker surface; the free-chat wallpaper cookie preserves the
+          pick through registration so no in-canvas commit button is
+          required. */}
 
       {/* Owner directive 2026-11-12 · 5-second theme-preview countdown
           overlay · appears above the composer while the picker and
@@ -2054,92 +2030,11 @@ function IMessageIcon(): React.JSX.Element {
 // Removed `NexShareIcon` (iteration 91) · NEX share chip retired per
 // owner directive · WhatsApp + iMessage are the only channels now.
 
-// ─── Picked-theme action bar (Keep / View all) ──────────────────
-
-function PickedThemeActionBar({
-  onKeep,
-  onViewAll,
-}: {
-  readonly onKeep: () => void;
-  readonly onViewAll: () => void;
-}): React.JSX.Element {
-  return (
-    <div
-      data-nex-free-chat-picked-theme-action-bar
-      role="group"
-      aria-label="Confirm or change chat theme"
-      style={{
-        // Owner directive 2026-11-10 · light-theme palette · the
-        // Keep + View Themes action bar now paints WHITE with an
-        // Amber-tinted border. Matches the Choose 1 Free Theme
-        // container above so the picker reads as one continuous
-        // light card stack.
-        marginTop: 8,
-        padding: "10px 10px",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 8,
-        background: "#FFFFFF",
-        border: "1px solid rgba(212, 162, 79, 0.32)",
-        borderRadius: 12,
-        boxShadow: "0 2px 10px rgba(42, 31, 15, 0.08)",
-      }}
-    >
-      <button
-        type="button"
-        onClick={onKeep}
-        aria-label="Keep this theme"
-        data-nex-free-chat-picked-theme-keep
-        style={{
-          minHeight: 40,
-          padding: "0 12px",
-          borderRadius: 10,
-          background: NEX.cyan,
-          color: "#0a0608",
-          border: `1px solid ${NEX.cyan}`,
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: 0.3,
-          cursor: "pointer",
-          fontFamily: "inherit",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        Keep Theme
-      </button>
-      <Link
-        href="/nex-native/chat-themes-library/all"
-        aria-label="View all chat themes"
-        onClick={onViewAll}
-        data-nex-free-chat-picked-theme-view-all
-        style={{
-          // Owner directive 2026-11-10 · View Themes button now fills
-          // SOLID NEX Orange (was transparent + orange rim). Reads as
-          // the primary "go browse the library" CTA against the new
-          // white action bar.
-          minHeight: 40,
-          padding: "0 12px",
-          borderRadius: 10,
-          background: "#FF7200",
-          color: "#FFFFFF",
-          border: "1px solid #FF7200",
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: 0.3,
-          textDecoration: "none",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "inherit",
-          boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        View Themes
-      </Link>
-    </div>
-  );
-}
+// Removed `PickedThemeActionBar` (2026-11-27) · owner directive
+// "these buttons we dont need and small container Keep Theme / View
+// Themes". The three category cards above the canvas are the sole
+// picker surface. The free-chat wallpaper cookie preserves the pick
+// through registration without an in-canvas commit button.
 
 /* ─── ButterflyFlyby ──────────────────────────────────────────────
    Owner directive 2026-10-23 · "add butterfly flying in randomly on
@@ -2325,10 +2220,11 @@ function Butterfly({
 // in-library preview + select experience lives. The library is
 // responsible for writing the `nex-free-chat-wallpaper` cookie on
 // select so that the subsequent return to /nex-native/free-chat
-// re-enters this canvas with `initialThemeId` resolved, which lights
-// up the PickedThemeActionBar (Keep Theme · View Themes) and permits
-// the user to continue into account creation with the chosen theme
-// preserved through the registration journey.
+// re-enters this canvas with `initialThemeId` resolved, which paints
+// the wallpaper directly. The guest continues into account creation
+// via the existing sign-in/registration surfaces; the cookie is
+// consumed on signup by `seedChatThemeFromFreeChatCookie` so the
+// chosen theme is preserved through the registration journey.
 const FIRST_VISIT_CATEGORIES = [
   {
     kind: "plain" as const,
@@ -2453,16 +2349,17 @@ function FirstVisitCategoryCards({
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              gap: 4,
-              padding: "14px 14px",
+              gap: 3,
+              padding: "12px 14px",
               borderRadius: 10,
               textDecoration: "none",
               background:
-                "linear-gradient(135deg, rgba(198, 161, 91, 0.14) 0%, rgba(2, 9, 20, 0.6) 100%)",
-              border: "1px solid rgba(212, 162, 79, 0.65)",
-              color: NEX.text,
-              boxShadow: "0 3px 10px rgba(0, 0, 0, 0.18)",
-              minHeight: 64,
+                "linear-gradient(135deg, #D4A24F 0%, #C6A15B 55%, #A88443 100%)",
+              border: "1px solid #A88443",
+              color: "#1A1512",
+              boxShadow:
+                "0 3px 10px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28)",
+              minHeight: 60,
             }}
           >
             <span
@@ -2470,7 +2367,7 @@ function FirstVisitCategoryCards({
                 fontSize: 9,
                 letterSpacing: 1.6,
                 textTransform: "uppercase",
-                color: "#C6A15B",
+                color: "#1A1512",
                 fontWeight: 800,
               }}
             >
@@ -2479,8 +2376,8 @@ function FirstVisitCategoryCards({
             <span
               style={{
                 fontSize: 15,
-                fontWeight: 700,
-                color: "#FF7200",
+                fontWeight: 800,
+                color: "#1A1512",
                 lineHeight: 1.15,
               }}
             >
@@ -2489,8 +2386,8 @@ function FirstVisitCategoryCards({
             <span
               style={{
                 fontSize: 11,
-                color: NEX.textDim,
-                lineHeight: 1.35,
+                color: "#3B2E12",
+                lineHeight: 1.3,
               }}
             >
               {category.hint}
@@ -2673,12 +2570,11 @@ function FirstVisitThemeGrid({
           onPress={() => onPick(t)}
         />
       ))}
-      {/* Owner-authorised 2026-11-02 · the in-grid "View" tile has been
-          removed · the picked-theme action bar immediately below the
-          grid already surfaces "View all themes" as a dedicated CTA,
-          so the sixth grid slot is reclaimed for a real theme tile
-          (6 themes total · 2×3 grid). The onViewAll handler is still
-          routed through the action bar · see PickedThemeActionBar. */}
+      {/* Owner-authorised 2026-11-02 · in-grid "View" tile removed;
+          sixth grid slot reclaimed for a real theme tile (6 themes
+          total · 2×3 grid). Container retained in deprecated form
+          only — the active picker is FirstVisitCategoryCards above,
+          and the picked-theme action bar was removed 2026-11-27. */}
       </div>
     </div>
   );
