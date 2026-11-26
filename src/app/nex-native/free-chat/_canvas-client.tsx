@@ -464,17 +464,18 @@ export function FreeChatCanvasClient({
         );
       })}
 
-      {/* Picker stage · owner directive 2026-10-21 (iteration 66) ·
-          2x3 theme tile grid · active tile heartbeat-glows · stays
-          visible even after the user picks a tile so they can swap.
-          Owner directive 2026-11-12 · hidden for 5 seconds after any
-          pick so the user sees the theme take over the page. */}
+      {/* Picker stage · owner directive 2026-11-27 (Option B approval) ·
+          The 2026-11-12 sealed 2×3 FirstVisitThemeGrid is superseded.
+          The first-visit interface now renders three vertically stacked
+          category entry cards (Plain Backgrounds · Small Designs · Full
+          Image Backgrounds). Each card opens its corresponding category
+          library route (/plain /small /full-image) · the user picks a
+          free theme in that library · the library writes the free-chat
+          wallpaper cookie + routes back · returning hits land here with
+          `initialThemeId` already resolved so the PickedThemeActionBar
+          below (Keep Theme · View Themes) takes over. */}
       {stage === "picker" && previewCountdown === null && (
-        <FirstVisitThemeGrid
-          themes={themes}
-          activeThemeId={themeId}
-          onPick={handlePickTheme}
-          onViewAll={handleViewAll}
+        <FirstVisitCategoryCards
           onInfo={() => setHowItWorksOpen(true)}
         />
       )}
@@ -2316,7 +2317,196 @@ function Butterfly({
   );
 }
 
+// ─── First-visit category cards (three vertical entry cards) ─────
+// Owner directive 2026-11-27 (Option B approval). Supersedes the
+// 2026-11-12 sealed six-pinned-tile FirstVisitThemeGrid. The first-
+// visit visitor now sees three category entry cards · each opens its
+// matching library route (plain · small · full-image) where the full
+// in-library preview + select experience lives. The library is
+// responsible for writing the `nex-free-chat-wallpaper` cookie on
+// select so that the subsequent return to /nex-native/free-chat
+// re-enters this canvas with `initialThemeId` resolved, which lights
+// up the PickedThemeActionBar (Keep Theme · View Themes) and permits
+// the user to continue into account creation with the chosen theme
+// preserved through the registration journey.
+const FIRST_VISIT_CATEGORIES = [
+  {
+    kind: "plain" as const,
+    href: "/nex-native/chat-themes-library/plain",
+    title: "Plain Backgrounds",
+    hint: "Clean solid colours · easy on the eye.",
+  },
+  {
+    kind: "small" as const,
+    href: "/nex-native/chat-themes-library/small",
+    title: "Small Designs",
+    hint: "Subtle patterns · character without noise.",
+  },
+  {
+    kind: "full-image" as const,
+    href: "/nex-native/chat-themes-library/full-image",
+    title: "Full Image Backgrounds",
+    hint: "Immersive scenes · maximum atmosphere.",
+  },
+] as const;
+
+function FirstVisitCategoryCards({
+  onInfo,
+}: {
+  readonly onInfo: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-free-chat-first-visit-row
+      data-nex-free-chat-category-cards
+      aria-label="Pick a chat background category"
+      style={{
+        marginTop: 8,
+        padding: "10px 10px 12px",
+        background: "#FFFFFF",
+        border: "1px solid rgba(212, 162, 79, 0.28)",
+        borderRadius: 12,
+        boxShadow: "0 2px 10px rgba(42, 31, 15, 0.08)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          margin: "0 2px 10px",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <h3
+            data-nex-free-chat-first-visit-title
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: NEX.cyan,
+              lineHeight: 1,
+            }}
+          >
+            First Theme On Us · Free
+          </h3>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 10,
+              color: NEX.textDim,
+              letterSpacing: 0.2,
+            }}
+          >
+            Pick a style · open the library · choose your free theme.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onInfo}
+          aria-label="How theme picking works"
+          data-nex-free-chat-first-visit-info
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            background: "#FFD600",
+            border: "1px solid #E6B800",
+            color: "#1A1512",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 800,
+            lineHeight: 1,
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontStyle: "italic",
+            fontFamily: "'Times New Roman', Georgia, serif",
+            flexShrink: 0,
+          }}
+        >
+          i
+        </button>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr",
+          gridAutoRows: "minmax(0, 1fr)",
+          gap: 8,
+        }}
+      >
+        {FIRST_VISIT_CATEGORIES.map((category) => (
+          <Link
+            key={category.kind}
+            href={{
+              pathname: category.href,
+              query: { from: "first-visit-free-chat" },
+            }}
+            data-nex-free-chat-category-card={category.kind}
+            aria-label={`Open ${category.title} library`}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              gap: 4,
+              padding: "14px 14px",
+              borderRadius: 10,
+              textDecoration: "none",
+              background:
+                "linear-gradient(135deg, rgba(198, 161, 91, 0.14) 0%, rgba(2, 9, 20, 0.6) 100%)",
+              border: "1px solid rgba(212, 162, 79, 0.65)",
+              color: NEX.text,
+              boxShadow: "0 3px 10px rgba(0, 0, 0, 0.18)",
+              minHeight: 64,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                letterSpacing: 1.6,
+                textTransform: "uppercase",
+                color: "#C6A15B",
+                fontWeight: 800,
+              }}
+            >
+              Open library
+            </span>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#FF7200",
+                lineHeight: 1.15,
+              }}
+            >
+              {category.title}
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                color: NEX.textDim,
+                lineHeight: 1.35,
+              }}
+            >
+              {category.hint}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── First-visit theme grid (2 rows × 3 columns) ─────────────────
+// Deprecated 2026-11-27 (Option B approval) · retained temporarily
+// so callers outside the picker-stage render do not break. No code
+// path still reaches this function · scheduled for removal in a
+// follow-up cleanup pass.
 
 function FirstVisitThemeGrid({
   themes,

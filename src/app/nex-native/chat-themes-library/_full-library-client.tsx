@@ -442,6 +442,20 @@ function ApplyPreviewModal({
   readonly entitlement?: LibraryEntitlementProps;
 }): React.JSX.Element {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Owner directive 2026-11-27 (Option B approval) · anonymous first-
+  // visit bridge. When the library was reached from /nex-native/free-
+  // chat's first-visit three-category cards, every category-library
+  // route carries `?from=first-visit-free-chat`. In that case the user
+  // is pre-account · the server action applyFromLibraryChatAction will
+  // reject with `not-signed-in`. Instead, we persist the choice into
+  // the free-chat wallpaper cookie (JS-writable, SameSite=Lax, 365-day)
+  // and route back to /nex-native/free-chat, where the server page re-
+  // reads the cookie, resolveFreeChatWallpaperUrl finds the asset in
+  // LIBRARY_THEMES (unprefixed ids), and the canvas remounts with
+  // `initialThemeId` resolved so the PickedThemeActionBar lights up.
+  const isFirstVisitFreeChat =
+    searchParams?.get("from") === "first-visit-free-chat";
   const [applying, setApplying] = React.useState(false);
   const [result, setResult] = React.useState<string | null>(null);
 
@@ -483,6 +497,30 @@ function ApplyPreviewModal({
     if (applying) return;
     setApplying(true);
     setResult(null);
+    // Owner directive 2026-11-27 (Option B approval) · anonymous first-
+    // visit bridge. When reached from /nex-native/free-chat's first-
+    // visit three category cards, the viewer is pre-account. Persist
+    // the pick as a free-chat wallpaper cookie (JS-writable, 365-day,
+    // SameSite=Lax) and route back to /nex-native/free-chat so the
+    // canvas's PickedThemeActionBar surfaces "Keep Theme · View Themes"
+    // for the just-made choice. The nex_account.chat_theme row will be
+    // written AFTER account creation when the registration flow reads
+    // the same cookie and migrates it to the DB on first sign-in.
+    if (isFirstVisitFreeChat) {
+      try {
+        const bareId = theme.id.replace(/^chat:/, "").replace(/^shop:/, "");
+        const maxAge = 365 * 24 * 60 * 60;
+        document.cookie = `nex-free-chat-wallpaper=${encodeURIComponent(bareId)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        onClose();
+        router.replace("/nex-native/free-chat");
+        router.refresh();
+        return;
+      } catch (e) {
+        setResult(`Could not save pick · ${(e as Error).message}`);
+        setApplying(false);
+        return;
+      }
+    }
     try {
       // LIBRARY_THEMES ids are unprefixed; the unified library chat
       // action expects the "chat:<id>" form so it resolves via
