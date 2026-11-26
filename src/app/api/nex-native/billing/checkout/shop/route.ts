@@ -217,6 +217,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ok: true,
         url: checkoutSession.url,
         checkoutSessionId: checkoutSession.id,
+        // NAV-SINGLE-APP-06 · observability · echo the resolved
+        // region so callers (and country-correctness regression
+        // tests) can confirm which region drove the Checkout
+        // Session without needing to re-fetch the session from
+        // Stripe. Additive · does not change existing caller
+        // behaviour · no new side effect.
+        region,
       },
       { status: 200 },
     );

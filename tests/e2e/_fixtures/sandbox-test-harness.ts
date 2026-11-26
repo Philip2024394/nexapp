@@ -198,11 +198,36 @@ export interface TestOrderHandle {
     | "refunded";
 }
 
+/**
+ * Shape of a seeded chat-peer fixture · one nex_peer_conversation row
+ * + one nex_peer_message row with an embedded product snapshot on
+ * attachment_meta.product (per mig 059 · attachment_type stays NULL
+ * because the sealed CHECK on attachment_type does not accept
+ * 'product'; the shell detects product bubbles via meta presence).
+ *
+ * The underlying FK graph CASCADES on nex_account delete, so the
+ * standard teardownAll(handles) path removes the conversation +
+ * message implicitly when the merchant/peer accounts are torn down.
+ * We expose handles here so specs can address the rows directly
+ * (for example to assert SSR text contains the bubble's messageId).
+ */
+export interface ChatPeerHandle {
+  readonly kind: "chat-peer";
+  readonly conversationId: string;
+  readonly merchantAccountId: string;
+  readonly peerAccountId: string;
+  readonly messageId: string;
+  readonly messageSentAtIso: string;
+  readonly messageBodyPricePence: number;
+  readonly messageBodyCurrency: "IDR" | "GBP" | "USD";
+}
+
 export type FixtureHandle =
   | TestAccountHandle
   | TestBusinessHandle
   | TestProductHandle
-  | TestOrderHandle;
+  | TestOrderHandle
+  | ChatPeerHandle;
 
 // ---------------------------------------------------------------------
 // Create: fresh test account
@@ -573,6 +598,180 @@ export async function createTestOrder(
     pricePence,
     currency,
     state,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Chat peer helpers (2026-11-27 · L-043 Portrait Bloom hydration
+// regression enablement)
+// ---------------------------------------------------------------------
+
+/**
+ * Create a `nex_peer_conversation` between two fixture accounts.
+ *
+ * Writes through the service-role admin client (bypasses RLS by
+ * design, same pattern as every other harness write). The CHECK
+ * constraint `participant_a_id < participant_b_id` (mig 047) is
+ * honoured by UUID string-sort below so the insert never fails on
+ * the ordered-pair invariant.
+ *
+ * Does NOT weaken RLS, encryption, or ownership. The resulting row
+ * is still read-gated by the sealed participant policies on
+ * nex_peer_conversation and nex_peer_message · the browser session
+ * that reads it must be one of the two participants. Device-only
+ * chat storage + E2E encryption are unaffected · this row stays
+ * plaintext (encrypted=false by default) which is the legacy mode
+ * the shell happily renders when no device keys are present.
+ */
+export async function createTestConversation(
+  merchant: TestAccountHandle,
+  peer: TestAccountHandle,
+): Promise<{
+  conversationId: string;
+  participantAId: string;
+  participantBId: string;
+}> {
+  assertSandboxRef();
+  const sb = supabaseAdmin();
+  // Canonical ordering · mig 047 CHECK requires strict string-sort.
+  const [a, b] = [merchant.nexAccountId, peer.nexAccountId].sort();
+  const { data, error } = await sb
+    .from("nex_peer_conversation")
+    .insert({ participant_a_id: a, participant_b_id: b })
+    .select("id")
+    .single();
+  if (error || !data?.id) {
+    throw new Error(
+      `createTestConversation: insert nex_peer_conversation failed · ${error?.message ?? "no row returned"}`,
+    );
+  }
+  return {
+    conversationId: data.id as string,
+    participantAId: a,
+    participantBId: b,
+  };
+}
+
+/**
+ * Insert a single plaintext `nex_peer_message` row into an existing
+ * conversation. `encrypted=false` keeps the row in the legacy
+ * plaintext mode that pre-dates mig 093; the sealed
+ * `nex_peer_message_encrypted_shape` CHECK is satisfied because all
+ * ciphertext columns stay NULL (mig 093 lines 64-72). Body must be
+ * non-empty because this row carries no attachment_url
+ * (`nex_peer_message_body_or_attachment_check`, mig 054 line 72).
+ *
+ * `productSnapshot` is projected onto `attachment_meta.product` so
+ * the shell's `attachment_product` branch (page.tsx:1004-1016)
+ * resolves to a product bubble on render. `attachment_type` stays
+ * NULL because the sealed CHECK (mig 306:56-59) allows NULL or
+ * image/video/audio/call_invite · 'product' is intentionally
+ * absent from that enum (product bubbles are meta-detected).
+ *
+ * `sent_at` is explicitly overridden so SSR vs. browser timezone
+ * divergence is deterministic for the hydration regression.
+ */
+export async function createTestMessage(
+  opts: {
+    readonly conversationId: string;
+    readonly sender: TestAccountHandle;
+    readonly body: string;
+    readonly sentAtIso: string;
+    readonly productSnapshot?: {
+      readonly product_id: string;
+      readonly business_id: string;
+      readonly business_slug: string | null;
+      readonly name: string;
+      readonly price_pence: number;
+      readonly currency: string;
+      readonly image_url: string | null;
+      readonly short_description: string | null;
+    };
+  },
+): Promise<{ messageId: string }> {
+  assertSandboxRef();
+  const sb = supabaseAdmin();
+  const insertPayload: Record<string, unknown> = {
+    conversation_id: opts.conversationId,
+    sender_account_id: opts.sender.nexAccountId,
+    body: opts.body,
+    sent_at: opts.sentAtIso,
+    encrypted: false,
+  };
+  if (opts.productSnapshot) {
+    insertPayload.attachment_meta = { product: opts.productSnapshot };
+  }
+  const { data, error } = await sb
+    .from("nex_peer_message")
+    .insert(insertPayload)
+    .select("id")
+    .single();
+  if (error || !data?.id) {
+    throw new Error(
+      `createTestMessage: insert nex_peer_message failed · ${error?.message ?? "no row returned"}`,
+    );
+  }
+  return { messageId: data.id as string };
+}
+
+/**
+ * Composite helper that stitches together:
+ *   1. createTestConversation(merchant, peer)
+ *   2. createTestMessage(...) with an embedded product snapshot
+ *      sized to trigger the L-043 group-separator hydration case
+ *      (IDR 100,000,000 pence = Rp 1,000,000 · the comma-vs-dot
+ *      locale divergence the fix pinned to "en-US").
+ *
+ * Returns a `ChatPeerHandle` compatible with `teardownAll` and the
+ * residual-check contract. The standard teardown path deletes the
+ * two fixture accounts last; both `nex_peer_conversation` and
+ * `nex_peer_message` CASCADE on `nex_account.id` delete (mig 047:50,
+ * 047:75-76), so the chat rows are cleaned implicitly. No special
+ * handling is required in teardownAll beyond ignoring the
+ * `"chat-peer"` kind.
+ */
+export async function seedChatPeer(opts: {
+  readonly merchant: TestAccountHandle;
+  readonly peer: TestAccountHandle;
+  readonly businessId: string;
+  readonly messageSentAtIso: string;
+  readonly pricePence: number;
+  readonly currency: "IDR" | "GBP" | "USD";
+  /** Optional overrides · defaults produce a renderable product card. */
+  readonly productName?: string;
+  readonly productShortDescription?: string | null;
+  readonly productImageUrl?: string | null;
+  readonly businessSlug?: string | null;
+  readonly body?: string;
+}): Promise<ChatPeerHandle> {
+  assertSandboxRef();
+  const conv = await createTestConversation(opts.merchant, opts.peer);
+  const productId = randomUUID();
+  const { messageId } = await createTestMessage({
+    conversationId: conv.conversationId,
+    sender: opts.merchant,
+    body: opts.body ?? "Hello from the fixture merchant.",
+    sentAtIso: opts.messageSentAtIso,
+    productSnapshot: {
+      product_id: productId,
+      business_id: opts.businessId,
+      business_slug: opts.businessSlug ?? null,
+      name: opts.productName ?? "Fixture product",
+      price_pence: opts.pricePence,
+      currency: opts.currency,
+      image_url: opts.productImageUrl ?? null,
+      short_description: opts.productShortDescription ?? null,
+    },
+  });
+  return {
+    kind: "chat-peer",
+    conversationId: conv.conversationId,
+    merchantAccountId: opts.merchant.nexAccountId,
+    peerAccountId: opts.peer.nexAccountId,
+    messageId,
+    messageSentAtIso: opts.messageSentAtIso,
+    messageBodyPricePence: opts.pricePence,
+    messageBodyCurrency: opts.currency,
   };
 }
 

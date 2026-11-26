@@ -250,10 +250,13 @@ test.describe.serial(
           .replace(/<!--[\s\S]*?-->/g, "");
 
         // Locate the order's own row via the short-id text the row
-        // emits (sealed at `_client.tsx:309` · `#{order.id.slice(0,8)}`).
-        // That anchor is unique per order and nearby to the
-        // timestamp slot that <ClientRelTime> renders.
-        const shortId = order.orderId.slice(0, 8);
+        // emits (sealed at `_client.tsx:332` ·
+        // `#{order.id.slice(0, 8).toUpperCase()}`). That anchor is
+        // unique per order and nearby to the timestamp slot that
+        // <ClientRelTime> renders. We match the uppercase form the
+        // component actually emits — case-insensitive substring would
+        // also work but exact match is a tighter contract.
+        const shortId = order.orderId.slice(0, 8).toUpperCase();
         const rowAnchorIdx = ssrVisibleHtml.indexOf(`#${shortId}`);
         expect(
           rowAnchorIdx,
@@ -262,17 +265,23 @@ test.describe.serial(
 
         // Take a bounded window after the anchor · the per-row
         // timestamp slot (<ClientRelTime iso={order.created_at} />)
-        // renders within ~400 chars of the short-id at the current
-        // row layout. A correct fix seeds with the raw ISO; a
-        // regression that calls toLocaleDateString() at render emits
-        // the host-locale date string and this assertion fails.
+        // renders within the <a> tag of the same list row. With all
+        // sibling inline styles between the short-id span and the
+        // timestamp slot, the raw ISO sits ~900-1100 chars after the
+        // anchor at the current row layout, so we take a 1600-char
+        // window to cover realistic row-layout variation while still
+        // scoping the assertion to this specific row (the next row's
+        // anchor is well beyond 1600 chars with inline styles). A
+        // correct fix seeds with the raw ISO; a regression that calls
+        // toLocaleDateString() at render emits the host-locale date
+        // string and this assertion fails.
         const rowWindow = ssrVisibleHtml.slice(
           rowAnchorIdx,
-          rowAnchorIdx + 800,
+          rowAnchorIdx + 1600,
         );
         expect(
           rowWindow.includes(createdIso),
-          `L-042 Contract A · raw ISO '${createdIso}' must appear in the 800-char window after row anchor '#${shortId}' in SSR visible HTML · a render-time toLocaleDateString() regression would emit a locale-formatted date string here instead · window='${rowWindow}'`,
+          `L-042 Contract A · raw ISO '${createdIso}' must appear in the 1600-char window after row anchor '#${shortId}' in SSR visible HTML · a render-time toLocaleDateString() regression would emit a locale-formatted date string here instead · window='${rowWindow}'`,
         ).toBe(true);
 
         // ─────────────────────────────────────────────────────────

@@ -190,6 +190,7 @@ export function ProductDetailSheet({
           image_url: product.image_url,
           quantity: qty,
           variants: [],
+          added_at: Date.now(),
         };
         next = [...existing, item];
       }

@@ -1,0 +1,53 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.1s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-single-app-07-role-country-currency.spec.ts:234:9 › NAV-SINGLE-APP-07 · merchant × country sample · pricing currency label › merchant with last_known_country_iso=IE sees EUR label on /nex-native/pricing (14.1s)
+  -  3 [stage-a-pixel7] › tests\e2e\journey-single-app-07-role-country-currency.spec.ts:287:9 › NAV-SINGLE-APP-07 · merchant × country sample · pricing currency label › same merchant switched to last_known_country_iso=ID sees IDR label after reload
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-single-app-07-role-country-currency.spec.ts:234:9 › NAV-SINGLE-APP-07 · merchant × country sample · pricing currency label › merchant with last_known_country_iso=IE sees EUR label on /nex-native/pricing 
+
+    Error: NAV-SINGLE-APP-07 · pricing chat card must mount under IE
+
+    expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-nex-pricing-chat-card]').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - NAV-SINGLE-APP-07 · pricing chat card must mount under IE locator('[data-nex-pricing-chat-card]').first() with timeout 10000ms
+      - waiting for locator('[data-nex-pricing-chat-card]').first()
+
+
+      271 |         page.locator("[data-nex-pricing-chat-card]").first(),
+      272 |         "NAV-SINGLE-APP-07 · pricing chat card must mount under IE",
+    > 273 |       ).toBeVisible({ timeout: 10_000 });
+          |         ^
+      274 |
+      275 |       // Country-dependent value: EUR symbol appears in the shop price.
+      276 |       const priceText =
+        at C:\Users\Victus\nexapp\tests\e2e\journey-single-app-07-role-country-currency.spec.ts:273:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-single-app-07-role-31c6c-label-on-nex-native-pricing-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-single-app-07-role-31c6c-label-on-nex-native-pricing-stage-a-pixel7\error-context.md
+
+    Error Context: test-results\journey-single-app-07-role-31c6c-label-on-nex-native-pricing-stage-a-pixel7\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-single-app-07-role-31c6c-label-on-nex-native-pricing-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-single-app-07-role-31c6c-label-on-nex-native-pricing-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-single-app-07-role-country-currency.spec.ts:234:9 › NAV-SINGLE-APP-07 · merchant × country sample · pricing currency label › merchant with last_known_country_iso=IE sees EUR label on /nex-native/pricing 
+  1 did not run
+  1 passed (36.9s)

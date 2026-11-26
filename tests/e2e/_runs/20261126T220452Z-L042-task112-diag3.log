@@ -1,0 +1,27 @@
+
+Running 2 tests using 1 worker
+
+  ✘  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (4.7s)
+
+
+  1) [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json 
+
+    Error: browserContext.close: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-0\traces\17e3fe6f4d9d8bd79c6b-4b4937f5d2a51be0e5ea.trace'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json 
+  1 did not run

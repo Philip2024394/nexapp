@@ -247,6 +247,20 @@ test.describe.serial(
           `L-010 · '${row.label}' at ${row.target} must NOT render the branded not-found UI`,
         ).toHaveCount(0);
 
+        // 2026-11-26 · L-041 cycle-2 timing fix. Next.js 16 server
+        // components use `redirect()` to issue a NEXT_REDIRECT marker
+        // over the RSC stream; the client-side router then performs
+        // the hop. Under `waitUntil: "domcontentloaded"` the initial
+        // DOM sampled by `innerText()` is the empty streaming
+        // fallback (`<template data-dgst="NEXT_REDIRECT;…">`) BEFORE
+        // the client has navigated. Wait for the network to settle
+        // so any Server-Component `redirect()` chain completes and
+        // the final page body is in the DOM. 10 s cap keeps a dead
+        // route from eating the whole test timeout.
+        await page
+          .waitForLoadState("networkidle", { timeout: 10_000 })
+          .catch(() => undefined);
+
         // Contract C · body has non-empty rendered text content
         // (strict empty-shell guard · the sealed layout chrome alone
         // emits text so a non-rendering route-segment surfaces as

@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.0s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-single-app-06-checkout-region.spec.ts:107:11 › NAV-SINGLE-APP-06 · Checkout endpoint resolves region from cf-ipcountry (422 observable · no Stripe side effect) › cf-ipcountry=GB → POST /api/nex-native/billing/checkout/shop echoes region="GB" (GBP) in 422 missing_price_id body (12.7s)
+  ✓  3 [stage-a-pixel7] › tests\e2e\journey-single-app-06-checkout-region.spec.ts:107:11 › NAV-SINGLE-APP-06 · Checkout endpoint resolves region from cf-ipcountry (422 observable · no Stripe side effect) › cf-ipcountry=US → POST /api/nex-native/billing/checkout/shop echoes region="US" (USD) in 422 missing_price_id body (11.4s)
+  ✓  4 [stage-a-pixel7] › tests\e2e\journey-single-app-06-checkout-region.spec.ts:107:11 › NAV-SINGLE-APP-06 · Checkout endpoint resolves region from cf-ipcountry (422 observable · no Stripe side effect) › cf-ipcountry=ID → POST /api/nex-native/billing/checkout/shop echoes region="ID" (IDR) in 422 missing_price_id body (11.1s)
+  ✓  5 [stage-a-pixel7] › tests\e2e\journey-single-app-06-checkout-region.spec.ts:222:9 › NAV-SINGLE-APP-06 · Checkout endpoint resolves region from cf-ipcountry (422 observable · no Stripe side effect) › no cf-ipcountry · neutral Accept-Language → POST /api/nex-native/billing/checkout/shop echoes region="IE" (EUR) in 422 body (hard-default IE rung) (10.8s)
+
+  5 passed (54.7s)

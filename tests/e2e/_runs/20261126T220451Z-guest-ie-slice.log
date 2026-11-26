@@ -1,0 +1,22 @@
+
+Running 17 tests using 1 worker
+
+  ✓   1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (4.6s)
+  ✓   2 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › create · List a product → /nex-native/create/product/category [REDIRECT-TO-SIGNIN] (2.4s)
+  ✓   3 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Chats and contacts → /nex-native/contacts [REDIRECT-TO-SIGNIN] (877ms)
+  ✓   4 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · My profile → /nex-native/profile/me [REDIRECT-TO-SIGNIN] (851ms)
+  ✓   5 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Edit Profile → /nex-native/settings/profile/edit [REDIRECT-TO-SIGNIN] (1.1s)
+  ✓   6 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Shop Settings → /nex-native/manage [REDIRECT-TO-SIGNIN] (831ms)
+  ✓   7 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · FAQ → /nex-native/manage/shop/faq [REDIRECT-TO-SIGNIN] (900ms)
+  ✓   8 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Chat Settings → /nex-native/settings/chat-settings [REDIRECT-TO-SIGNIN] (1.1s)
+  ✓   9 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Payment Providers → /nex-native/settings/payments [PUBLIC-RENDER] (690ms)
+  ✓  10 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · My Orders → /nex-native/manage/orders [REDIRECT-TO-SIGNIN] (927ms)
+  ✓  11 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Wholesale → /nex-native/manage/wholesale [REDIRECT-TO-SIGNIN] (831ms)
+  ✓  12 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · NEX Store → /nex-native/store [PUBLIC-RENDER] (686ms)
+  ✓  13 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › your-nex · Install NEX → /nex-native/install [PUBLIC-RENDER] (681ms)
+  ✓  14 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › preferences · Settings → /nex-native/settings [REDIRECT-TO-SIGNIN] (908ms)
+  ✓  15 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › preferences · Buying Guides → /nex-generated/buying-guides [PUBLIC-RENDER] (730ms)
+  ✓  16 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › preferences · NEX 1 → /nex-native/nex-1 [PUBLIC-RENDER] (844ms)
+  ✓  17 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-guest-ie.spec.ts:268:11 › L-010/NAV · drawer rows under unauthenticated GUEST × IE identity › cta · Chat themes library → /nex-native/chat-themes-library [PUBLIC-RENDER] (660ms)
+
+  17 passed (23.7s)

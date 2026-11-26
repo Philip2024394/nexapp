@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.7s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-single-app-07-role-country-currency.spec.ts:234:9 › NAV-SINGLE-APP-07 · merchant × country sample · pricing currency label › merchant with last_known_country_iso=IE sees EUR label on /nex-native/pricing (3.6s)
+  ✓  3 [stage-a-pixel7] › tests\e2e\journey-single-app-07-role-country-currency.spec.ts:286:9 › NAV-SINGLE-APP-07 · merchant × country sample · pricing currency label › same merchant switched to last_known_country_iso=ID sees IDR label after reload (2.3s)
+
+  3 passed (27.5s)

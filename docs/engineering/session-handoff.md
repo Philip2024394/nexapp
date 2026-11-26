@@ -7,7 +7,329 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-26 (continuation · L-043 Chat-pillar hydration pattern-hunt landed · BUILT · typecheck clean · verify blocked on host disk)
+## Current state · 2026-11-27 (continuation cycle addendum 6 · reconciliation · F3 safe-prep + L-006 correction plan + consolidated approval queue)
+
+**Delta from addendum 5.** Owner directive 2026-11-27 (7-point): mark the final 16-section launch report complete in the 60-task tracker; record mig 368, NAV-04/05, L-006 diagnosis and F3 accurately as drafted or diagnosed (NOT implemented or verified); prioritise F3 safe preparation; prepare the complete L-006 correction + verification plan; check for any independent authorised work; keep all ten approval gates in one consolidated queue; do not reopen VERIFIED tasks without evidence; deliver fixes where authorised. Launch readiness remains NOT READY.
+
+**Deltas:**
+
+- **Task #71 (Final 16-section launch-readiness report) → completed** in the task tool. The report at `docs/engineering/final-launch-readiness-report-2026-11-27.md` is written. Overall launch readiness unchanged: NOT READY (launch-ready phrase BANNED per sealed 2026-11-25 directive).
+- **F3 safe-prep authored** at `docs/engineering/f3-hq-journey-map-gate-safe-prep-2026-11-27.md`. Packages the exact 3-import + 6-guard-line patch for `src/app/nex-native/hq/journey-map/page.tsx`, the 4-line header-comment replacement, the regression spec text for `tests/e2e/regression-hq-journey-map-admin-gate.spec.ts` (held — not written), the testMatch alternation fragment for `playwright.config.ts:157`, baseline + fix-verify log names, and the sole approval phrase `APPROVE F3 PATCH APPLY`. Patch is defensive-only (adds a lock) and strictly less risky than a loosening change; Rule 12 still reserves the decision to the owner.
+- **L-006 correction plan authored** at `docs/engineering/l-006-correction-and-verification-plan-2026-11-27.md`. Preserves the "16 emitters" headline figure from the prior diagnosis. Classifies those 16 references as **7 user-reachable live emitters** (component CTAs/banners/drawer in `CreateAccountPrompt`, `LockedSettingsButton`, `visitor-interact-popup`, `control-drawer-client`, `start-checkout-client`, `_guest-chat-client`, `_guest-signup-banner`) vs **9 comment/history lines across 5 files** (header comments and action-registry history in `src/app/page.tsx`, `src/app/nex-native/page.tsx`, `_actions.ts`, `_install-home-slider-dismiss-action.ts`, `sign-in/page.tsx`). Three apply-branches detailed (Option A shim · Option B rewire 7 emitters · Option C shim + child-route retention) with exact spec-rewrite table against the 8 assertions in `tests/e2e/mobile-public-surfaces.spec.ts` and the 5-step verification plan. No prior-diagnosis re-audit.
+- **Consolidated approval queue authored** at `docs/engineering/consolidated-approval-queue-2026-11-27.md`. 15 rows across 10 distinct approval classes (F3 · L-006 · MIG 286 · MIG 368 · MIG 206 · MIG 354-365 · L-005 · T10 · L-044 commit · L-044 push). Supersedes scattered approval-phrase references in prior addenda and `remaining-work-register-2026-11-26.md` §D. Rule: no end-of-cycle report re-enumerates phrases — reference this file by path.
+- **Ledger decisions-log entry added** (dated 2026-11-27) recording the three new docs, the correction scope, and the explicit "no VERIFIED task reopened · no new approval phrase introduced" bounds. **L-006 row updated** to point at the new correction plan without regenerating the diagnosis.
+- **Status accurately recorded**: mig 368 DRAFTED (not applied) · NAV-SINGLE-APP-04/05 spec DRAFTED and `test.skip`-gated on `hasRegionPrefColumn()` · F3 DIAGNOSED + PREP COMPLETE (not applied) · L-006 BLOCKED-AT-APPROVAL with correction plan ready · launch readiness NOT READY.
+
+**Rule 7 posture:** No commit executed. No push executed. No migration applied. No credential activated. No production touched. HEAD remains `9dfa90b4`. All sealed invariants preserved.
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- Author remaining Chat-pillar, Shop-pillar, or Themes-pillar regression slices that do not require new fixture roles beyond harness capability.
+- Extend nav inventory for any drawer-row that becomes reachable without migration dependency.
+- Author additional perf-regression specs under the §10 DoD without touching protected branches.
+
+**Next action requiring owner authorisation (ONE phrase at a time):** see `docs/engineering/consolidated-approval-queue-2026-11-27.md` — 15 rows across 10 classes. Highest-priority rows: `APPROVE F3 PATCH APPLY` (security defect prep complete) · `APPROVE L-006 OPTION A` (customer-journey correction plan complete) · `APPROVE MIG 286 SANDBOX APPLY` (NAV-SINGLE-APP-01 and 3 downstream specs) · `APPROVE NEX_ACCOUNT REGION_PREF MIGRATION SANDBOX` (NAV-SINGLE-APP-04/05).
+
+---
+
+## Current state · 2026-11-27 (continuation cycle addendum 5 · L-043 VERIFIED · harness extended)
+
+**Delta from addendum 4.** Owner directive: *"Proceed with L-043 now. Extend the sandbox test harness with the missing seedChatPeer, createTestConversation and createTestMessage helpers. Preserve the existing chat encryption, device-key privacy, RLS, ownership and storage requirements."* Delivered under existing Rule-7 authority.
+
+**Deltas:**
+
+- **L-043 · Chat-pillar hydration regression VERIFIED on first run.** Evidence: `tests/e2e/_runs/20261127T-L043-portrait-bloom-run1.log` · **2 passed · 45.0 s · 34.1 s inside the regression · EXIT=0**. All three contracts PASS under `locale:"en-GB"` + `timezoneId:"Asia/Jakarta"` against a Node host with distinct locale/tz: SSR figure-space placeholder + `Rp 1,000,000` + no `17:00`; post-hydration bubble swap to `17:00` with `Rp 1,000,000` preserved; zero React hydration warnings. The 9dfa90b4 fix (formatBubblePrice `"en-US"` pin + `<ClientMessageTime>` wrapper) survives real-browser hydration end-to-end.
+- **Harness extended within authority**: `tests/e2e/_fixtures/sandbox-test-harness.ts` gained `ChatPeerHandle` + `createTestConversation` + `createTestMessage` + `seedChatPeer`. All writes via service-role admin, assertSandboxRef-guarded. Plaintext mode only (encrypted=false · all crypto cols NULL · mig 093 shape CHECK satisfied). UUID canonical ordering honours mig 047 `participant_a_id < participant_b_id`. Product bubble projected on `attachment_meta.product` (shell meta-detects per peer/page.tsx:1004-1016 — mig 306 CHECK forbids `'product'` on `attachment_type`). Peer-chat tables CASCADE on `nex_account` delete (mig 047:50, 047:75-76) so no new teardown path needed.
+- **Spec corrected to production attribute names**: `[data-nex-portrait-bloom-shell]` → `[data-nex-message-scroll]`, `data-nex-message-id` → `data-nex-msg-id`. Zero product-code change in the shell — test contract adapts to observable DOM, not vice versa. `FIXTURE_HELPER_AVAILABLE=true`, placeholder throw-stub + dead `supabaseAdmin` import pin removed.
+- **playwright.config.ts:157** testMatch regex extended with `regression-l043-chat-portrait-bloom-hydration\.spec\.ts`.
+
+**Rule 7 posture:** No commit executed. No push executed. No migration applied. No credential activated. No production touched. HEAD remains `9dfa90b4`. All sealed invariants preserved (device-only chat storage · E2E encryption path · RLS policies · ownership gates · storage bucket rules).
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- Audit remaining Chat-pillar regression candidates discovered during L-043 (none surfaced in this pass — the 9dfa90b4 L-043 fix was the targeted hazard).
+- NAV-SINGLE-APP-04/05 remain BLOCKED on an un-authored `nex_account.region_pref` migration (distinct approval class from mig-286).
+- NAV-SINGLE-APP-01 remains BLOCKED on mig-286 sandbox apply.
+- HQ Axis A desktop slice remains BLOCKED on mig 206.
+
+---
+
+## Current state · 2026-11-27 (continuation cycle addendum 4 · NAV-SINGLE-APP-06 VERIFIED · L-051 opened + closed)
+
+**Delta from addendum 3.** Owner master directive 2026-11-26 explicitly named NAV-SINGLE-APP-06 as a cycle target to be completed under existing authority ("complete all code, region mapping, validation, error handling and test preparation that does not require live payment credentials"). This tick delivered it under Rule 7.
+
+**Deltas:**
+
+- **L-051 · NAV-SINGLE-APP-06 (checkout-region correctness) VERIFIED**. Authored `tests/e2e/journey-single-app-06-checkout-region.spec.ts` (5 tests: GB/US/ID via `cf-ipcountry` + IE control via `en-IE` Accept-Language). Each test mints a fresh fixture account, signs in, then POSTs `/api/nex-native/billing/checkout/shop` with the header injected at context + request level. The route's `resolveRegion` delegates to the sealed `resolveViewerRegion` 5-tier chain. The spec asserts the response body echoes the resolved region — on 422 (`missing_price_id` for GB/US/ID price IDs unset) OR on 200 (test-mode session created for IE where EUR price ID is set). Live-mode safety guard present: any `cs_live_` substring in a 200 URL FAILs the test (never silent SKIP). Strict teardown + `assertNoResidualFixtures`. Evidence: `tests/e2e/_runs/20261127T-NAV-SINGLE-APP-06-run3.log` · **5 passed · 0 failed · 54.7 s · EXIT=0**. Prior run1/run2 preserved as fix-then-pass audit trail.
+- **Narrow additive route change**: `src/app/api/nex-native/billing/checkout/shop/route.ts:215-227` now echoes `region` in the 200 response body (was only present on 422). Comment added explaining the observability purpose. Zero change to 401/422/500 shapes, no new dependency, no behaviour change beyond body-shape additive field, idempotency-key scheme preserved.
+- **playwright.config.ts:157** testMatch regex extended with `journey-single-app-06-checkout-region\.spec\.ts`.
+- **L-044 commit scope doc updated** (`docs/engineering/l044-commit-scope-2026-11-26.md`): source files 8 → 9 (route.ts added), E2E specs 10 → 11, evidence logs 22 → 25 (3 new NAV-06 logs), 2 supplementary logs (`20261126T-HQ-IE-slice-first-run.log` + `20261126T-NAV-SINGLE-APP-02-flaky-check-run2.log`) formally reconciled into L-044 scope per owner master directive §2.
+
+**Rule 7 posture:** No commit executed. No push executed. No migration applied. No credential activated. No production touched. HEAD remains `9dfa90b4`.
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- NAV-SINGLE-APP-04/05 remain BLOCKED on an un-authored `nex_account.region_pref` migration — distinct approval class from mig-286.
+- L-043 chat portrait-bloom hydration regression · spec exists and is `test.skip`-gated on the missing `seedChatPeer` fixture helper · extending the harness (`createTestConversation` + `createTestMessage` + `seedChatPeer`) is a dedicated cycle (involves understanding ~15 chat-related migrations + the 4000-line chat shell).
+- HQ Axis A desktop drawer-row slice remains BLOCKED on mig 206.
+- NAV-SINGLE-APP-01 remains BLOCKED on mig 286.
+- Stable continuation targets inside authority: pillar coverage sweeps (Chat/Shop/Themes end-to-end journeys that don't require credentials), Nav matrix slices that don't require fresh fixture roles beyond harness capability, additional perf regression tests, non-pillar-tsc polish (dead-code tsconfig exclude).
+
+**Next action requiring owner authorisation (ONE phrase at a time):** unchanged from addendum 3 — approval queue is the 10-row consolidated list in `docs/engineering/remaining-work-register-2026-11-26.md` Section D. Highest-priority rows remain `APPROVE MIG 286 SANDBOX APPLY` · `APPROVE MIG 206 SANDBOX APPLY` · `APPROVE L-044 COMMIT` or `APPROVE L-044 COMMIT AND PUSH` (now covering the new L-051 artefacts too).
+
+---
+
+## Current state · 2026-11-26 (continuation cycle addendum 3 · NAV-SINGLE-APP-02 + -03 VERIFIED)
+
+**Delta from addendum 2.** Owner directive 2026-11-26 "keep to strick rules while pushing all passed sand box tested and proven — … do not stop until all confirmed" listed six remaining items. Five rows require owner action (approval phrases). One row (NAV-SINGLE-APP-02) was marked "Claude can build and test without new approval". That row + the adjacent NAV-SINGLE-APP-03 were executed this tick. HQ-role Axis A slice remains BLOCKED because `journey-drawer-rows-hq-ie.spec.ts` needs mig 206 applied (same approval-gate class as mig 286).
+
+**Deltas:**
+
+- **L-049 · NAV-SINGLE-APP-02 (IP-pickup via `cf-ipcountry`) VERIFIED**. Authored `tests/e2e/journey-single-app-02-ip-pickup.spec.ts` (4 tests · GB → `£`, US → `US$`, ID → `Rp`, no-header control → `€`). Each case opens a guest context with `storageState: undefined` + `extraHTTPHeaders: { "cf-ipcountry": <ISO> }`. Observable: `/nex-native/pricing` `[data-nex-pricing-detected-country=<ISO>]` + `[data-nex-pricing-shop-price]`. Evidence `tests/e2e/_runs/20261126T-NAV-SINGLE-APP-02-run1.log` · **5 passed · 0 failed · 11.5 s · EXIT=0**. Registered in `playwright.config.ts:157` testMatch regex.
+- **L-050 · NAV-SINGLE-APP-03 (Accept-Language fallback) VERIFIED (unit)**. The Accept-Language tier is already covered by `src/lib/nex-native/commercial/__tests__/region-resolver.test.ts:115-124` (test "2 · Accept-Language wins when no account pref") + 20 adjacent cases. Ran vitest fresh: **21 passed · 0 failed · 223 ms · EXIT=0**. Honest classification: unit evidence is sufficient because `resolveViewerRegion` is a pure function with injected header accessor; browser-level E2E was NOT authored because the only consuming product route (`/api/nex-native/billing/checkout/shop`) creates Stripe test-mode side-effects on each call (held pending owner approval of T10 credentials row).
+- **Sibling-spec regression check**: ran `journey-ask-seller-nonowner-full.spec.ts` to confirm the L-048 buyer-device-key change didn't ripple. 2 pass + 1 skip · 40.7s · EXIT=0.
+- **HQ-role Axis A slice BLOCKED-confirmed**: `tests/e2e/journey-drawer-rows-hq-ie.spec.ts` exists as `describe.skip` because (a) mig 206 (`nex_account.hq_role` column) NOT APPLIED to sandbox, (b) harness lacks `createTestHqAdmin` helper. Owner-table row "mig 206 sandbox apply" was not provided — same approval-gate class as mig 286. Correctly held.
+- Commit-scope doc updated: specs 9 → 10, evidence logs 19 → 22, four new bullets in the commit-message section.
+
+## Current state · 2026-11-26 (continuation cycle addendum 2 · post-compaction · L-048 diagnosed and VERIFIED)
+
+**Where we are (delta from the architecture-correction block below).** Post-compaction continuation of the 2026-11-26 continuation cycle executed two Chat fresh-buyer runs: first run FAILED, root cause diagnosed, candidate fix applied, second run **PASSED 2/2 · EXIT=0 · 49.5s**. L-048 promoted from FAILED/BLOCKED to **VERIFIED**. Nine commit-scope specs now all PASS or honest-SKIP — 0 open failed/gated specs.
+
+**Deltas:**
+
+- L-047 (NAV-SINGLE-APP-07) **VERIFIED** · `tests/e2e/_runs/20261126T-NAV-SINGLE-APP-07-run1.log` · 3 pass · 27.5s. Two authoring fixes landed: (a) networkidle → domcontentloaded; (b) removed obsolete `[data-nex-pricing-chat-card]` selector — `src/app/nex-native/pricing/page.tsx:165-168` comment confirms ChatFreeCard retired from render per 2026-11-09 owner directive (function definition remains but not mounted).
+- L-048 **VERIFIED (after 1 FAILED → 1 PASS)**. First run `20261126T-chat-fresh-buyer-ask-seller-first-run.log` failed with `error-surfaced` + route-segment error boundary. Root cause: `sendEncryptedBusinessMessage` returned `no_self_devices` because the freshly-minted buyer had no `nex_account_device_key` row at Send time (browser auto-publish-on-mount hadn't landed). Fix: add `await seedDeviceKeyForFixtureAccount(buyer);` after `handles.push(buyer);` — same security justification as the pre-existing merchant seed (private half never leaves test-process memory; device-based E2E encryption invariant unchanged for real users). Spec un-gated. Re-run `20261126T-chat-fresh-buyer-fix-attempt-1.log` **2 passed · 0 failed · 49.5 s · EXIT=0**. Route-segment error boundary confirmed as downstream symptom of the client error state, not an independent second failure.
+- `docs/engineering/l044-commit-scope-2026-11-26.md` updated: Chat fresh-buyer spec moved to VERIFIED; evidence-log count 18 → 19 (both FAILED and PASS logs kept to preserve fix-then-pass history); E2E specs header updated to "all 9 VERIFIED"; commit-message L-048 bullet updated to describe the fix + PASS outcome.
+
+**Rule 7 posture:** No commit executed. No push executed. Awaiting owner authorisation phrase (the prior "push and commit all proven files that have passed sandbox" directive predates this continuation cycle — Safety Constitution §4 requires per-push explicit approval naming repo + branch + reviewed commit). HEAD remains `9dfa90b4`.
+
+**Next safe action (no approval needed · continue working inside Rule 7):**
+
+- Author NAV-SINGLE-APP-02 (IP-pickup via `cf-ipcountry` / Vercel header on create-account) — unblocked.
+- OR Author NAV-SINGLE-APP-03 (Accept-Language fallback) — unblocked.
+- OR Author HQ-role Axis A drawer-row slice (desktop fixture profile) — unblocked.
+
+**Next action requiring owner authorisation (ONE phrase at a time):**
+
+- `COMMIT AND PUSH L-044 CYCLE SCOPE TO Philip2024394/nexapp release-audit-v1-2026-11-14` → executes the preflight + the staged commit defined in `docs/engineering/l044-commit-scope-2026-11-26.md` (10 source/config files · 9 specs · 18 evidence logs · 11 docs). Preflight stops immediately on any unexpected value.
+- `APPROVE MIG 286 SANDBOX APPLY` → unblocks NAV-SINGLE-APP-01 + 3 downstream specs.
+- `APPROVE OPTION A FILE REVIEW` / `APPROVE OPTION B` / `APPROVE OPTION C` / `HOLD` → L-005 migration 207/257 reconciliation.
+- `APPROVE OPTION A` / `APPROVE OPTION A (alternate CTAs)` / `APPROVE OPTION B` / `HOLD` → L-006 F2 batch (welcome restore + /create-account migration).
+- `APPROVE T10 SANDBOX CREDENTIALS` → L-004 Stripe + PayPal positive-path.
+
+---
+
+## Current state · 2026-11-26 (architecture correction · single-app country-selection model · nav matrix model corrected)
+
+**Where we are.** Owner directive 2026-11-26 "ARCHITECTURE CORRECTION — NEX IS ONE APP WITH COUNTRY SELECTION" authoritatively corrected the remaining-work programme. NEX is ONE application with country selection inside it (IP-pickup + Accept-Language + explicit selection in business-details). IE / ID / WW are NOT separate app deployments.
+
+**What was done this cycle (documentation-only · no code change · HEAD unchanged · Rule 7 preserved):**
+
+1. **Architecture reconciliation document authored** at `docs/engineering/single-app-country-model-reconciliation-2026-11-26.md`. Nine sections. Records: (a) the correction, (b) the two architectural layers that co-exist in source (`resolve-app-identity.ts` deployment-env safety fence vs `region-resolver.ts` A10 in-app country selection with 5-tier resolution supporting IE·GB·US·ID), (c) reclassified evidence for L-041/L-045/L-046, (d) corrected two-axis matrix replacing the obsolete 216-cell model, (e) accurate current coverage (Axis A · Role × session × drawer nav: 3 of 4 roles VERIFIED in IE country context; Axis B · Country-selection journeys: 0 of 7 VERIFIED), (f) retired ID-as-separate-deployment workstream, (g) NAV-SINGLE-APP-01 through -07 queued, (h) documents updated as a result, (i) next concrete action.
+
+2. **Ledger updates landed**: L-045 + L-046 rows reclassified in place (role × session evidence in IE country context, not country-deployment cells); new Decisions-log entry at top describing the architecture correction.
+
+3. **Remaining-work register updated**: L-010 row rewritten with the two-axis model and the NAV-SINGLE-APP-01…-07 queue; §B §4 updated to reflect corrected coverage phrasing; obsolete "3-of-12 cells" claim removed.
+
+**Current coverage (honest):**
+
+- **Axis A** (role × session × drawer navigation): 3 of 4 roles VERIFIED in IE country context. Merchant (L-041 · 17 rows). Guest (L-045 · 16 rows). Buyer (L-046 · 17 rows). HQ role uncovered — desktop-only, needs separate fixture profile.
+- **Axis B** (country-selection / IP-pickup / country-change / cross-country isolation / checkout-region correctness): **0 of 7 journeys VERIFIED**. UI exists at `src/app/nex-native/manage/shop/setup/business-details/_client.tsx` with 5-tier default resolution. `resolveViewerRegion` is pure and testable. No E2E assertions yet.
+
+**NAV-SINGLE-APP queue (replaces obsolete ID-as-separate-deployment tasks):**
+
+- **NAV-SINGLE-APP-01** · Country selection in business-details form (no approval blocker — authorable now)
+- **NAV-SINGLE-APP-02** · IP-pickup via `cf-ipcountry` / Vercel header on create-account (no approval blocker)
+- **NAV-SINGLE-APP-03** · Accept-Language fallback (no approval blocker)
+- **NAV-SINGLE-APP-04** · Country change does not create a separate account (BLOCKED on `nex_account.region_pref` column migration · owner approval needed)
+- **NAV-SINGLE-APP-05** · Cross-country RLS isolation (same blocker as -04)
+- **NAV-SINGLE-APP-06** · Checkout region correctness for IE·GB·US·ID (no approval blocker — unit + integration)
+- **NAV-SINGLE-APP-07** · Role × country sample (merchant × {IE, ID} currency label) (no approval blocker)
+
+**Boundaries preserved**: HEAD still `9dfa90b4` · 0 commits · 0 pushes · 0 migrations applied · 0 credentials activated · no CLAUDE.md edit (Rule 11 seal-level change requires separate owner authorisation; practical reading recorded in §2.3 of the reconciliation doc). Sandbox-only test authoring continues under existing approvals.
+
+**Owner approvals still outstanding**: `APPROVE L-005 OPTION A` · `APPROVE L-006 OPTION A` · `APPROVE L-044 COMMIT` / `APPROVE L-044 COMMIT AND PUSH` · `APPROVE MIG 354-365 SANDBOX APPLY` · `APPROVE T10 SANDBOX CREDENTIALS` · **NEW 2026-11-26 continuation** `APPROVE MIG 286 SANDBOX APPLY` — packet at `docs/engineering/mig-286-operating-country-apply-request-2026-11-26.md` · unblocks NAV-SINGLE-APP-01/-02/-03/-06. Country-change testing (NAV-SINGLE-APP-04/-05) separately needs `APPROVE NEX_ACCOUNT REGION_PREF MIGRATION SANDBOX` once that migration draft is authored.
+
+**New finding this cycle (2026-11-26 continuation)**: NAV-SINGLE-APP-01 spec authored at `tests/e2e/journey-country-selection-business-details.spec.ts` (282 lines, typecheck clean), with owner-scoped `nex_business` sweep in the `finally{}` block (L-030 pattern). Sandbox DB read-back surfaced `code 42703 · column nex_business.operating_country_code does not exist`. Migration `nex-supabase/migrations/286_nex_business_operating_country.sql` is AUTHORED but NOT APPLIED — the migration file itself declares this status at lines 5-7. Business-details form UI + server action already write `operating_country_code`; the write silently fails in sandbox because the column is absent. Real launch gap, not a test or code defect. Spec status: BLOCKED pending `APPROVE MIG 286 SANDBOX APPLY`.
+
+**Next concrete action**:
+- If owner approves MIG 286: apply to sandbox, re-run NAV-SINGLE-APP-01, then proceed to NAV-SINGLE-APP-02 (IP-pickup via `cf-ipcountry`) since the persistence path is proven.
+- If owner holds: rewrite NAV-SINGLE-APP-01 to assert country persistence via the weaker observable (re-open business-details as the same merchant, read `<select id="shop-country">` default), then move to NAV-SINGLE-APP-02 (IP-pickup is observable without the column).
+- Either way, HQ-role Axis A slice remains an authorable parallel task (no approval gate).
+
+---
+
+## Prior state · 2026-11-26 (continuation · 4 parallel agents · L-042 VERIFIED · Guest+Buyer IE slices VERIFIED · nav matrix 3-of-12 — model since corrected)
+
+**Where we are.** Owner directive "CONTINUE EXECUTION AFTER L-041" dispatched four independent agents. All four returned productive, boundaries-respecting work. Delta vs previous block:
+
+1. **L-042 VERIFIED (real root cause: case-mismatch, NOT fixture-session).** Agent 1 (Task #112) diagnostic instrumentation **REFUTED** both earlier hypotheses. Hypothesis (a) fixture-session account.id mismatch: DB query confirmed persisted order under fixture account.id — resolver was correct. Hypothesis (b) `page.request.get` redirect: `ssrResp.url` resolved to orders-list route directly with 200 — no redirect occurred. **Actual cause**: row component (`_client.tsx:332`) emits `#{order.id.slice(0, 8).toUpperCase()}` (e.g. `#11EFE99B`); spec computed lowercase `shortId = order.orderId.slice(0, 8)` (e.g. `11efe99b`) and used case-sensitive `indexOf('#11efe99b')` → `-1`. Fix: `tests/e2e/regression-l042-orders-list-hydration.spec.ts` lines 252-264 (case normalisation on both sides) + lines 266-284 (SSR window widened 800 → 1600 chars). **Result: 2 passed · EXIT=0 across two consecutive runs** · evidence `20261126T220851Z-L042-task112-fixed2.log`, `20261126T220951Z-L042-task112-verify.log`. L-042 Contracts A+B+C all pass. Product `ClientRelTime` wrapper at `_client.tsx:65-84` was already correct and unchanged — fix was spec-side only.
+
+2. **L-045 Guest × IE slice VERIFIED (new).** Agent 2 authored `tests/e2e/journey-drawer-rows-guest-ie.spec.ts` (303 lines, `storageState: undefined`, 16 rows classified REDIRECT-TO-SIGNIN (10) or PUBLIC-RENDER (6)). **16 passed / 23.7s / EXIT=0** · evidence `20261126T220451Z-guest-ie-slice.log`. `playwright.config.ts:157` testMatch extended.
+
+3. **L-046 Buyer × IE slice VERIFIED (new).** Agent 3 authored `tests/e2e/journey-drawer-rows-buyer-ie.spec.ts` (342 lines, `createTestAccount` only — no business, `signInAsFixtureInBrowser`, `teardownAll` + `assertNoResidualFixtures` with strict `expect(total).toBe(0)`). 16 rows with `expectedBuyerBehaviour` classification (PUBLIC-RENDER / OWNER-GATE-TO-SETUP / AUTH-ONLY-RENDER / OWNER-GATE-TO-PLACEHOLDER / CREATE-GATE-TO-SETUP). **17 passed / 3.4m / EXIT=0 · zero residuals** · evidence `20261126T220357Z-buyer-ie-slice.log`.
+
+4. **Approval-gated prep doc landed.** Agent 4 authored `docs/engineering/approval-gated-prep-2026-11-26-continuation.md` (762 lines) with five exact approval phrases needed before gated work can proceed:
+   - `APPROVE L-005 OPTION A` — order-status enum + `nex_order.shop_status` (migration **367**, not 260 — collision; prior packet had wrong number)
+   - `APPROVE L-006 OPTION A` — Chat theme storage policy
+   - `APPROVE L-044 COMMIT` or `APPROVE L-044 COMMIT AND PUSH` — commit/push the **9+6** file set (drift from prior packet's 7+2); **no `[founder]` tag** required
+   - `APPROVE MIG 354-365 SANDBOX APPLY` — apply pending migrations to sandbox `kdstoyyeygcopkogqsyv`
+   - `APPROVE T10 SANDBOX CREDENTIALS` — Stripe + PayPal test-mode (env var corrected to `PAYPAL_API_BASE`)
+   
+   **New cross-dependency identified**: T10 Stripe positive-path depends on L-005 (writes `nex_order.shop_status` which L-005 adds). PayPal positive-path stays `BLOCKED-PENDING-INTEGRATION`.
+
+**Nav matrix delta**: 1-of-12 slices VERIFIED → **3-of-12 slices VERIFIED** (all three Ireland-identity slices complete: merchant·guest·buyer). 9 slices remain: IE/ID/WW × guest/buyer/merchant minus the 3 IE rows, plus HQ desktop variants.
+
+**Files changed this cycle (all uncommitted, Rule 7 preserved):**
+- `tests/e2e/regression-l042-orders-list-hydration.spec.ts` — case normalisation + window widened (L-042 fix)
+- `tests/e2e/journey-drawer-rows-guest-ie.spec.ts` — NEW · 303 lines
+- `tests/e2e/journey-drawer-rows-buyer-ie.spec.ts` — NEW · 342 lines
+- `playwright.config.ts` — testMatch regex extended (registered by Agent 2 + Agent 3)
+- `docs/engineering/approval-gated-prep-2026-11-26-continuation.md` — NEW · 762 lines
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` — L-042 row updated to VERIFIED + L-045/L-046 rows added + new decisions-log entry at top
+- `docs/engineering/session-handoff.md` — this block
+- Evidence logs under `tests/e2e/_runs/`: `20261126T215931Z-L042-task112-baseline.log`, `20261126T220851Z-L042-task112-fixed2.log`, `20261126T220951Z-L042-task112-verify.log`, `20261126T220451Z-guest-ie-slice.log`, `20261126T220357Z-buyer-ie-slice.log`
+
+**Boundaries preserved all cycle**: HEAD still `9dfa90b4` · 0 commits · 0 pushes · 0 migrations applied · 0 credentials activated · no sealed-invariant breaks.
+
+**Next concrete actions (authorised, next cycle):**
+- Author `journey-drawer-rows-signed-in-merchant-id.spec.ts` (merchant × ID slice)
+- Author `journey-drawer-rows-guest-id.spec.ts` (guest × ID slice)
+- Author `journey-drawer-rows-buyer-id.spec.ts` (buyer × ID slice with teardown)
+- Pick first independent Chat pillar verification slice (device-only storage integrity OR send/receive E2E on authed test accounts)
+
+**Still gated on owner word** (no change): L-005 · L-006 · L-044 commit/push · mig 354-365 apply · T10 credentials.
+
+---
+
+## Prior state · 2026-11-26 (continuation · L-041 VERIFIED (17/17) · drawer docs-drift FIXED · L-042 Contract A reclassified — superseded above)
+
+**Where we are.** Continuation of Execution-Control cycle. Three deliverables, all within authority:
+
+1. **L-041 drawer-rows signed-in-merchant × IE slice → VERIFIED (17/17).** Applied the spec-timing fix the prior cycle had identified but not yet landed. Added `await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined)` between Contract B and Contract C at `tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts:260-262`. Next.js 16 streams NEXT_REDIRECT over RSC; `waitUntil: "domcontentloaded"` samples the empty streaming fallback BEFORE the client-side router completes the redirect; `networkidle` waits for the chain to settle. Re-ran twice for stability: Run 1 `17 passed (3.8m)` EXIT=0; Run 2 `17 passed (3.6m)` EXIT=0 saved to `tests/e2e/_runs/20261126T-L041-merchant-ie-verified.log`. All 16 signed-in shop-owner × IE drawer destinations now confirmed live and non-empty (create/product/category · contacts · profile/me · settings/profile/edit · manage · manage/shop/faq · settings/chat-settings · settings/payments · manage/orders · manage/wholesale · store · install · settings · nex-generated/buying-guides · nex-1 · chat-themes-library). Nav matrix delta: 1-of-12 (role × country) slice PARTIAL → VERIFIED.
+
+2. **Drawer-client docs-drift comment FIXED.** `src/components/nex-native/control-drawer/control-drawer-client.tsx:268-271` previously carried a stale 2026-11-09 note claiming `/create/product` had no page.tsx. The page was authored 2026-11-15 as the proper merchant 0/1/2+ business dispatcher. Replaced with an accurate 2026-11-26 note covering (a) original 2026-11-09 directive, (b) 2026-11-15 restoration, (c) why the drawer destination stays pinned at `/create/product/category` (single-hop to the sealed first step), (d) the L-041 verification evidence log. Comment-only edit · zero behaviour change · zero sealed-invariant touch.
+
+3. **L-042 Contract A reclassified: test-infrastructure/fixture-session defect, NOT a product defect.** The product fix (`ClientRelTime` wrapper at `src/app/nex-native/manage/orders/_client.tsx:77-83`) is sealed in place and unchanged. The regression spec's Contract A failure (`rowAnchorIdx = -1`) is upstream of hydration: either (a) fixture-session account.id ≠ `merchant.nexAccountId` (task #72 territory — resolver at `session.ts:196-208` looks up `nex_account` by `supabase_user_id` and auto-creates if absent; a stale row or race would cause `listBusinessesByOwner(session.account.id)` to return `[]` and the page to render the "No shop found" placeholder with no `#shortId` row), or (b) `page.request.get` is following a redirect to `/sign-in?next=...`. Both are test-harness defects, not hydration regressions. L-042 product fix status remains **SEALED**; regression spec Contract A gates on a diagnostic that distinguishes (a) from (b) before Contracts B+C can reach.
+
+**Files changed this continuation (all uncommitted, Rule 7 preserved):**
+- `tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts` — `networkidle` wait between Contract B and Contract C (L-041 timing fix)
+- `src/components/nex-native/control-drawer/control-drawer-client.tsx` — stale 2026-11-09 comment replaced with accurate 2026-11-26 note (comment-only · zero behaviour)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` — new top decisions-log entry recording this cycle
+- `docs/engineering/session-handoff.md` — this block
+- `tests/e2e/_runs/20261126T-L041-merchant-ie-verified.log` — new evidence log (17/17 passed)
+
+**Still outstanding from prior Execution-Control cycle (unchanged this pass):**
+- L-042 fixture-visibility (test-infra, not product — reopening task #72 would be the correct next step)
+- Guest×IE and buyer×IE drawer-row slices (Agent A recommendation · fixture-free · within authority · clear next cycle)
+- `.env.example` Part 5.1 drift (5 env vars documentation-truth gap)
+- Four owner-gated decisions (L-005 · L-006 · mig 354-365 · L-044 commit) per `docs/engineering/owner-decision-packet-2026-11-26.md`
+- T10 credentials (5 env vars from owner)
+
+**What this continuation did NOT do:**
+- Any commit/push (Rule 7; no fresh authorisation)
+- Any migration apply (Rule 7; mig 354-365 awaits owner word)
+- Any credential activation (Rule 7; T10 awaits owner word)
+- Edit `.env.example` (documentation-truth fix · potentially affects onboarding scripts)
+- Switch drawer destination from `/create/product/category` → `/create/product` (nav-row target change could affect other specs; recorded as low-risk polish for a future cycle)
+
+**Register snapshot** at `docs/engineering/remaining-work-register-2026-11-26.md` (prior cycle) — Section A 16-row table + Section B 13-point totals. Still valid; L-042 row updates needed to reflect that spec DID run (not blocked) and the failure is fixture-visibility not hydration.
+
+**All ledger VERIFIED rows preserved; only non-VERIFIED items re-reconciled.**
+
+**Key reconciliations this cycle:**
+
+- **L-044 non-pillar residue CONFIRMED NON-BLOCKING** via import-graph analysis: `src/lib/nex-agent/code-engine/*` (196 errors · zero imports from any `src/app/*` route) + `components/nex-app/centre/SupplierCard.tsx` (26 errors · zero imports from `src/app/*`) proven DEAD. Legacy `src/lib/nex/` (673 errors) matches CLAUDE.md "clean up incrementally" note. 1381 errors do not block any pillar customer journey.
+- **Disk partial reclaim**: deleted 12 stale Playwright `cdp-profile-*` dirs in `/c/tmp/` (537 MB). Disk 1.3 GB → 1.8 GB free. Still thin for full Playwright regression; `.next/dev` (2.6 GB) held by live dev server on :3008 — reclaim remains owner host-action per L-041.
+- **Remaining launch gates mapped** (register §8): 5 P0 blockers — all are owner-action-required (credentials, decisions, host actions, commit approval), not undone engineering.
+
+**Launch-readiness verdict (register §13): NEX is NOT yet a release candidate but is launch-adjacent.** A single authorised sequence (commit L-044 → reclaim host disk → populate T10 credentials → decide F2 and migration options → run four blocked specs) brings NEX to a full release-candidate state.
+
+**Fastest convergence path owner can authorise**:
+1. Stop :3008 + delete `.next/dev` → unlocks L-041 (16 drawer rows) + L-042 (orders list hydration regression) + L-043 (Chat hydration regression)
+2. Populate `.env.local` with T10 credentials (5 env vars named in register) → unlocks L-004
+3. Decide F2 batch → unlocks L-006 (5 failures) + L-024 (10 skipped tests)
+4. Approve L-044 fix-sweep commit → consolidates pillar type-safety work
+5. Decide mig 207/257 and mig 354-365 → unlocks L-005 + 2 Shop-pillar skip specs
+
+**Files changed this cycle (uncommitted, strictly documentation):**
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (new decisions-log entry at top: L-044 non-pillar residue reconciliation)
+- `docs/engineering/remaining-work-register-2026-11-26.md` (NEW · the register itself)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Boundaries honoured per directive §10**: no prod DB · no prod migration · no prod deploy · no auth/RLS/encryption weakening · no live payment activation · no commit/push (Rule 7 preserved) · no reopening of VERIFIED ledger rows. `src/*` tree untouched this cycle — register plus prior-cycle L-044 fix-sweep both sit on working tree awaiting owner commit word.
+
+**Operation receipt (Safety Constitution §7)**: Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD UNCHANGED at `9dfa90b4`. No push. No deploy. Working-tree delta cumulative since `9dfa90b4`: 10 modified source/doc files + several untracked doc artefacts + 1 new evidence log + prior L-044 fix-sweep still uncommitted. This cycle's own delta: 2 code/spec edits + 2 doc edits + 1 evidence log.
+
+---
+
+## Previous state · 2026-11-26 (L-044 pillar-defect fix-sweep · scoped-tsc green · awaits commit approval)
+
+**Where we are.** The six pre-existing pillar-impacting `tsc --noEmit` errors enumerated under L-044 (Agent-F audit 2026-11-26) are RESOLVED on the working tree. Targeted re-run `npx tsc --noEmit 2>&1 | grep -E "(_log-call-action|_full-library-client|_product-detail-sheet|manage/shop/themes/_actions|manage/products/\[productId\]/page|vault/home/chats)"` returns ZERO lines. Full-project count dropped from 1877 → 1381 (surplus beyond the six fixes reflects background cleanup absorbed into `9dfa90b4`); remainder is non-pillar legacy residue (CLAUDE.md § "Legacy residue in `src/lib/nex/`").
+
+**Files changed this cycle (uncommitted):**
+
+- `src/app/nex-native/calls/_log-call-action.ts` (NEW · thin Server Action over `logCallEvent`, soft-fail on unauth)
+- `src/app/nex-native/chat-themes-library/_full-library-client.tsx` (`viewerEarnedBadges` → `viewerEarnedCreatorBadges={…earned}`)
+- `src/app/nex-native/cover/_product-detail-sheet.tsx` (`added_at: Date.now()` on `NexCartItem`)
+- `src/app/nex-native/manage/categories/_actions.ts` (`Promise<never>` → `Promise<void>` return-type widen on `assignProductToSectionAction`)
+- `src/app/nex-native/manage/products/[productId]/page.tsx` (bind arg order fixed: `(businessId, productId)`)
+- `src/app/nex-native/manage/shop/themes/_actions.ts` (upload path → object-input + `publicUrl` · clear path → try/catch wrapper for `Promise<void>` helper)
+- `src/app/nex-native/vault/home/chats/[conversationId]/_vault-chat-client.tsx` (narrow `attachmentLabelFor` call to exclude `"document"` kind — file input doesn't accept documents)
+- `src/app/nex-native/vault/home/chats/page.tsx` (`"theme_sticker"` → `"sticker"` matching `NexPeerAttachmentKind` · remove dead `"link_preview"` branch with non-existent `link_title`/`link_source_domain` fields)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-044 row status updated · new decisions-log entry)
+- `docs/engineering/session-handoff.md` (this block)
+
+**What is still open (ordered).**
+
+1. **Commit + push L-044 fix-sweep** — requires fresh explicit owner approval per Rule 7 (previous 2026-11-26 commit-push authorisation was scoped to the `9dfa90b4` cycle).
+2. **L-043 browser regression** — spec deferred until chat-peer fixture seed harness lands.
+3. **L-036/L-042 Contract C re-verification** — after dev-server cycle (flaky under long-running HMR).
+4. **Non-pillar tsc residue** (1381 errors) — `src/lib/nex/` legacy audience model, chat-standard theme-engine token drift, scripts/_tmp noise, test fixtures with stale imports, doctrine draft worker types. None block pillar journeys.
+5. Owner-gated (unchanged): L-004 payment credentials · L-005 mig 207/257 · L-006 F2 `/welcome` + `/create-account` batch · prod deploy / DB / live Stripe/PayPal.
+
+**Safe next engineering steps within existing authority.**
+
+1. Continue burning down pillar defects from the ledger's next-highest-priority unfinished rows per Rule 1 (scoped to code edits + tsc verification · no browser runs until host disk reclaimed).
+2. Author follow-on scoped tsconfig to exclude the identified legacy-residue paths from the project-level baseline, so a future "all green" baseline is reachable without rewriting 1381 lines of legacy code (owner-decision whether to pursue).
+
+**Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD UNCHANGED at `9dfa90b4` — this fix-sweep has NOT been committed or pushed. No deploy triggered.
+
+---
+
+## Previous state · 2026-11-26 (parallel-agent cycle committed + pushed · `9dfa90b4` landed on `release-audit-v1-2026-11-14`)
+
+**Where we are.** First commit under the 2026-11-26 owner "commit + push authorised" directive is on `origin/release-audit-v1-2026-11-14`. HEAD = `9dfa90b4`. Preview-deploy chain fires automatically: push → `.github/workflows/cloudflare-deploy.yml` → wrangler deploy --env preview → `nexapp-preview.nex-sandbox.workers.dev`. Production Workers env NOT configured — no prod deploy risk.
+
+**What landed in this commit.**
+
+- L-036 hydration fix (`/manage/orders/[orderId]` `ClientDateTime`) + fail-then-pass regression spec.
+- L-042 pattern-hunt extension (`/manage/orders` list `ClientRelTime`) + regression spec.
+- L-043 Chat-pillar hydration fix in `_portrait-bloom-shell.tsx` (`formatBubblePrice` locale pin + new `ClientMessageTime` wrapper).
+- L-044 project-level typecheck baseline captured (**1877 `tsc --noEmit` errors**, EXIT=1). Corrects the earlier false "exit 0" background-job report. Six pillar-impacting defects enumerated, ~1850 non-pillar legacy residue. Remediation plan recorded.
+- Rulebook sealed: `CLAUDE.md` (12 Rules + Safety Constitution), `NEX-DELIVERY-RULES.md`, `.claude/settings.json` hooks.
+- `tests/e2e/_fixtures/{sandbox-test-harness,spec-payload-helper}.ts` + `_runs/` evidence envelope.
+- `.gitignore` hardened to permanently exclude `_g4-auth-cookie.txt` (contained a real Supabase sandbox session JWT — never landed in git).
+- Scope: 183 files · 45 231 insertions · 1 663 deletions.
+
+**What is still open (ordered).**
+
+1. **L-043 browser regression** — spec authoring deferred to same fixture-seed phase as L-041/L-042 (chat-peer mounts require seeded account + peer + message fixtures). No sealed invariant touched; verified behaviour matches L-036 pattern already proven.
+2. **L-044 fix-sweep** — six pillar-impacting tsc errors (peer-call `_log-call-action` missing module · shop theme actions `publicUrl` contract · product-edit action signature · cart `added_at` · vault attachment-kind · themes drawer `viewerEarnedBadges`). Within existing authority per Rule 7; next engineering action.
+3. **L-036/L-042 Contract C re-verification** — two harness-timeout fails in last run classified as L-025/L-028 FLAKY-DEV-HMR-STATE pattern (sign-in flake under long-running dev server), not product defect. Re-run after dev-server cycle.
+4. Owner-gated (unchanged): **L-004** payment-provider credentials · **L-005** mig 207/257 decision · **L-006** F2 `/welcome` + `/create-account` batch · production deploy / prod DB / live Stripe/PayPal.
+
+**Safe next engineering steps within existing authority.**
+
+1. Execute L-044 fix-sweep — six enumerated pillar defects, no sealed-invariant risk.
+2. Re-verify L-036 Contract C + L-042 Contract A after dev-server cycle.
+3. Continue parallel Chat/Shop/Themes defect burn-down via the ledger's highest-priority unfinished rows per Rule 1.
+
+**Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD `9dfa90b4`. Push occurred — remote reports `10ca82cc..9dfa90b4 release-audit-v1-2026-11-14 -> release-audit-v1-2026-11-14`. Pre-push hook PASS. Preview deploy will be validated on the next cycle via `/api/nex-native/version` + `x-nex-commit-sha` header. No prod verification applicable.
+
+---
+
+## Previous state · 2026-11-26 (continuation · L-043 Chat-pillar hydration pattern-hunt landed · BUILT · typecheck clean · verify blocked on host disk)
 
 **Where we are.** Agent-A pattern-hunt from L-036/L-042 extended into the Chat pillar per Rule 4. Three edits applied to `src/app/nex-native/chat/_portrait-bloom-shell.tsx`:
 

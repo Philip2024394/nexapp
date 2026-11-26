@@ -6,6 +6,8 @@ required by the 2026-11-25 Strict Completion Standard §6 and the companion
 entitlement, or page-mount MUST update this file as part of the cycle's
 deliverable. A nav edit that does not update this file is INCOMPLETE.
 
+> **Architecture correction · 2026-11-26.** See `docs/engineering/single-app-country-model-reconciliation-2026-11-26.md`. NEX is ONE application with country selection inside it (IP-pickup + Accept-Language + explicit user selection in business-details). The "Country identity · IE / ID / WW applicability" column records which country contexts a surface must operate correctly under — NOT separate app deployments. The previous matrix framing "18 drawer rows × 4 session states × 3 country-deployments = 216 cells" is **OBSOLETE as a deployment axis**. Corrected model has two orthogonal axes: **Axis A** Role × session × drawer navigation (shared across all countries) and **Axis B** Country-selection / IP-pickup / country-change / cross-country isolation journeys. Any row in this inventory that was previously labelled "ID-as-separate-deployment" should be re-read as "surface must operate in ID country context within the one app" and tested per Axis B rather than as a separate deployment cell.
+
 Companion artefacts:
 - `docs/product/nav-journey-ledger.md` — journey-shaped ledger (NAV-nnnn rows).
 - `docs/product/launch-evidence-ledger.md` — evidence-of-verification ledger.
@@ -320,6 +322,96 @@ service) happens at the destination page, not at the drawer row.
 promotions in this cycle** — all would require fixture seeding or
 provider creds, both out of this cycle's authority.
 
+## HQ Axis A · desktop-only control centre · inventory 2026-11-27
+
+The main consumer `ControlDrawer` is NOT mounted on `/nex-native/hq/*`.
+HQ has its own left-sidebar navigation at
+`src/app/nex-native/hq/_hq-nav.tsx` (mounted by `hq/layout.tsx`). HQ
+is **desktop-only** (CSS media query `(min-width: 900px)` in
+`hq/layout.tsx:49-56`) with a mobile fallback that renders
+"NEX HQ is desktop-only" instead of chrome. Every HQ page gates
+`requireHqAdmin` or `isAdmin` plus session resolution; non-admin and
+guest viewers hit `notFound()` (non-revealing 404 per owner directive
+2026-10-31).
+
+### HQ nav destinations · 13 declared rows + 2 orphan page.tsx + 7 dev-preview leaves
+
+| Row | Section | Label | Target | Gate | Route file | Country | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | — | HQ Home | `/nex-native/hq` | session + `requireHqAdmin` | `hq/page.tsx` | WW | MAPPED |
+| 2 | — | Harvest | `/nex-native/hq/harvest` | HQ admin | `hq/harvest/page.tsx` | WW | MAPPED |
+| 3 | — | Pages | `/nex-native/hq/pages` | HQ admin | `hq/pages/page.tsx` | WW | MAPPED |
+| 4 | — | Journey Map | `/nex-native/hq/journey-map` | `notFound()` (no `requireHqAdmin` observed in 1-occurrence grep — see "known gate drift" below) | `hq/journey-map/page.tsx` | WW | MAPPED · gate drift PARTIAL |
+| 5 | Founder Engineering | Mapping Audit | `/nex-native/hq/founder-engineering/mapping-audit` | HQ admin | present | WW | MAPPED |
+| 6 | Members | Overview | `/nex-native/hq/members` | HQ admin | present | WW | MAPPED |
+| 7 | Members | Shops | `/nex-native/hq/members/shops` | HQ admin | present | WW | MAPPED |
+| 8 | Members | Chats | `/nex-native/hq/members/chats` | HQ admin | present | WW | MAPPED |
+| 9 | Members | Vault | `/nex-native/hq/members/vault` | HQ admin | present | WW | MAPPED |
+| 10 | — | Communities | `/nex-native/hq/communities` | HQ admin | present | WW | MAPPED |
+| 11 | — | Chat Themes | `/nex-native/hq/chat-themes` | HQ admin | present | WW | MAPPED |
+| 12 | Security Audit | Log | `/nex-native/hq/security-audit` | HQ admin | present | WW | MAPPED |
+| 13 | Security Audit | Unresolved | `/nex-native/hq/security-audit?view=unresolved` | HQ admin · same page, query only | same as row 12 | WW | MAPPED · query-filter view |
+| 14 | Security Audit | Retention | `/nex-native/hq/security-audit/retention` | HQ admin | present | WW | MAPPED |
+| 15 | Security Audit | Deletion recovery | `/nex-native/hq/security-audit/deletion-recovery` | HQ admin | present | WW | MAPPED |
+| 16 | — | Security & Recovery | `/nex-native/hq/security-recovery` | HQ admin | present | WW | MAPPED |
+| 17 | — | Alerts | `/nex-native/hq/alerts` | HQ admin | present | WW | MAPPED |
+| 18 | — | Translation | `/nex-native/hq/translation` | HQ admin | present | WW | MAPPED |
+
+### HQ orphan routes (page.tsx exists, no nav row)
+
+| Route | Notes |
+|---|---|
+| `/nex-native/hq/support-tickets` | `page.tsx` present, gated on `isAdmin(session.account.id)` via `support/ticket-service` (distinct from `requireHqAdmin`). Reachable by **direct URL only** — no nav entry in `_hq-nav.tsx`. **Status: DISCOVERED-NO-NAV.** Owner decision: add to nav or remove from code? |
+| `/nex-native/hq/members/[accountId]/message` + `/traffic` | Dynamic member detail routes. Reached from the `/members` list page (not nav). Expected pattern — no action needed. |
+| `/nex-native/hq/communities/[zoneId]` + `/security-recovery/[incidentId]` | Dynamic detail routes reached from list pages. Expected. |
+
+### HQ Dev-previews (consumer-route leaves, NOT HQ routes)
+
+The `dev-previews` section links to consumer surfaces for admin
+preview access. All seven targets are consumer routes already
+enumerated in the main ControlDrawer inventory above. Preserved as
+convenience shortcuts.
+
+### Known gate drift (row 4 · Journey Map) — CONFIRMED 2026-11-27
+
+`src/app/nex-native/hq/journey-map/page.tsx` shows 1 occurrence of
+`requireHqAdmin|notFound` in grep (vs 5-8 in sibling HQ pages).
+Follow-up read of the whole file 2026-11-27 confirmed the hypothesis:
+the lone match is inside string literal content, NOT a handler-level
+gate. The handler has no `resolveSessionWithDevOverride()` /
+`resolveNexAppSessionOrGuest()` call and no `requireHqAdmin` /
+`isAdmin` / `notFound()` guard. The header comment at lines 20-22
+asserts upstream enforcement that does not exist (`src/middleware.ts`
+grep for `hq|hq-admin` → 0 matches; `hq/layout.tsx` only enforces a
+viewport media query). **Classification: PARTIAL · gate-absent
+confirmed.** See finding F3 below.
+
+### Finding F3 · Journey Map missing admin gate — DIAGNOSED + PREP COMPLETE
+
+- **Where:** `src/app/nex-native/hq/journey-map/page.tsx`
+- **Observed (2026-11-27 full read):** no server-side admin gate in the handler. 0 of the three expected calls present (`resolveSessionWithDevOverride`, `requireHqAdmin`, authorised `notFound()`). 17 sibling HQ pages invoke `requireHqAdmin` or `isAdmin` inside their own handlers (route listing in `hq-finding-f3-journey-map-missing-admin-gate-2026-11-27.md` § 3).
+- **Why it matters:** any desktop viewer (guest or non-admin authed) at the HQ viewport width sees the full journey-map strategic content. No PII leakage (page does not read user data), but HQ-category disclosure is reputational/strategic and contradicts the sealed 2026-10-31 HQ-gate standard.
+- **Severity:** Medium (HQ-content disclosure to any desktop viewer · no PII).
+- **Finding doc:** `docs/engineering/hq-finding-f3-journey-map-missing-admin-gate-2026-11-27.md`.
+- **Safe-prep doc:** `docs/engineering/f3-hq-journey-map-gate-safe-prep-2026-11-27.md` — contains the exact 3-import + 6-guard-line patch, 4-line header-comment correction, regression-spec text (held — not written to `tests/`), testMatch alternation fragment, 5-step verification plan.
+- **Status:** DIAGNOSED · PREP COMPLETE · NOT APPLIED. Patch is strictly a lockdown (adds an auth gate where none exists). Rule 7 + Rule 12 preserved — security decisions remain owner-gated.
+- **Approval phrase to unblock:** `APPROVE F3 PATCH APPLY` (row 1 of `docs/engineering/consolidated-approval-queue-2026-11-27.md`). Alternatives: `APPROVE F3 BATCH INTO HQ GATE SWEEP` · `APPROVE F3 ACCEPT AS-IS`.
+
+### Summary of HQ Axis A state
+
+| Category | Count | Status |
+|---|---|---|
+| Declared HQ nav rows (excl. dev-previews) | 18 | 17 MAPPED, 1 PARTIAL (F3 gate drift) |
+| Dev-preview shortcuts (consumer routes) | 7 | covered in main drawer inventory |
+| Orphan HQ routes (page.tsx, no nav) | 1 | `support-tickets` DISCOVERED-NO-NAV |
+| Dynamic detail routes (list-reached) | 3 | expected |
+
+**HQ Axis A rendered state is NOT VERIFIED in this cycle.** VERIFIED
+requires a desktop viewport (≥ 900 px) browser session under an HQ-
+admin fixture, which is a separate approval class from the consumer
+Axis A slices (L-041 merchant/IE, L-045 guest/IE, L-046 buyer/IE).
+Current MAPPED state is route-file-exists + gate-grep evidence only.
+
 ## Change log
 
 - 2026-11-25 · First ratchet · 18 drawer destinations enumerated + verified at
@@ -362,3 +454,15 @@ provider creds, both out of this cycle's authority.
   deferred — most require fixture seeding (T5/T6/T7) or owner-supplied
   provider creds (T10 positive-path) which are out of this cycle's
   authority.
+- 2026-11-27 · Reconciliation cycle · Finding F3 promoted from
+  hypothesis to CONFIRMED (gate-absent, full-handler read). F3
+  finding doc + safe-prep doc authored
+  (`hq-finding-f3-journey-map-missing-admin-gate-2026-11-27.md` +
+  `f3-hq-journey-map-gate-safe-prep-2026-11-27.md`). "Known gate
+  drift" and Finding F3 sections rewritten to reflect the confirmed
+  state. Row 4 (Journey Map) remains PARTIAL · will flip to
+  **VERIFIED** on fix-then-pass log capture after owner issues
+  `APPROVE F3 PATCH APPLY`. HQ Axis A summary unchanged (18 rows · 17
+  MAPPED · 1 PARTIAL). No drawer rows added or removed. No consumer
+  Axis A row target changed. No commits, pushes, migrations, or
+  production touches this cycle.

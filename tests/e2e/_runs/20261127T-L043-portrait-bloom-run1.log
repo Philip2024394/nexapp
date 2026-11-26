@@ -1,0 +1,7 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (6.7s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\regression-l043-chat-portrait-bloom-hydration.spec.ts:143:9 › L-043 · /chat/peer portrait-bloom hydration-mismatch regression › no React hydration warnings fire when buyer opens peer chat under a different-locale + different-timezone browser context (exercises both formatBubblePrice and ClientMessageTime fixes) (34.1s)
+
+  2 passed (45.0s)

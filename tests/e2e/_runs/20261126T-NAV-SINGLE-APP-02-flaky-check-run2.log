@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (6.5s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-single-app-02-ip-pickup.spec.ts:89:11 › NAV-SINGLE-APP-02 · IP-pickup via cf-ipcountry drives guest pricing-page currency › cf-ipcountry=GB → guest pricing page renders GBP symbol '£' (568ms)
+  ✓  3 [stage-a-pixel7] › tests\e2e\journey-single-app-02-ip-pickup.spec.ts:89:11 › NAV-SINGLE-APP-02 · IP-pickup via cf-ipcountry drives guest pricing-page currency › cf-ipcountry=US → guest pricing page renders USD symbol 'US$' (567ms)
+  ✓  4 [stage-a-pixel7] › tests\e2e\journey-single-app-02-ip-pickup.spec.ts:89:11 › NAV-SINGLE-APP-02 · IP-pickup via cf-ipcountry drives guest pricing-page currency › cf-ipcountry=ID → guest pricing page renders IDR symbol 'Rp' (601ms)
+  ✓  5 [stage-a-pixel7] › tests\e2e\journey-single-app-02-ip-pickup.spec.ts:178:9 › NAV-SINGLE-APP-02 · IP-pickup via cf-ipcountry drives guest pricing-page currency › no cf-ipcountry → guest pricing page renders EUR symbol (hard-default IE) (526ms)
+
+  5 passed (11.3s)

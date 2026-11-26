@@ -1,0 +1,7 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.1s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) (27.5s)
+
+  2 passed (36.3s)

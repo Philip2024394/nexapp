@@ -490,7 +490,9 @@ export function VaultChatClient(props: Props) {
         const nowIso = new Date().toISOString();
         const bubbleText =
           text ||
-          (pendingAttachment ? attachmentLabelFor(pendingAttachment.kind, t) : "");
+          (pendingAttachment && pendingAttachment.kind !== "document"
+            ? attachmentLabelFor(pendingAttachment.kind, t)
+            : "");
         setMessages((prev) => [
           ...prev,
           {

@@ -1,0 +1,5 @@
+[14/17] [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › preferences · Settings → /nex-native/settings
+[15/17] [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › preferences · Buying Guides → /nex-generated/buying-guides
+[16/17] [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › preferences · NEX 1 → /nex-native/nex-1
+[17/17] [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › cta · Chat themes library → /nex-native/chat-themes-library
+  17 passed (3.6m)

@@ -1,0 +1,41 @@
+
+Running 2 tests using 1 worker
+
+[1/2] [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json
+[2/2] [stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code
+  1) [stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code 
+
+    Error: default country for fresh fixture must come from env fallback ('') or be empty · got 'IE'
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "IE"
+    Received array: [""]
+
+      177 |           acceptableDefaults,
+      178 |           `default country for fresh fixture must come from env fallback ('${envCountry}') or be empty · got '${defaultValue}'`,
+    > 179 |         ).toContain(defaultValue);
+          |           ^
+      180 |
+      181 |         // ──────────────────────────────────────────────────────────
+      182 |         // 5 · Explicitly change the country to a counter-value so the
+        at C:\Users\Victus\nexapp\tests\e2e\journey-country-selection-business-details.spec.ts:179:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code 
+  1 passed (34.9s)

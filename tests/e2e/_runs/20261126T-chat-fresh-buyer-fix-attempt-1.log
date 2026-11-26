@@ -1,0 +1,7 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (6.8s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-chat-fresh-buyer-ask-seller-2026-11-26.spec.ts:145:7 › L-045 · Chat pillar · fresh-signup buyer sends Ask Seller enquiry · DB readback › SUCCESS · fresh buyer signs in → opens shop → sends enquiry → one conversation + two participants + ≥1 message row observable at DB (count only · no body) (38.7s)
+
+  2 passed (49.5s)

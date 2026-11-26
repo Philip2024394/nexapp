@@ -1,0 +1,45 @@
+
+Running 2 tests using 1 worker
+
+[1/2] [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json
+[2/2] [stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code
+[stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code
+[teardown] nex_account a41e457a-747a-46a5-a5c5-934050e6a568: update or delete on table "nex_account" violates foreign key constraint "nex_business_owner_account_id_fkey" on table "nex_business"
+
+[teardown] auth user eefe93f2-e808-4e88-943a-8b13d06e490b: Database error deleting user
+
+  1) [stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code 
+
+    Error: post-save read-back has no error
+
+    expect(received).toBeNull()
+
+    Received: {"code": "42703", "details": null, "hint": null, "message": "column nex_business.operating_country_code does not exist"}
+
+      221 |           )
+      222 |           .eq("owner_account_id", merchant.nexAccountId);
+    > 223 |         expect(postErr, "post-save read-back has no error").toBeNull();
+          |                                                             ^
+      224 |         expect(
+      225 |           postBusinesses?.length,
+      226 |           "exactly one business row persisted for fixture merchant",
+        at C:\Users\Victus\nexapp\tests\e2e\journey-country-selection-business-details.spec.ts:223:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-country-selection--5b900-ists-operating-country-code-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-country-selection-business-details.spec.ts:87:9 › NAV-SINGLE-APP-01 · country selection in business-details form › shop-less merchant · default country matches env resolver · user change persists operating_country_code 
+  1 passed (38.3s)

@@ -1,0 +1,45 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.9s)
+[TASK112] ssrResp.url=http://localhost:3008/nex-native/manage/orders status=200
+[TASK112] nex_business where owner_account_id=acd763fe-58f5-4a99-9d1e-f2c3e334ce72 → rows=[{"id":"c6c92a4e-46a8-4699-aefd-067e95604329","owner_account_id":"acd763fe-58f5-4a99-9d1e-f2c3e334ce72","slug":"e2e-fixture-l042-list-shop-mwxom6x3-af0kl"}] err=none
+[TASK112] nex_order where id=cbaa18f4-cafe-4eab-b9cc-108c63a1962d → rows=[{"id":"cbaa18f4-cafe-4eab-b9cc-108c63a1962d","business_id":"c6c92a4e-46a8-4699-aefd-067e95604329","state":"created","created_at":"2026-11-16T15:02:55.75+00:00"}] err=none
+[TASK112] auth-related cookie names on context=["nex_session","sb-kdstoyyeygcopkogqsyv-auth-token","nex_known_device"]
+[TASK112] ssrHtmlRaw first 2500 chars:
+<!DOCTYPE html><html lang="en" style="background:transparent;margin:0;padding:0"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/><link rel="stylesheet" href="/_next/static/chunks/src_app_nex-native_nex-native_1bh6er6.css" data-precedence="next_static/chunks/src_app_nex-native_nex-native_1bh6er6.css"/><link rel="preload" as="script" fetchPriority="low" href="/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js"/><script src="/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_090k2jm.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_164kp-6._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_1amofcm._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40swc_helpers_cjs_1r9vbqw._.js" async=""></script><script src="/_next/static/chunks/_1anvha4._.js" async=""></script><script src="/_next/static/chunks/turbopack-_08bm286._.js" async=""></script><script src="/_next/static/chunks/_0vw_c6v._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_20wefz_._.js" async=""></script><script src="/_next/static/chunks/src_lib_nex-native_realtime_signalling_ts_1d8i_6t._.js" async=""></script><script src="/_next/static/chunks/src_1j2siks._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40noble_hashes_0ao7xes._.js" async=""></script><script src="/_next/static/chunks/node_modules_1tvelak._.js" async=""></script><script src="/_next/static/chunks/src_app_nex-native_error_tsx_0n93634._.js" async=""></script><script src="/_next/static/chunks/src_0vdbi64._.js" async=""></script><script src="/_next/static/chunks/src_app_nex-native_manage_orders__client_tsx_1639eq8._.js" async=""></script><meta name="theme-color" content="#020914"/><title>NEX · Chat that&#x27;s yours</title><meta name="description" content="NEX is a chat app with beautiful themes · every conversation looks the way
+[TASK112] contains "No shop found"=false contains "Sign in"=false contains "My Orders"=true
+  ✘  2 [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) (22.8s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+
+    Error: L-042 Contract A · row anchor '#cbaa18f4' must appear in SSR visible HTML · a missing row would fail here
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      311 |           rowAnchorIdx,
+      312 |           `L-042 Contract A · row anchor '#${shortId}' must appear in SSR visible HTML · a missing row would fail here`,
+    > 313 |         ).toBeGreaterThanOrEqual(0);
+          |           ^
+      314 |
+      315 |         // Take a bounded window after the anchor · the per-row
+      316 |         // timestamp slot (<ClientRelTime iso={order.created_at} />)
+        at C:\Users\Victus\nexapp\tests\e2e\regression-l042-orders-list-hydration.spec.ts:313:11
+
+    Error Context: test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+  1 passed (33.0s)

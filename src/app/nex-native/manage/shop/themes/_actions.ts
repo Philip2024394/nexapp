@@ -103,10 +103,27 @@ export async function applyShopBackgroundAction(
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
-  const result = await uploadShopCoverImage(businessId, file);
-  if (!result.ok) return { ok: false, error: result.error ?? "upload-failed" };
+  // L-044 fix 2026-11-26 · `uploadShopCoverImage` was migrated to take
+  // an object input `{ businessId, file, mimeType }` and return
+  // `{ publicUrl }`, throwing on failure. This action still used the
+  // legacy two-positional-arg / `{ ok, error, url }` shape, so tsc
+  // flagged three TS2339 errors on the dead `result.ok / result.error /
+  // result.url` accesses. Switch to the current contract + catch the
+  // thrown error so the client sees the same `{ ok: false, error }`
+  // envelope it has always received.
+  let publicUrl: string;
+  try {
+    const result = await uploadShopCoverImage({
+      businessId,
+      file,
+      mimeType: file.type,
+    });
+    publicUrl = result.publicUrl;
+  } catch (e) {
+    return { ok: false, error: (e as Error).message ?? "upload-failed" };
+  }
   revalidatePath("/nex-native/manage/shop/themes");
-  return { ok: true, url: result.url };
+  return { ok: true, url: publicUrl };
 }
 
 /** Owner directive 2026-11-06 · each preset background carries a
@@ -461,8 +478,11 @@ export async function clearShopBackgroundAction(
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
-  const result = await clearShopCoverImage(businessId);
-  if (!result.ok) return { ok: false, error: result.error ?? "clear-failed" };
+  try {
+    await clearShopCoverImage(businessId);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message ?? "clear-failed" };
+  }
   revalidatePath("/nex-native/manage/shop/themes");
   return { ok: true };
 }

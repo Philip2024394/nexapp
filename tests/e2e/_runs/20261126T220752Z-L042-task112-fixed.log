@@ -1,0 +1,38 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (4.9s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) (19.6s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+
+    Error: L-042 Contract A · raw ISO '2026-11-16T15:08:03.06+00:00' must appear in the 800-char window after row anchor '#0980F714' in SSR visible HTML · a render-time toLocaleDateString() regression would emit a locale-formatted date string here instead · window='#0980F714</span><span style="font-size:9px;font-weight:900;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,0.3);color:#C6A15B;border:1px solid #C6A15B55;text-transform:uppercase;letter-spacing:0.3px">New</span></div><div data-nex-order-row-product="true" style="font-size:13.5px;font-weight:700;color:#F2F5F8;line-height:1.35;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">L-042 regression product</div><div style="font-size:13px;color:#B5C3D6;line-height:1.4">Customer <span style="color:#7D9BC0;font-family:ui-monospace, Consolas, monospace;font-size:11px">6a6a38ab…</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:15px;font-weight:900;color:#F2F5F8;letter-spacing:-0.005em">£9.99</div><div style="margin-top:4px;font-size'
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      277 |           rowWindow.includes(createdIso),
+      278 |           `L-042 Contract A · raw ISO '${createdIso}' must appear in the 800-char window after row anchor '#${shortId}' in SSR visible HTML · a render-time toLocaleDateString() regression would emit a locale-formatted date string here instead · window='${rowWindow}'`,
+    > 279 |         ).toBe(true);
+          |           ^
+      280 |
+      281 |         // ─────────────────────────────────────────────────────────
+      282 |         // 4 · Open the list page in a real browser so React
+        at C:\Users\Victus\nexapp\tests\e2e\regression-l042-orders-list-hydration.spec.ts:279:11
+
+    Error Context: test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+  1 passed (28.5s)

@@ -268,7 +268,15 @@ const CONTACTS_HREF: string =
 // Owner directive 2026-11-09 · "List a product" row now routes to
 // /create/product/category (the real first step of the sealed product-
 // creation journey · category selection). Previously pointed at
-// /create/product which has no page.tsx (only its /category subroute).
+// /create/product which, at the time of the 2026-11-09 directive, had
+// no page.tsx (only its /category subroute). 2026-11-15 restored a
+// /create/product/page.tsx landing (routes 0-business → /manage/shop/setup,
+// 1-business → auto-forward to /category?business=<id>, 2+ → picker).
+// The drawer destination stays pinned at /create/product/category so
+// signed-in merchants land directly on the sealed first step without
+// a double-hop. L-041 cycle-2 (2026-11-26) verified this row renders
+// under signed-in shop-owner × IE identity (17/17 drawer rows VERIFIED,
+// evidence: tests/e2e/_runs/20261126T-L041-merchant-ie-verified.log).
 const CREATE_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "create-product",

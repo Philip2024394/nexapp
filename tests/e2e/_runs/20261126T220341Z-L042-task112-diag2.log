@@ -1,0 +1,83 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.4s)
+[TASK112] ssrResp.url=http://localhost:3008/nex-native/manage/orders status=200
+[TASK112] nex_business where owner_account_id=14ae8933-db06-4741-b018-82bf8ab35685 → rows=[{"id":"487d818e-94de-4e1d-bfe7-4c82eae98bcf","owner_account_id":"14ae8933-db06-4741-b018-82bf8ab35685","slug":"e2e-fixture-l042-list-shop-mwxonf79-nek7m"}] err=none
+[TASK112] nex_order where id=1c6f74fb-c422-410d-a99e-7cdd9f3d0604 → rows=[{"id":"1c6f74fb-c422-410d-a99e-7cdd9f3d0604","business_id":"487d818e-94de-4e1d-bfe7-4c82eae98bcf","state":"created","created_at":"2026-11-16T15:03:53.268+00:00"}] err=none
+[TASK112] auth-related cookie names on context=["nex_session","sb-kdstoyyeygcopkogqsyv-auth-token","nex_known_device"]
+[TASK112] ssrHtmlRaw first 2500 chars:
+<!DOCTYPE html><html lang="en" style="background:transparent;margin:0;padding:0"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/><link rel="stylesheet" href="/_next/static/chunks/src_app_nex-native_nex-native_1bh6er6.css" data-precedence="next_static/chunks/src_app_nex-native_nex-native_1bh6er6.css"/><link rel="preload" as="script" fetchPriority="low" href="/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js"/><script src="/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_090k2jm.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_164kp-6._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_compiled_1amofcm._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40swc_helpers_cjs_1r9vbqw._.js" async=""></script><script src="/_next/static/chunks/_1anvha4._.js" async=""></script><script src="/_next/static/chunks/turbopack-_08bm286._.js" async=""></script><script src="/_next/static/chunks/_0vw_c6v._.js" async=""></script><script src="/_next/static/chunks/node_modules_next_dist_20wefz_._.js" async=""></script><script src="/_next/static/chunks/src_lib_nex-native_realtime_signalling_ts_1d8i_6t._.js" async=""></script><script src="/_next/static/chunks/src_1j2siks._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js" async=""></script><script src="/_next/static/chunks/node_modules_%40noble_hashes_0ao7xes._.js" async=""></script><script src="/_next/static/chunks/node_modules_1tvelak._.js" async=""></script><script src="/_next/static/chunks/src_app_nex-native_error_tsx_0n93634._.js" async=""></script><script src="/_next/static/chunks/src_0vdbi64._.js" async=""></script><script src="/_next/static/chunks/src_app_nex-native_manage_orders__client_tsx_1639eq8._.js" async=""></script><meta name="theme-color" content="#020914"/><title>NEX · Chat that&#x27;s yours</title><meta name="description" content="NEX is a chat app with beautiful themes · every conversation looks the way
+[TASK112] contains "No shop found"=false contains "Sign in"=false contains "My Orders"=true
+[TASK112] shortId=1c6f74fb contains shortId=true contains fullOrderId=true contains businessId=true
+[TASK112] contains "No orders"=false contains "no results"=false contains data-nex-manage-orders=true
+[TASK112] ssrHtmlRaw chars 2500-6000:
+ you want · shops and chat together."/><meta name="application-name" content="NEX"/><link rel="manifest" href="/nex.webmanifest"/><link rel="canonical" href="https://ireland.nex.invalid/nex-native"/><meta name="format-detection" content="telephone=no, address=no, email=no"/><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-title" content="NEX"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta property="og:title" content="NEX · Chat that&#x27;s yours"/><meta property="og:description" content="Beautiful chat themes · every conversation looks the way you want · shops and chat together."/><meta property="og:site_name" content="NEX"/><meta property="og:locale" content="id_ID"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="NEX · Chat that&#x27;s yours"/><meta name="twitter:description" content="Beautiful chat themes · every conversation looks the way you want · shops and chat together."/><link rel="shortcut icon" href="/favicon-32.png"/><link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png"/><link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png"/><link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png"/><link rel="icon" href="/icons/icon-512.png" sizes="512x512" type="image/png"/><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" type="image/png"/><link rel="preload" as="image" href="/nex-native/desktop-bg-nex-chat-shop-banner.png" media="(min-width: 500px)" fetchPriority="low"/><link rel="preconnect" href="https://kdstoyyeygcopkogqsyv.supabase.co" crossorigin="anonymous"/><link rel="dns-prefetch" href="https://kdstoyyeygcopkogqsyv.supabase.co"/><script src="/_next/static/chunks/node_modules_next_dist_build_polyfills_polyfill-nomodule.js" noModule=""></script></head><body style="background:transparent;color:#F2F5F8;margin:0;padding:0;min-height:100dvh;font-family:Arial, Helvetica, sans-serif"><div hidden=""><!--$--><!--/$--></div><style data-nex-world-root="ireland" data-nex-identity="ireland">:root {
+  --nex-world-desktop-backdrop: url("/nex-native/desktop-bg-nex-chat-shop-banner.png");
+  --nex-world-page-base: #F5EDD3;
+  --nex-world-drawer-bg: #F5EDD3;
+  --nex-world-primary-ink: #2A1F0F;
+  --nex-world-muted-ink: #8FA69A;
+  --nex-world-live-drawer-tagline-display: block;
+  --nex-world-live-drawer-edge-light-display: block;
+  --nex-world-control-drawer-edge-light-display: block;
+  --nex-world-live-drawer-footer-image-display: block;
+  --nex-world-live-drawer-footer-image-url: url("/nex-brand/ireland-leprechaun-dj.png");
+  --nex-kp-accent: #FF7200;
+  --nex-kp-accent-dim: rgba(255,114,0,0.22);
+  --nex-kp-accent-glow: rgba(255,114,0,0.55);
+  --nex-kp-accent-pressed: rgba(255,114,0,0.25);
+  --nex-kp-accent-border: rgba(255,114,0,0.18);
+}
+.nex-native-stage {
+  --nex-world-primary: #D4A24F;
+  --nex-world-secondary: #D4A24F;
+  --nex-world-tertiary: #D4A24F;
+  --nex-world-background-base: #F5EDD3;
+  --nex-world-surface: #FFFFFF;
+  --nex-world-surface-sunken: #F5EDD3;
+  --nex-world-text-primary: #2A1F0F;
+  --nex-world-text-secondary: #5A4A2E;
+  --nex-world-text-muted: #8A7A5E;
+  --nex-world-border: rgba(212, 162, 79, 0.18);
+  --nex-world-border-accent: rgba(212, 162, 79, 0.45);
+  --nex-world-success: #02AD04;
+  --nex-world-warning: #F5A623;
+  --nex-world-danger: #9B1C1C;
+}</style><div class="nex-native-stage" data-nex-
+[TASK112] ssrHtmlRaw chars 6000-10000:
+world="ireland"><div class="nex-native-frame"><div data-nex-page-slide-root="true"><!--$--><!--$?--><template id="B:0"></template><div data-nex-silent-loading="true" style="position:absolute;inset:0;background:var(--nex-world-background-base, #F5EDD3)"></div><!--/$--><!--/$--></div></div></div><script>requestAnimationFrame(function(){$RT=performance.now()});</script><script id="_R_">self.__next_r="-igRJ49A5jSHkObOcsEnj";if(document.cookie.indexOf('next-instant-navigation-testing=')>-1){self.__next_instant_test=fetch(location.pathname+'?_rsc=xhdorIanPcIpYSsE',{credentials:'same-origin',headers:{'rsc':'1','next-router-prefetch':'1','next-router-segment-prefetch':'/_full'}})}</script><script src="/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1di75ot._.js" async=""></script><div hidden id="S:0"><template id="P:1"></template><!--$--><!--/$--></div><script>(self.__next_f=self.__next_f||[]).push([0])</script><script>self.__next_f.push([1,"7:I[\"[project]/node_modules/next/dist/next-devtools/userspace/app/segment-explorer-node.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"SegmentViewNode\"]\n9:\"$Sreact.fragment\"\n1a:I[\"[project]/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"default\"]\n1c:I[\"[project]/node_modules/next/dist/client/components/render-from-template-context.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"default\"]\n2e:I[\"[project]/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"LoadingBoundaryProvider\"]\n47:I[\"[project]/src/app/nex-native/manage/error.tsx [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\",\"/_next/static/chunks/src_lib_nex-native_realtime_signalling_ts_1d8i_6t._.js\",\"/_next/static/chunks/src_1j2siks._.js\",\"/_next/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js\",\"/_next/static/chunks/node_modules_%40noble_hashes_0ao7xes._.js\",\"/_next/static/chunks/node_modules_1tvelak._.js\",\"/_next/static/chunks/src_0vdbi64._.js\"],\"default\"]\n64:I[\"[project]/node_modules/next/dist/lib/framework/boundary-components.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"OutletBoundary\"]\n66:\"$Sreact.suspense\"\n74:I[\"[project]/node_modules/next/dist/lib/framework/boundary-components.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"ViewportBoundary\"]\n7e:I[\"[project]/node_modules/next/dist/lib/framework/boundary-components.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"MetadataBoundary\"]\n84:I[\"[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-client] (ecmascript)\",[\"/_next/static/chunks/node_modules_next_dist_20wefz_._.js\"],\"default\",1]\n:HL[\"/_next/static/chunks/src_app_nex-native_nex-native_1bh6er6.css\",\"style\"]\n1:D\"$4\"\n1:D\"$2\"\n1:D\"$5\"\n1:null\nb:D\"$15\"\nb:D\"$c\"\nb:D\"$17\"\n1e:D\"$20\"\n1e:D\"$1f\"\n1e:D\"$22\"\n1e:D\"$21\"\n1e:D\"$23\"\n1e:[[\"$\",\"title\",null,{\"children\":\"404: This page could not be found.\"},\"$21\",\"$24\",1],[\"$\",\"div\",null,{\"style\":{\"fontFamily\":\"system-ui,\\\"Segoe UI\\\",Roboto,Helvetica,Arial,sans-serif,\\\"Apple Color Emoji\\\",\\\"Segoe UI Emoji\\\"\",\"height\":\"100vh\",\"textAlign\":\"center\",\"display\":\"flex\",\"flexDirection\":\"column\",\"alignItems\":\"center\",\"justifyContent\":\"center\"},\"children\":[\"$\",\"div\",null,{\"children\":[[\"$\",\"style\",null,{\"dangerouslySetInnerHTML\":{\"__html\":\"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-e
+  ✘  2 [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) (23.3s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+
+    Error: L-042 Contract A · row anchor '#1c6f74fb' must appear in SSR visible HTML · a missing row would fail here
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      330 |           rowAnchorIdx,
+      331 |           `L-042 Contract A · row anchor '#${shortId}' must appear in SSR visible HTML · a missing row would fail here`,
+    > 332 |         ).toBeGreaterThanOrEqual(0);
+          |           ^
+      333 |
+      334 |         // Take a bounded window after the anchor · the per-row
+      335 |         // timestamp slot (<ClientRelTime iso={order.created_at} />)
+        at C:\Users\Victus\nexapp\tests\e2e\regression-l042-orders-list-hydration.spec.ts:332:11
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'C:\Users\Victus\nexapp\test-results\.playwright-artifacts-1\traces\resources\6fe93f9c176355814ea4e5059e5e23ad.jsonl'
+
+    attachment #1: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-l042-orders-lis-44537--toLocaleDateString-branch--stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\regression-l042-orders-list-hydration.spec.ts:119:9 › L-042 · /manage/orders list hydration-mismatch regression › no React hydration warnings fire when merchant opens orders LIST under a different-timezone browser context (>= 7-day-old order exercises the toLocaleDateString branch) 
+  1 passed (31.3s)

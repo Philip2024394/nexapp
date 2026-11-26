@@ -205,7 +205,7 @@ export function FullLibraryClient({
           >
             <UnifiedDrawer
               session={drawerSession}
-              viewerEarnedBadges={viewerCreatorBadges}
+              viewerEarnedCreatorBadges={viewerCreatorBadges.earned}
             />
           </span>
         ) : null}

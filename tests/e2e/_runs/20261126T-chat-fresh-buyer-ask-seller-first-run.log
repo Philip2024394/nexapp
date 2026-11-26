@@ -1,0 +1,42 @@
+
+Running 2 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (6.1s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\journey-chat-fresh-buyer-ask-seller-2026-11-26.spec.ts:132:7 › L-045 · Chat pillar · fresh-signup buyer sends Ask Seller enquiry · DB readback › SUCCESS · fresh buyer signs in → opens shop → sends enquiry → one conversation + two participants + ≥1 message row observable at DB (count only · no body) (32.5s)
+
+
+  1) [stage-a-pixel7] › tests\e2e\journey-chat-fresh-buyer-ask-seller-2026-11-26.spec.ts:132:7 › L-045 · Chat pillar · fresh-signup buyer sends Ask Seller enquiry · DB readback › SUCCESS · fresh buyer signs in → opens shop → sends enquiry → one conversation + two participants + ≥1 message row observable at DB (count only · no body) 
+
+    Error: Send must transition to 'sent' (chip detaches). Got 'error-surfaced' · error-surfaced or timeout is a real failure, NOT an acceptable outcome under Strict Completion Standard §3.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "sent"
+    Received: "error-surfaced"
+
+      276 |         outcome,
+      277 |         `Send must transition to 'sent' (chip detaches). Got '${outcome}' · error-surfaced or timeout is a real failure, NOT an acceptable outcome under Strict Completion Standard §3.`,
+    > 278 |       ).toBe("sent");
+          |         ^
+      279 |
+      280 |       // URL product param clears after successful send.
+      281 |       await expect
+        at C:\Users\Victus\nexapp\tests\e2e\journey-chat-fresh-buyer-ask-seller-2026-11-26.spec.ts:278:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\journey-chat-fresh-buyer-a-7b578-at-DB-count-only-·-no-body--stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\journey-chat-fresh-buyer-a-7b578-at-DB-count-only-·-no-body--stage-a-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\journey-chat-fresh-buyer-a-7b578-at-DB-count-only-·-no-body--stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\journey-chat-fresh-buyer-a-7b578-at-DB-count-only-·-no-body--stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\journey-chat-fresh-buyer-ask-seller-2026-11-26.spec.ts:132:7 › L-045 · Chat pillar · fresh-signup buyer sends Ask Seller enquiry · DB readback › SUCCESS · fresh buyer signs in → opens shop → sends enquiry → one conversation + two participants + ≥1 message row observable at DB (count only · no body) 
+  1 passed (43.1s)

@@ -89,8 +89,17 @@ export default async function ManageProductPage({
   const atMaxSections =
     productSections.length >=
     productSectionService.NEX_PRODUCT_SECTION_MAX;
+  // L-044 fix 2026-11-26 · the action signature is
+  // `(businessId, productId, formData) => Promise<void>`. The earlier
+  // bind only supplied `productId`, which got bound to the `businessId`
+  // slot — the redirect URL's `&biz=` query would have carried the
+  // product id in place of the business id. Section reassignment is
+  // currently stubbed/disabled so the user-visible impact is
+  // cosmetic, but the honest fix is to bind both args in the right
+  // order.
   const assignSectionBound = assignProductToSectionAction.bind(
     null,
+    business.id,
     productId,
   );
   // Fetch existing variants for the grouped list.

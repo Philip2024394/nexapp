@@ -1,0 +1,22 @@
+
+Running 17 tests using 1 worker
+
+  ✓   1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (4.4s)
+  ✓   2 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › create · List a product → /nex-native/create/product/category [CREATE-GATE-TO-SETUP] (11.8s)
+  ✓   3 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Chats and contacts → /nex-native/contacts [AUTH-ONLY-RENDER] (12.6s)
+  ✓   4 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · My profile → /nex-native/profile/me [AUTH-ONLY-RENDER] (12.4s)
+  ✓   5 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Edit Profile → /nex-native/settings/profile/edit [AUTH-ONLY-RENDER] (12.2s)
+  ✓   6 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Shop Settings → /nex-native/manage [OWNER-GATE-TO-SETUP] (11.7s)
+  ✓   7 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · FAQ → /nex-native/manage/shop/faq [OWNER-GATE-TO-SETUP] (11.6s)
+  ✓   8 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Chat Settings → /nex-native/settings/chat-settings [AUTH-ONLY-RENDER] (11.9s)
+  ✓   9 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Payment Providers → /nex-native/settings/payments [AUTH-ONLY-RENDER] (12.7s)
+  ✓  10 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · My Orders → /nex-native/manage/orders [OWNER-GATE-TO-PLACEHOLDER] (12.1s)
+  ✓  11 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Wholesale → /nex-native/manage/wholesale [OWNER-GATE-TO-PLACEHOLDER] (12.5s)
+  ✓  12 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · NEX Store → /nex-native/store [PUBLIC-RENDER] (12.0s)
+  ✓  13 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › your-nex · Install NEX → /nex-native/install [PUBLIC-RENDER] (11.6s)
+  ✓  14 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › preferences · Settings → /nex-native/settings [AUTH-ONLY-RENDER] (11.7s)
+  ✓  15 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › preferences · Buying Guides → /nex-generated/buying-guides [PUBLIC-RENDER] (2.1s)
+  ✓  16 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › preferences · NEX 1 → /nex-native/nex-1 [PUBLIC-RENDER] (11.5s)
+  ✓  17 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-buyer-ie.spec.ts:287:11 › L-010/NAV · drawer rows under signed-in BUYER (no business) × IE identity › cta · Chat themes library → /nex-native/chat-themes-library [PUBLIC-RENDER] (11.4s)
+
+  17 passed (3.4m)
