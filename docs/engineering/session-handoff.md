@@ -40,7 +40,19 @@ What requires the owner before continuing?
 
 **Rule 7 posture:** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push. No `--no-verify`.
 
-**Next safe action (no approval needed):** (a) buyer-side Shop checkout UI coverage that is auth-unblocked (full add-to-cart → checkout review flow against sandbox stripe), (b) Chat Themes three-category journey regression after the Plain reshape, (c) begin drafting migration 370 (RLS corrections per L-057) — authoring permitted, apply gated on owner phrase, (d) commit the L-062 + "How it works" UI tweak under the standing policy.
+**Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD advanced `7c4ecfa2` → `50237529`. Two commits (separate scopes per standing policy "never mix unrelated features into one commit"):
+- `3e7205e6` · `fix(ui): remove × close button on Chat Themes How-it-works sheet and bump top padding` · 1 file · +13 / −35
+- `50237529` · `test(chat): L-062 peer-side retract reader spec · completes retract contract across both ends` · 5 files · +294 / −4 · 1 new file
+
+Push `7c4ecfa2..50237529 release-audit-v1-2026-11-14 -> release-audit-v1-2026-11-14`. Remote verification: `git ls-remote origin refs/heads/release-audit-v1-2026-11-14 → 50237529d60ea288e53b573100f47522076f1fc2` matches local HEAD. Pre-commit + commit-msg + pre-push hooks all PASS. Excluded (not in L-062 or UI scope): `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (incidental audit noise · same exclusion rationale as L-060 commit `2596579a`). No deploy triggered manually; preview deploy chain fires on push → `cloudflare-deploy.yml` → `nexapp-preview.nex-sandbox.workers.dev`. No production verification applicable.
+
+**2026-11-27 follow-on (same session · migration 370 authored).** After the L-062 commit landed, this session drafted the L-057 corrective migration and its rollback as separate reviewable artefacts. Files:
+- `nex-supabase/migrations/370_fix_rls_account_id_bridge.sql` (forward · drops + recreates 5 defective policies through sealed `nex_current_account_ids()` helper: `nex_notification` SELECT + UPDATE · `nex_affiliate_promotion` SELECT · `nex.discovery_signal` SELECT + DELETE)
+- `nex-supabase/migrations/370_fix_rls_account_id_bridge_rollback.sql` (restores pre-370 wording verbatim)
+
+Both files are authoring-only; **no apply has occurred against either sandbox or production**. Apply remains gated on the owner approval phrase `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)`. L-057 ledger row updated to reflect the authoring.
+
+**Next safe action (no approval needed):** (a) buyer-side Shop checkout UI coverage that is auth-unblocked; (b) Chat Themes three-category journey regression after the Plain reshape; (c) author the companion integration spec for migration 370 (uses `supabase-js` authenticated-client against two fixture accounts, asserts A cannot read B's rows on each of the three tables, asserts A CAN read own rows · spec runs ONLY after sandbox apply, hard-skips today).
 
 **Next action requiring owner authorisation (ONE phrase at a time):** unchanged from L-061 block — see below.
 
