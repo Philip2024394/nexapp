@@ -33,39 +33,51 @@ for (const vp of VIEWPORTS) {
       // --- Page 1: 8 cards + pagination 1 / 3 -------------------------------
       await expect(page.locator("[data-nex-cover-product-card]")).toHaveCount(8);
 
-      // Owner-sealed 2026-11-28 heading restructure:
+      // Owner-sealed 2026-11-28 (third pass) heading restructure:
       //   · "Products" eyebrow present (replaces "Shop")
-      //   · "Select product" dropdown present above the cards
+      //   · Category dropdown ("Select category") above the cards ·
+      //     lists CATEGORIES (not products) · orange text on black panel
       //   · Legacy "📦 17 products live" badge REMOVED
       //   · Legacy section title (t.catalog_heading) REMOVED from this layout
       await expect(
         page.locator("[data-nex-cover-product-select]"),
       ).toBeVisible();
       await expect(
-        page.getByRole("combobox", { name: "Select product" }),
+        page.getByRole("combobox", { name: "Select category" }),
       ).toBeVisible();
       await expect(page.locator("body")).not.toContainText(
         /\d+\s*products\s*live/i,
       );
-      // Dropdown must list every live product (8 shown + 9 more = 17 live
-      // products on the sandbox shop · regardless of current page).
-      const optionCount = await page
-        .getByRole("combobox", { name: "Select product" })
-        .locator("option")
-        .count();
-      // +1 for the disabled "Select product" placeholder
-      expect(optionCount).toBe(17 + 1);
+
+      // Orange on black doctrine: control background is pure black and
+      // its text/border inherit --nex-accent (orange on this shop).
+      const selectWrap = page.locator("[data-nex-cover-product-select]");
+      const selectWrapBg = await selectWrap.evaluate(
+        (el) => getComputedStyle(el).backgroundColor,
+      );
+      expect(selectWrapBg).toBe("rgb(0, 0, 0)");
+      const selectWrapBorder = await selectWrap.evaluate(
+        (el) => getComputedStyle(el).borderTopColor,
+      );
+      expect(selectWrapBorder).toBe("rgb(249, 115, 22)");
 
       const pagerNav = page.getByRole("navigation", { name: "Product pages" });
       await expect(pagerNav).toBeVisible();
       await expect(pagerNav).toContainText(/1\s*\/\s*3/);
 
-      // Owner-sealed 2026-11-28 (second pass) · Template 15 cards
-      // are now text-only: no brand strip, no product image.
+      // Owner-sealed 2026-11-28 (third pass) · Template 15 cards keep
+      // the product image back on the left · the brand strip stays off
+      // · the gray surface now sits ONLY behind the meta column.
       await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(0);
-      // All 8 landscape cards must carry the text-only marker.
+      // All 8 landscape cards must carry the text-only marker so the
+      // meta column renders its light-gray background.
       await expect(
         page.locator('[data-nex-cover-product-card][data-text-only="true"]'),
+      ).toHaveCount(8);
+
+      // View-product magnifier affordance returns on the product image.
+      await expect(
+        page.locator("[data-nex-cover-view-product]"),
       ).toHaveCount(8);
 
       // Card is wider than tall.
@@ -76,12 +88,14 @@ for (const vp of VIEWPORTS) {
         expect(firstBox.width).toBeGreaterThan(firstBox.height);
       }
 
-      // Light-gray background (#E5E7EB → rgb(229, 231, 235)) behind the
-      // product text column.
-      const firstBg = await firstCard.evaluate(
-        (el) => getComputedStyle(el).backgroundColor,
-      );
-      expect(firstBg).toBe("rgb(229, 231, 235)");
+      // Light-gray background (#E5E7EB → rgb(229, 231, 235)) sits
+      // behind the meta (text) column only · the card itself keeps its
+      // theme card background.
+      const firstMetaBg = await firstCard
+        .locator("[data-nex-cover-meta-column]")
+        .first()
+        .evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(firstMetaBg).toBe("rgb(229, 231, 235)");
 
       // Shop identity badge renders the uploaded header logo in place
       // of the typed shop name · the <img data-nex-cover-header-logo>
@@ -95,15 +109,9 @@ for (const vp of VIEWPORTS) {
       const badgeText = (await badge.textContent()) ?? "";
       expect(badgeText).not.toContain("X-Rated Tool Belts");
 
-      // Ping around the shop portrait exists and inherits the accent
-      // color (no hardcoded #22C55E green should be computed here).
-      const ping = page.locator("[data-nex-cover-ping]").first();
-      await expect(ping).toBeAttached();
-      const pingBorderColor = await ping.evaluate(
-        (el) => getComputedStyle(el).borderTopColor,
-      );
-      // --nex-accent on this shop is #F97316 (orange) → rgb(249, 115, 22).
-      expect(pingBorderColor).toBe("rgb(249, 115, 22)");
+      // Owner-sealed 2026-11-28 (third pass) · ping rings removed on
+      // this template · the portrait reads calmer behind the logo.
+      await expect(page.locator("[data-nex-cover-ping]")).toHaveCount(0);
 
       await testInfo.attach(`${vp.label}-page-1.png`, {
         body: await page.screenshot({ fullPage: true }),
@@ -115,6 +123,7 @@ for (const vp of VIEWPORTS) {
       await expect(pagerNav).toContainText(/2\s*\/\s*3/);
       await expect(page.locator("[data-nex-cover-product-card]")).toHaveCount(8);
       await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(0);
+      await expect(page.locator("[data-nex-cover-ping]")).toHaveCount(0);
 
       await testInfo.attach(`${vp.label}-page-2.png`, {
         body: await page.screenshot({ fullPage: true }),
@@ -126,6 +135,7 @@ for (const vp of VIEWPORTS) {
       await expect(pagerNav).toContainText(/3\s*\/\s*3/);
       await expect(page.locator("[data-nex-cover-product-card]")).toHaveCount(1);
       await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(0);
+      await expect(page.locator("[data-nex-cover-ping]")).toHaveCount(0);
 
       await testInfo.attach(`${vp.label}-page-3.png`, {
         body: await page.screenshot({ fullPage: true }),

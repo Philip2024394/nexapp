@@ -39,6 +39,9 @@ export function CoverCatalog({
   variant = "grid",
   brandStripUrl = null,
   textOnly = false,
+  hideTabs = false,
+  controlledActiveId,
+  onActiveIdChange,
 }: {
   sections: CoverSection[];
   products: CoverProduct[];
@@ -64,6 +67,16 @@ export function CoverCatalog({
    *  and paints a light-gray surface behind the text column. Template 15
    *  uses this to become a pure name/description/price row. */
   textOnly?: boolean;
+  /** Owner directive 2026-11-28 (third pass) · when true, suppress the
+   *  internal category select so the parent layout can render its own
+   *  category control (e.g. Template 15's orange-on-black dropdown)
+   *  and still drive the grid filter via controlledActiveId. */
+  hideTabs?: boolean;
+  /** Owner directive 2026-11-28 (third pass) · when present, the
+   *  active section filter is driven by the parent. Pair with
+   *  onActiveIdChange so tab + pagination state stay in sync. */
+  controlledActiveId?: string;
+  onActiveIdChange?: (id: string) => void;
 }): React.JSX.Element {
   const effectivePageSize =
     pageSize ??
@@ -101,7 +114,16 @@ export function CoverCatalog({
     return firstSectionId;
   }, [highlightProduct, firstSectionId]);
 
-  const [activeId, setActiveId] = React.useState<string>(initialActiveId);
+  const [uncontrolledActiveId, setUncontrolledActiveId] =
+    React.useState<string>(initialActiveId);
+  // Owner directive 2026-11-28 (third pass) · when the parent passes
+  // controlledActiveId, that value drives the filter and we forward
+  // every change up via onActiveIdChange. Keeps internal state as a
+  // fallback for untouched templates.
+  const isControlled = typeof controlledActiveId === "string";
+  const activeId = isControlled
+    ? (controlledActiveId as string)
+    : uncontrolledActiveId;
   const [page, setPage] = React.useState(0);
 
   // Reset to page 1 whenever the filter changes.
@@ -136,18 +158,25 @@ export function CoverCatalog({
     (nextId: string) => {
       // Toggle: tapping the highlighted tab clears the filter so the
       // buyer can see every product without needing an "All" tab.
-      setActiveId((prev) => (prev === nextId ? "" : nextId));
+      const resolved = activeId === nextId ? "" : nextId;
+      if (isControlled) {
+        onActiveIdChange?.(resolved);
+      } else {
+        setUncontrolledActiveId(resolved);
+      }
     },
-    [],
+    [activeId, isControlled, onActiveIdChange],
   );
 
   return (
     <div>
-      <CoverCategoryTabs
-        sections={sections}
-        activeId={activeId}
-        onSelect={handleTabSelect}
-      />
+      {!hideTabs && (
+        <CoverCategoryTabs
+          sections={sections}
+          activeId={activeId}
+          onSelect={handleTabSelect}
+        />
+      )}
       <CoverProductGrid
         products={visible}
         peerAccountId={peerAccountId}

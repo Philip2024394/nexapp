@@ -187,6 +187,11 @@ export interface CoverIdentityBadgeProps {
    *  nex_business.header_logo_url + a boolean toggle; until it lands
    *  this flows from the per-slug content gate in page.tsx. */
   headerLogoUrl?: string | null;
+  /** Owner directive 2026-11-28 (third pass) · suppress the ping rings
+   *  around the portrait on templates that want a calmer identity
+   *  silhouette. Default false keeps the ping rings on existing
+   *  templates. Template 15 (product_hero_landscape) passes true. */
+  hidePing?: boolean;
 }
 
 /**
@@ -257,9 +262,16 @@ export function CoverIdentityBadge(
           {/* Owner directive 2026-11-12 · shop portrait ALWAYS wears a
               green rim + green ping · supersedes the presence-gated
               model. Shop identity on NEX reads as "live and reachable"
-              as a brand standard, not as a conditional presence cue. */}
-          <span aria-hidden data-nex-cover-ping />
-          <span aria-hidden data-nex-cover-ping data-nex-cover-ping-2 />
+              as a brand standard, not as a conditional presence cue.
+              2026-11-28 (third pass) · ping suppressed on templates
+              that pass hidePing (Template 15 product_hero_landscape)
+              so the logo-first identity reads calmer. */}
+          {!props.hidePing && (
+            <>
+              <span aria-hidden data-nex-cover-ping />
+              <span aria-hidden data-nex-cover-ping data-nex-cover-ping-2 />
+            </>
+          )}
           <div
             aria-hidden
             style={{
@@ -380,6 +392,39 @@ export function CoverIdentityBadge(
               {props.name}
             </div>
           )}
+          {/* Owner directive 2026-11-28 (third pass) · when a header
+              logo renders (Template 15 · product_hero_landscape), the
+              "online now" + green dot sit DIRECTLY under the logo
+              image so presence reads as part of the identity header.
+              Templates without a header logo keep the legacy position
+              (after subtitle · see block below). */}
+          {props.headerLogoUrl && props.presenceOnline && (
+            <div
+              style={{
+                marginTop: 4,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 10,
+                fontWeight: 700,
+                color: "#22C55E",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#22C55E",
+                  boxShadow: "0 0 10px rgba(34,197,94,0.55)",
+                }}
+              />
+              online now
+            </div>
+          )}
           {/* Owner directive 2026-11-06 · location single-row under
               business name · pin glyph + city/country · same shape
               as the About Us overlay header so the two surfaces
@@ -431,7 +476,7 @@ export function CoverIdentityBadge(
           >
             {props.subtitle}
           </div>
-          {props.presenceOnline && (
+          {!props.headerLogoUrl && props.presenceOnline && (
             <div
               style={{
                 marginTop: 4,
@@ -781,12 +826,13 @@ export function CoverProductCard({
    *  AND NOT textOnly, render a vertical brand-strip image on the LEFT
    *  edge of the card (before the square product image). Null = no strip. */
   brandStripUrl?: string | null;
-  /** Owner directive 2026-11-28 (second pass) · when true AND variant
-   *  === "landscape", suppress the vertical brand strip AND the product
-   *  image column so the card is a pure text row (name · description ·
-   *  price) over a light-gray background. Template 15
-   *  (product_hero_landscape) uses this · other landscape layouts stay
-   *  unchanged. */
+  /** Owner directive 2026-11-28 (third pass) · when true AND variant
+   *  === "landscape": suppress the vertical brand strip, paint a
+   *  light-gray background BEHIND THE TEXT COLUMN only (not the whole
+   *  card), and keep the product image + view-product magnifier on
+   *  the LEFT. Template 15 (product_hero_landscape) uses this · other
+   *  landscape layouts stay unchanged. Earlier passes also hid the
+   *  product image · reverted by owner in the third pass. */
   textOnly?: boolean;
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
@@ -1049,13 +1095,10 @@ export function CoverProductCard({
           position: "relative",
           borderRadius: "var(--nex-card-radius)",
           border: "var(--nex-card-border)",
-          // Owner directive 2026-11-28 (second pass) · text-only landscape
-          // cards paint a light-gray surface behind the product text.
-          // Everything else keeps the themed glassy card background.
-          background: isLandscape && textOnly ? "#E5E7EB" : "var(--nex-card-bg)",
-          color: isLandscape && textOnly ? "#111827" : "var(--nex-text)",
-          backdropFilter: isLandscape && textOnly ? undefined : "blur(14px) saturate(1.1)",
-          WebkitBackdropFilter: isLandscape && textOnly ? undefined : "blur(14px) saturate(1.1)",
+          background: "var(--nex-card-bg)",
+          color: "var(--nex-text)",
+          backdropFilter: "blur(14px) saturate(1.1)",
+          WebkitBackdropFilter: "blur(14px) saturate(1.1)",
           overflow: "hidden",
           textDecoration: "none",
           boxShadow: "0 8px 22px rgba(0,0,0,0.4)",
@@ -1080,7 +1123,6 @@ export function CoverProductCard({
             }}
           />
         ) : null}
-        {isLandscape && textOnly ? null : (
         <div
           aria-hidden={!!product.image_url}
           role={product.image_url ? undefined : "img"}
@@ -1244,7 +1286,6 @@ export function CoverProductCard({
             </svg>
           </span>
         </div>
-        )}
         {/* Founder direction 2026-09-30 (revised) · card meta stack ·
               name → 2-line description → price + round magnifier.
             The magnifier signals tap-to-open without a text pill
@@ -1252,6 +1293,7 @@ export function CoverProductCard({
             on narrow cards with long prices). Whole card is still the
             <Link>; the magnifier is the visible affordance. */}
         <div
+          data-nex-cover-meta-column
           style={{
             padding: isLandscape ? "10px 12px" : "10px 12px 12px",
             display: "grid",
@@ -1259,6 +1301,11 @@ export function CoverProductCard({
             minWidth: 0,
             flex: isLandscape ? "1 1 auto" : undefined,
             alignContent: isLandscape ? "center" : undefined,
+            // Owner directive 2026-11-28 (third pass) · light-gray
+            // surface behind the text column ONLY · the product image
+            // on the left keeps its own styling.
+            background: isLandscape && textOnly ? "#E5E7EB" : undefined,
+            color: isLandscape && textOnly ? "#111827" : undefined,
           }}
         >
           <div

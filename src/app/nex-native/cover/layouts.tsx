@@ -732,6 +732,10 @@ export function LayoutProductHeroLandscape({
   themeId,
 }: LayoutProps): React.JSX.Element {
   const t = terminologyForContent(content);
+  // Owner directive 2026-11-28 (third pass) · category dropdown drives
+  // the catalog filter via controlled props so the parent owns the
+  // active section id. Empty string = no filter (show every product).
+  const [categoryId, setCategoryId] = React.useState<string>("");
   return (
     <>
       <CoverPage>
@@ -745,6 +749,7 @@ export function LayoutProductHeroLandscape({
           countryCode={content.countryCode ?? null}
           location={content.location}
           headerLogoUrl={content.headerLogoUrl ?? null}
+          hidePing
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -769,6 +774,14 @@ export function LayoutProductHeroLandscape({
           >
             Products
           </div>
+          {/* Owner directive 2026-11-28 (third pass) · orange text +
+              chevron arrow on a BLACK dropdown panel. The <select>
+              options inherit the black background from the control
+              (modern Chromium honours background-color on <option>
+              within the popup; Safari falls back to system styling,
+              which still shows the orange text on a light panel · we
+              accept that fallback on iOS). Lists CATEGORIES, not
+              products · parent drives the filter via categoryId. */}
           <div
             data-nex-cover-product-select
             style={{
@@ -777,32 +790,24 @@ export function LayoutProductHeroLandscape({
               padding: "0 12px",
               marginBottom: 14,
               borderRadius: 10,
-              border: "1px solid var(--nex-border, rgba(139,169,209,0.22))",
-              background: "var(--nex-panel, rgba(6,15,28,0.72))",
+              border: "1px solid var(--nex-accent, #F97316)",
+              background: "#000000",
               height: 40,
             }}
           >
             <select
-              aria-label="Select product"
-              defaultValue=""
-              onChange={(e) => {
-                const pid = e.currentTarget.value;
-                if (!pid) return;
-                const target = document.querySelector<HTMLElement>(
-                  `[data-nex-cover-product-card][data-product-id="${CSS.escape(pid)}"]`,
-                );
-                if (target) {
-                  target.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-              }}
+              aria-label="Select category"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.currentTarget.value)}
               style={{
                 flex: 1,
                 height: "100%",
-                background: "transparent",
+                background: "#000000",
                 border: "none",
                 outline: "none",
-                color: "var(--nex-text, #F2F5F8)",
+                color: "var(--nex-accent, #F97316)",
                 fontSize: 14,
+                fontWeight: 700,
                 fontFamily: "inherit",
                 appearance: "none",
                 WebkitAppearance: "none",
@@ -810,22 +815,27 @@ export function LayoutProductHeroLandscape({
                 cursor: "pointer",
               }}
             >
-              <option value="" disabled>
-                Select product
+              <option value="" style={{ background: "#000000", color: "var(--nex-accent, #F97316)" }}>
+                All categories
               </option>
-              {content.products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              {content.sections.map((s) => (
+                <option
+                  key={s.id}
+                  value={s.id}
+                  style={{ background: "#000000", color: "var(--nex-accent, #F97316)" }}
+                >
+                  {s.name}
                 </option>
               ))}
             </select>
             <span
               aria-hidden
               style={{
-                fontSize: 12,
-                color: "var(--nex-text-dim, #7D9BC0)",
+                fontSize: 14,
+                color: "var(--nex-accent, #F97316)",
                 marginLeft: 8,
                 pointerEvents: "none",
+                lineHeight: 1,
               }}
             >
               ▾
@@ -837,6 +847,9 @@ export function LayoutProductHeroLandscape({
             peerAccountId={content.ownerAccountId}
             variant="landscape"
             textOnly
+            hideTabs
+            controlledActiveId={categoryId}
+            onActiveIdChange={setCategoryId}
           />
         </div>
         {content.infoPages?.delivery_details && (
