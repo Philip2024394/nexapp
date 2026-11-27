@@ -7,7 +7,51 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 cycle 3 (4-agent parallel blocker-removal hunt · 1 defensive dead-href repaired + committed + pushed · MarketplaceHeader orphan surfaced · Community dead-link cluster surfaced (needs owner decision) · autonomous work exhausted)
+## Current state · 2026-11-27 cycle 4 (Founder scope-simplification seal · three-pillar NEX launch · 8 non-pillar emitters hidden · pillar routes + infrastructure preserved · typecheck-clean · pending commit)
+
+**Delta from cycle 3 below.** Owner directive 2026-11-27: *"NEX launches with EXACTLY three pillars — NEX Chat · NEX Shop · Chat Themes. Everything else is ON HOLD."* Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken. No `main` push. No force-push.
+
+- **Scope:** audit entire app, hide customer-facing entry points for non-pillar products, preserve underlying infrastructure (routes, migrations, DB tables, shared services, HQ/admin access), do not delete, do not weaken security.
+- **Discovery:** 4 parallel Explore agents produced inventories across drawer/header entry points · home + onboarding emitters · peer-chat composer attachment picker · in-page cross-pillar links. Agent-A Directory misclassification (`/nex-native/directory` **IS** the Shop-pillar discovery surface per founder §1.B) caught + reversed. Agent-C peer-composer "Call" button `/call-centre` destination flagged as AMBIGUOUS and deferred (too invasive to tear Chat UI without explicit yes/no).
+- **Hide-patches applied (8 files · pattern `{false && (...)}` wrap OR filter Set OR commented-out array entries · never delete · minimised surface area for future re-exposure):**
+  - `src/app/nex-native/home/_first-contact-panel.tsx:273-280` · Community ActionCard wrapped `{false && (...)}` with scope-seal rationale.
+  - `src/app/nex-native/contacts/_contacts-list.tsx:409` · Groups-tab `<CommunityNoticeCard />` suppressed.
+  - `src/app/nex-native/chat/peer/[accountId]/_composer.tsx:1419-1424` · Composer "Location" ModalOption (points to non-existent `/community/discover`) suppressed.
+  - `src/components/nex-native/control-drawer/control-drawer-client.tsx:288-304, 1092-1101, 1126-1134` · New `SCOPE_SIMPLIFICATION_HIDDEN_KEYS: ReadonlySet<string> = new Set(["wholesale", "nex-store", "buying-guides"])` applied at `YOUR_NEX_ROWS` + `PREFERENCES_ROWS` render sites, combined with existing discovery-on-live filter.
+  - `src/app/nex-native/contacts/_contacts-plus-drawer.tsx` · MENU Vault + Live rows commented out.
+  - `src/app/nex-native/store/page.tsx` · STORE_ITEMS Vault + Help items commented out (array renders only Chat themes + Shop themes).
+  - `src/app/nex-native/settings/_sections.ts:298-311` · Vault row `comingSoon:false → true` (row remains visible as disabled teaser · existing section pattern).
+  - `src/app/nex-native/settings/page.tsx` · `heroTiles` array emptied by commenting out Emergency Help + Community Noticeboard; `{heroTiles.length > 0 && (...)}` render guard added to prevent invalid `repeat(0, …)` CSS.
+- **Infrastructure preserved (per founder §4):** Vault routes under `/nex-native/vault/*` still exist · chat-peer `vault-entry-service.isConversationVaulted` + `useVaultSession` integration untouched (vaulted-conversation gating preserved) · Emergency Help sealed splash SOS decision screen (2026-11-23) remains sole authorised SOS entry point · HQ admin routes untouched · migration-372 community/affiliate tables not dropped · `/nex-generated/buying-guides`, `/nex-native/manage/wholesale`, `/nex-native/store` routes all still respond.
+- **Verification (Rule 8):** scoped `npx tsc --noEmit | grep -E` across the 8 edited files returns **zero errors** (one unrelated hit at `src/lib/nex/brains/_composer.ts:769` is pre-existing legacy-tree residue per CLAUDE.md "Legacy residue" note · not from edits). Status BUILT + WIRED + TYPECHECK-CLEAN. VERIFIED promotion requires drawer-row / mobile-pass Playwright run — journey-drawer-rows specs navigate directly to routes (not drawer-row discovery) so direct routes still green; render-filter visual assertions NOT EXECUTED this cycle.
+- **AMBIGUOUS (pending owner decision):** peer-chat composer Call button at `_composer.tsx:1360` → `/call-centre`. Is Call-Centre a Chat pillar sub-feature or a non-pillar HOLD surface?
+
+### Files changed this cycle (standing-policy commit candidates)
+- `src/app/nex-native/chat/peer/[accountId]/_composer.tsx` (MODIFIED · Community Location hidden)
+- `src/app/nex-native/contacts/_contacts-list.tsx` (MODIFIED · CommunityNoticeCard hidden)
+- `src/app/nex-native/contacts/_contacts-plus-drawer.tsx` (MODIFIED · Vault + Live rows hidden)
+- `src/app/nex-native/home/_first-contact-panel.tsx` (MODIFIED · Community ActionCard hidden)
+- `src/app/nex-native/settings/_sections.ts` (MODIFIED · Vault row → comingSoon: true)
+- `src/app/nex-native/settings/page.tsx` (MODIFIED · Both hero tiles hidden + render guard)
+- `src/app/nex-native/store/page.tsx` (MODIFIED · Vault + Help items hidden)
+- `src/components/nex-native/control-drawer/control-drawer-client.tsx` (MODIFIED · SCOPE_SIMPLIFICATION_HIDDEN_KEYS filter)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (cycle-4 decisions-log entry)
+- `docs/engineering/session-handoff.md` (this block)
+
+Excluded (not scope-simplification scope · same exclusion rationale as prior cycles): `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (incidental audit-test noise).
+
+### Next safe action (no approval needed · continue inside Rule 7 + Founder scope-seal)
+- Request owner decision on the AMBIGUOUS composer Call button `/call-centre` destination before touching that UI.
+- Run drawer-row Playwright specs under `tests/e2e/journey-drawer-rows-*-ie.spec.ts` once dev server is reclaimed to promote cycle-4 hide-patches BUILT+WIRED → VERIFIED.
+- Continue finish-the-application queue on the three pillars (Chat / Shop / Themes).
+
+### Next action requiring owner authorisation (ONE phrase at a time)
+- Unchanged from cycle-3 — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+- Founder-decision follow-up: AMBIGUOUS composer Call button `/call-centre` — is this a Chat pillar sub-feature or a non-pillar HOLD surface?
+
+---
+
+## Previous state · 2026-11-27 cycle 3 (4-agent parallel blocker-removal hunt · 1 defensive dead-href repaired + committed + pushed · MarketplaceHeader orphan surfaced · Community dead-link cluster surfaced (needs owner decision) · autonomous work exhausted)
 
 **Delta from cycle 2 below.** Owner directive: *"continue to remove blockers and push proven files, assign agents."* Under standing 2026-11-27 source-control policy on `release-audit-v1-2026-11-14`. Dispatched 4 parallel Explore agents (dead-link hunt · hydration-boundary audit · unapplied-authority defect sweep · typecheck residue recheck).
 

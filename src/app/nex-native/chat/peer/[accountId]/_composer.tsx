@@ -1416,12 +1416,23 @@ function MediaModal({
             onClose={onClose}
             href="/nex-native/contacts"
           />
-          <ModalOption
-            icon={<LocationPinIcon size={26} />}
-            label="Location"
-            onClose={onClose}
-            href="/nex-native/community/discover"
-          />
+          {/* 2026-11-27 · Founder scope-simplification seal · NEX launches
+              with three pillars: Chat · Shop · Themes. The attachment
+              picker's "Location" option previously pointed at
+              `/nex-native/community/discover` — a route that does not exist
+              (no `page.tsx`) and whose destination surface is part of the
+              on-hold Community product. The ModalOption is suppressed from
+              the composer attachment sheet. When a stand-alone Location
+              feature is approved (non-Community), replace this guard with a
+              working destination; do not re-expose the current dead href. */}
+          {false && (
+            <ModalOption
+              icon={<LocationPinIcon size={26} />}
+              label="Location"
+              onClose={onClose}
+              href="/nex-native/community/discover"
+            />
+          )}
           <ModalOption
             icon={<PaletteIcon size={26} />}
             label="Themes"

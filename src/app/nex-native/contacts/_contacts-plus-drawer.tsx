@@ -55,13 +55,24 @@ interface MenuRow {
 // 2026-11-17 · the "Notifications" row dropped its dead link to
 // /nex-native/settings/notifications; it now fires the canonical LEFT
 // notifications drawer via window CustomEvent (§3 Settings Correction).
+// 2026-11-27 · Founder scope-simplification seal · NEX launches with
+// three pillars: Chat · Shop · Themes. The Vault row and the Live
+// Commerce row below are suppressed from the "+" drawer. Underlying
+// routes (`/nex-native/vault/**`, `/nex-native/live-commerce/**`),
+// migrations, DB tables, HQ admin surfaces, and Chat↔Vault shared
+// libraries (vault-entry-service · useVaultSession, both still used
+// by peer-chat to gate vaulted conversations) are preserved unchanged.
+// Delete the `false &&` guards to re-expose when the founder authorises
+// Vault or Live Commerce launch.
 const MENU: readonly MenuRow[] = [
   { href: "/nex-native/settings/profile/edit", icon: "👤", label: "Profile", sub: "Edit name · country · interests · socials" },
   { href: "/nex-native/chat-themes-library", icon: "🎨", label: "Chat themes", sub: "Wallpapers · bubbles · intros" },
   { href: "/nex-native/settings/privacy", icon: "🔒", label: "Privacy", sub: "Presence · blocked · read receipts" },
   { action: "open-notifications-drawer", icon: "🔔", label: "Notifications", sub: "Chat · community · live" },
-  { href: "/nex-native/vault", icon: "💾", label: "Vault", sub: "Secure storage · 5 GB" },
-  { href: "/nex-native/live-commerce/go-live", icon: "📺", label: "Live", sub: "Broadcast to your contacts" },
+  // Vault row suppressed 2026-11-27 — restore here when founder authorises Vault launch.
+  // { href: "/nex-native/vault", icon: "💾", label: "Vault", sub: "Secure storage · 5 GB" },
+  // Live row suppressed 2026-11-27 — Live Commerce on hold per founder scope seal.
+  // { href: "/nex-native/live-commerce/go-live", icon: "📺", label: "Live", sub: "Broadcast to your contacts" },
   { href: "/nex-native/settings/tier", icon: "💳", label: "Package & billing", sub: "Your plan · trial · invoices" },
   { href: "/nex-native/help", icon: "💬", label: "Help · NEX1", sub: "Chat with the NEX team" },
 ];

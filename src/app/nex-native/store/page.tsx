@@ -64,23 +64,35 @@ interface StoreItem {
 // The previous catalogue (Theme Packs, Shop Extras, Extra Vault) was
 // replaced per owner directive · the four above are the current shipping
 // set and "Help" was added so safety help is reachable from the same hub.
+// 2026-11-27 · Founder scope-simplification seal · NEX launches with
+// three pillars: Chat · Shop · Themes. The Vault and Help (Emergency
+// Help) store items are suppressed from the /store page's catalogue
+// rendering (filter below). Items remain in the array as commented
+// skeletons so that re-exposure is a two-line uncomment, not a rewrite.
+// Routes, migrations, DB tables and the sealed splash SOS decision
+// screen are preserved; this only removes the ordinary buyer entry
+// point via /store.
 const STORE_ITEMS: ReadonlyArray<StoreItem> = [
-  {
-    id: "vault",
-    name: "Vault",
-    glyph: "🔐",
-    priceLabel: "Included with NEX Shop",
-    href: "/nex-native/vault",
-    blurb: "Private encrypted storage · included with your Shop package.",
-  },
-  {
-    id: "help",
-    name: "Help",
-    glyph: "🚨",
-    priceLabel: "Free",
-    href: "/nex-native/emergency-help",
-    blurb: "Select your trusted contacts to alert when you need help.",
-  },
+  // Vault item suppressed 2026-11-27 — Vault launch awaits founder authorisation.
+  // {
+  //   id: "vault",
+  //   name: "Vault",
+  //   glyph: "🔐",
+  //   priceLabel: "Included with NEX Shop",
+  //   href: "/nex-native/vault",
+  //   blurb: "Private encrypted storage · included with your Shop package.",
+  // },
+  // Help / Emergency Help store item suppressed 2026-11-27 — the sealed
+  // splash SOS decision screen (2026-11-23) remains the sole authorised
+  // entry point to `/nex-native/emergency-help`.
+  // {
+  //   id: "help",
+  //   name: "Help",
+  //   glyph: "🚨",
+  //   priceLabel: "Free",
+  //   href: "/nex-native/emergency-help",
+  //   blurb: "Select your trusted contacts to alert when you need help.",
+  // },
   {
     id: "chat-themes",
     name: "Chat themes",

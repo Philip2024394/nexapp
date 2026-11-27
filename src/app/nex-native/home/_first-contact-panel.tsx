@@ -270,14 +270,23 @@ export function FirstContactPanel(
           tagline="Your first conversation. Reply to NEX1 any time you have a question."
           accent={accentHex}
         />
-        <ActionCard
-          href="/nex-native/community"
-          dataKey="community"
-          eyebrow="Explore"
-          title="NEX Community"
-          tagline="Discover what's happening in your area."
-          accent={NEX.orange}
-        />
+        {/* 2026-11-27 · Founder scope-simplification seal · NEX launches with
+            three pillars: Chat · Shop · Themes. Community is ON HOLD. The
+            NEX Community ActionCard is suppressed from the signed-in home
+            first-contact panel. Underlying routes + migrations + DB tables +
+            HQ admin surface (`/hq/communities`) preserved unchanged. When
+            the founder authorises Community launch, delete the `false &&`
+            guard to re-expose the card. */}
+        {false && (
+          <ActionCard
+            href="/nex-native/community"
+            dataKey="community"
+            eyebrow="Explore"
+            title="NEX Community"
+            tagline="Discover what's happening in your area."
+            accent={NEX.orange}
+          />
+        )}
         <ActionCard
           href="/nex-native/chat/first-visit"
           dataKey="themes"

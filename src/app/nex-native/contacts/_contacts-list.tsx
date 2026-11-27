@@ -405,8 +405,15 @@ function GroupsPlaceholderGrid({
       <MyPrivateGroupsBadge viewerNexHandle={viewerNexHandle} />
       {/* Owner directive 2026-10-23 · "community notice should be the
           first card on groups page always" · NEX Community sits
-          above viewer's private groups + the illustrative mock groups. */}
-      <CommunityNoticeCard />
+          above viewer's private groups + the illustrative mock groups.
+          2026-11-27 · Founder scope-simplification seal · NEX launches
+          with three pillars: Chat · Shop · Themes. Community is ON HOLD.
+          The NEX Community notice card is suppressed from the contacts /
+          groups tab. Underlying routes (`/nex-native/community/select`,
+          `/notices/[id]`), migrations, DB tables, HQ admin surface, and
+          the `CommunityNoticeCard` component itself are preserved. Delete
+          the `false &&` guard to re-expose when Community launches. */}
+      {false && <CommunityNoticeCard />}
       {/* Viewer's private groups · rendered as GroupCards. */}
       <MyPrivateGroupsList
         viewerDisplayName={viewerDisplayName}

@@ -300,7 +300,14 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         emoji: "🔐",
         title: "Vault",
         subtitle: "Your private space for chats and files.",
-        comingSoon: false,
+        // 2026-11-27 · Founder scope-simplification seal · Vault is ON HOLD
+        // outside the three launch pillars (Chat · Shop · Themes). The row
+        // is flipped to `comingSoon: true` so the Settings landing shows it
+        // as a disabled teaser rather than a live entry point. The route
+        // (`/nex-native/vault`), migrations, DB tables, Chat↔Vault shared
+        // libraries, and HQ admin surface are preserved. Flip back to
+        // `comingSoon: false` to re-expose when Vault launch is authorised.
+        comingSoon: true,
       },
       {
         // 2026-10-15 · R14 Stage 6 graduation. Replaces the ComingSoon

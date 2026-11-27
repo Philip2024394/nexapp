@@ -142,19 +142,29 @@ export default async function SettingsIndex({
   // isFamilySafetyEnabled() + the Family Safe entry are retired from
   // the settings landing. Service library and DB tables kept untouched
   // per owner-sealed "UI + nav only" removal scope.
+  // 2026-11-27 · Founder scope-simplification seal · NEX launches with
+  // three pillars: Chat · Shop · Themes. Emergency Help and Community
+  // Noticeboard hero tiles are suppressed from the Settings landing.
+  // The sealed 2026-11-23 splash SOS decision screen remains the sole
+  // authorised entry point to `/nex-native/emergency-help`; the Community
+  // route, migrations, DB tables and HQ admin surface are preserved.
+  // Restore entries to the array to re-expose when the founder authorises
+  // Emergency Help / Community launch outside the splash SOS flow.
   const heroTiles: HeroTile[] = [
-    {
-      href: "/nex-native/emergency-help",
-      icon: "🚨",
-      titleKey: "settings.hero.emergencyHelp",
-      tone: "danger",
-    },
-    {
-      href: "/nex-native/community",
-      icon: "🏘",
-      titleKey: "settings.hero.community",
-      tone: "orange",
-    },
+    // Emergency Help tile suppressed 2026-11-27 — splash SOS remains sole entry.
+    // {
+    //   href: "/nex-native/emergency-help",
+    //   icon: "🚨",
+    //   titleKey: "settings.hero.emergencyHelp",
+    //   tone: "danger",
+    // },
+    // Community Noticeboard tile suppressed 2026-11-27 — Community on hold.
+    // {
+    //   href: "/nex-native/community",
+    //   icon: "🏘",
+    //   titleKey: "settings.hero.community",
+    //   tone: "orange",
+    // },
   ];
 
   // Phase 0 render-time transform: a user who has already joined the
@@ -312,20 +322,30 @@ export default async function SettingsIndex({
               )}
             </p>
 
-            <section
-              aria-label={t("settings.hero.ariaLabel")}
-              data-nex-settings-hero="true"
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${heroTiles.length}, minmax(0, 1fr))`,
-                gap: 10,
-                marginBottom: 22,
-              }}
-            >
-              {heroTiles.map((tile) => (
-                <HeroTileCard key={tile.href} tile={tile} t={t} />
-              ))}
-            </section>
+            {/* 2026-11-27 · Founder scope-simplification seal · the hero
+                tile section only renders when at least one tile is present.
+                Both Emergency Help and Community Noticeboard hero tiles
+                are suppressed above for this launch, so the section
+                collapses to nothing (preserving layout spacing via the
+                untouched margin on the paragraph above + the theme-share
+                row below). `repeat(0, …)` is invalid CSS — this guard
+                prevents it. */}
+            {heroTiles.length > 0 && (
+              <section
+                aria-label={t("settings.hero.ariaLabel")}
+                data-nex-settings-hero="true"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${heroTiles.length}, minmax(0, 1fr))`,
+                  gap: 10,
+                  marginBottom: 22,
+                }}
+              >
+                {heroTiles.map((tile) => (
+                  <HeroTileCard key={tile.href} tile={tile} t={t} />
+                ))}
+              </section>
+            )}
 
             {/* Owner directive 2026-11-12 · landscape master row for
                 controlling whether your contacts see your chat theme.

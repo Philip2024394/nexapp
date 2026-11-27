@@ -287,6 +287,22 @@ const CREATE_ROWS: ReadonlyArray<MenuRow> = [
   },
 ];
 
+// 2026-11-27 · Founder scope-simplification seal · NEX launches with
+// three pillars: Chat · Shop · Themes. Drawer rows that promote
+// on-hold products are filtered out of ordinary customer-facing drawer
+// presentation. The row definitions below remain in-source with their
+// historical comments so that re-exposing a row is a single-line
+// deletion from this Set (not a rewrite of the array). Underlying
+// routes + migrations + DB tables + HQ admin surfaces (e.g.
+// `/nex-native/hq/communities`, `/nex-native/hq/members/vault`) are
+// preserved unchanged. A user with a direct URL can still reach the
+// destination; this only removes the drawer-level entry point.
+const SCOPE_SIMPLIFICATION_HIDDEN_KEYS: ReadonlySet<string> = new Set([
+  "wholesale", // owner directive 2026-11-18 · wholesale catalogue on hold
+  "nex-store", // owner directive 2026-11-07 · NEX Store (vault + extras) on hold
+  "buying-guides", // owner directive 2026-11-18 · independent buyer research on hold
+]);
+
 const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   // Owner directive 2026-11-12 · "Chats and contacts" promoted to the
   // top of the drawer so it's the first link on every surface · lets
@@ -1091,8 +1107,14 @@ function DrawerBody({
           // model cost · one row omitted, section intact.
           const base =
             currentSurface === "live"
-              ? YOUR_NEX_ROWS.filter((r) => r.key !== "discovery")
-              : YOUR_NEX_ROWS;
+              ? YOUR_NEX_ROWS.filter(
+                  (r) =>
+                    r.key !== "discovery" &&
+                    !SCOPE_SIMPLIFICATION_HIDDEN_KEYS.has(r.key),
+                )
+              : YOUR_NEX_ROWS.filter(
+                  (r) => !SCOPE_SIMPLIFICATION_HIDDEN_KEYS.has(r.key),
+                );
           if (!peerSharedMediaHref) return base;
           return [
             // Owner directive 2026-11-05 iter 8 · Shared media row
@@ -1126,7 +1148,9 @@ function DrawerBody({
       <SectionGroup
         title="NEX SUPPORT"
         icon="⚙️"
-        rows={PREFERENCES_ROWS}
+        rows={PREFERENCES_ROWS.filter(
+          (r) => !SCOPE_SIMPLIFICATION_HIDDEN_KEYS.has(r.key),
+        )}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
         closeDrawer={closeDrawer}
