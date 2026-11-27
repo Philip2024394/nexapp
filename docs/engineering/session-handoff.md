@@ -7,6 +7,20 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 shop-cover polish (Template 15 X-Rated Tool Belts · currency switch · product gallery · side drawer)
+
+Owner directive 2026-11-28 (verbatim, trailing): *"commit and push github"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No prod. No migration. No `main` push. No force-push. No secrets.
+
+- **Remote HEAD now:** `dfc814d0` (verified via `git fetch origin release-audit-v1-2026-11-14` · remote and local SHAs match).
+- **Commits pushed (2):**
+  - `02de9c0b feat(shop-cover): Template 15 editorial polish · currency switch · product gallery` — editorial product card variant, color swatches, orange chevron pill, cart-left-of-burger, currency switch popover (`flagcdn` PNGs) moved into burger as a dedicated row, burger dropdown → right-edge slide-in drawer with running edge light + Warm Ivory `#FFF9E9` background + orange `Close` pill, product page main image loses container chrome (matches editorial card) + always 3 image thumb slots + 1 video slot, new `src/lib/nex-native/shop-locale/` (ShopLocaleProvider + currency data), new `src/app/api/nex-native/ip-locale/route.ts` (cf-ipcountry → default currency, honest-null), new product PNG `public/nex-native/brand/x-rated-tool-belts-product-1.png`. 10 files changed.
+  - `dfc814d0 chore: incidental working-tree drift` — `cover/CoverCatalog.tsx` cosmetic ternary reformat (no behaviour change) + two WET_RUN cycle entries in `scripts/.phase12-audit-test/.../command_audit.jsonl`. 2 files changed.
+- **Tests:** no new tests run this cycle (UI polish only, pre-commit hooks green on all 12 files).
+- **Exclusions:** none — entire working tree classified and committed.
+- **Next cycle picks up from:** continuation of cycle-8 next-safe-action list (A3 impact-assessment doc · HQ merchant multi-device investigation doc · finish-the-application queue on the three pillars).
+
+---
+
 ## Current state · 2026-11-27 cycle 8 (Three-mock-merchant shop-link flow 99901/99902/99903 confirmed end-to-end · new regression spec 3/3 · idempotent sandbox seed · pending commit)
 
 **Delta from cycle 7 (same day) below.** Owner directive 2026-11-27 (verbatim): *"continue to fix the remaining blockers and confirm each shop link for 99901 - 99902 - 99903 fully flow accounts"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken. No `main` push. No force-push.
