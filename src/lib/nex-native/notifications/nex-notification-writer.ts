@@ -17,10 +17,19 @@
 //     non-sensitive catalogue data (seller owns, buyer sees).
 //
 // Concurrency model (honest · do not overclaim):
-//   · ON CONFLICT (recipient_account_id, source_ref) DO UPDATE is the
-//     atomic exactly-once-created guarantee. Two concurrent writers
-//     targeting the same (recipient, source_ref) resolve to a single
-//     row. The second one bumps created_at + resets read_at to NULL.
+//   · The partial unique index
+//       nex_notification_recipient_source_ref_uniq
+//         ON (recipient_account_id, source_ref) WHERE source_ref IS NOT NULL
+//     is the DB-level dedup authority. Two concurrent INSERTs for the
+//     same (recipient, source_ref) resolve to a single row via the
+//     usual uniqueness violation · the second one lands as SQLSTATE
+//     23505 which this writer catches and routes to the UPDATE path.
+//   · Because PostgreSQL does not accept partial unique indexes as
+//     ON CONFLICT (cols) targets via plain supabase-js upsert (see
+//     writer doc below), we implement SELECT→UPDATE / INSERT-with-
+//     23505-fallback instead. This is slightly less atomic than a
+//     single UPSERT but is correct under concurrency: the final
+//     state is exactly one row with the latest content.
 //   · We never claim exactly-once push dispatch. That lives upstream
 //     at the provider-event-id dedup layer (see Stripe/PayPal webhook
 //     notes).
@@ -122,16 +131,40 @@ function clamp(s: string, max: number): string {
 }
 
 /**
- * Core UPSERT writer. Always INSERT-or-UPDATE keyed on
- * (recipient_account_id, source_ref). On conflict:
- *   · created_at refreshed to now() so the row jumps to the top of
- *     the recipient-created-DESC index.
- *   · read_at reset to NULL so a group that was previously read
- *     becomes unread again on new activity.
- *   · title/subtitle/href refreshed so the drawer shows the latest
- *     event summary for the group.
- *   · sender_account_id refreshed so the drawer avatar reflects the
- *     most-recent sender in a group.
+ * Core writer. INSERT-or-UPDATE keyed on (recipient_account_id,
+ * source_ref). Semantics:
+ *   · preserve_read_state · first-write wins · on duplicate we DO
+ *     NOTHING (late webhook retry must never revive a read event).
+ *   · refresh_unread · on duplicate UPDATE: bump created_at,
+ *     reset read_at to NULL, refresh title/subtitle/href so the
+ *     drawer shows the latest event summary + most-recent sender.
+ *
+ * Implementation note (sealed 2026-11-27 · defect fix): the
+ * migration 366 unique is a PARTIAL index
+ *   CREATE UNIQUE INDEX nex_notification_recipient_source_ref_uniq
+ *     ON nex_notification (recipient_account_id, source_ref)
+ *     WHERE source_ref IS NOT NULL
+ * PostgreSQL does NOT accept a partial unique index as an
+ * ON CONFLICT (cols) target unless the query spells out the
+ * predicate (ON CONFLICT (cols) WHERE source_ref IS NOT NULL), which
+ * supabase-js's upsert API cannot express · it fails with
+ * 42P10 "there is no unique or exclusion constraint matching the
+ * ON CONFLICT specification". The previous UPSERT-based writer
+ * therefore returned `ok: false, skipped_reason: "db_error"` for
+ * every call with a non-null source_ref · meaning the entire
+ * durable-notification system (seller paid-order rows, contact-
+ * request, peer-message, product-inquiry, buyer payment-confirmed)
+ * silently failed to persist since migration 366 was applied.
+ *
+ * This rewrite uses plain INSERT with explicit 23505 handling:
+ *   · INSERT first · if `error.code === "23505"` we know the row
+ *     already exists.
+ *   · For preserve_read_state, 23505 → ok=true,was_insert=false.
+ *   · For refresh_unread, 23505 → SELECT the existing id then
+ *     UPDATE to bump created_at + reset read_at + refresh content.
+ * A SELECT→UPDATE pre-pass for refresh_unread avoids two round
+ * trips in the common replay case. The race between SELECT and
+ * INSERT is recovered via the same 23505 catch.
  *
  * Never throws · always returns a result. Writer calls are made from
  * fire-and-forget blocks inside producers; a durable-write failure
@@ -187,67 +220,23 @@ export async function writeNotification(
   const mode: NotificationConflictMode = input.on_conflict ?? "refresh_unread";
 
   if (mode === "preserve_read_state") {
-    // Immutable event identity (order_paid). First-write wins; on
-    // conflict we DO NOTHING so a late webhook retry never revives a
-    // read row. `ignoreDuplicates: true` maps to ON CONFLICT DO NOTHING.
-    const { data, error } = await nexSupabaseAdmin
+    const ins = await nexSupabaseAdmin
       .from("nex_notification")
-      .upsert(row, {
-        onConflict: "recipient_account_id,source_ref",
-        ignoreDuplicates: true,
-      })
-      .select("id");
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[nex-notification-writer] upsert (preserve) failed:",
-        error.message,
-        "source=",
-        input.source,
-        "source_ref=",
-        input.source_ref,
-      );
-      return {
-        ok: false,
-        id: null,
-        was_insert: false,
-        skipped_reason: "db_error",
-        error_message: error.message,
-      };
+      .insert(row)
+      .select("id")
+      .single();
+    if (!ins.error) {
+      return { ok: true, id: (ins.data as { id: string }).id, was_insert: true };
     }
-    // On conflict-ignore, Supabase returns an empty array. We treat
-    // that as "row already exists" · caller gets ok=true,
-    // was_insert=false so it can distinguish first-write from replay.
-    const arr = (data as Array<{ id: string }> | null) ?? [];
-    if (arr.length === 0) {
+    if ((ins.error as { code?: string }).code === "23505") {
+      // Row already exists · preserve_read_state means a replay
+      // must NOT revive it. Report ok=true,was_insert=false.
       return { ok: true, id: null, was_insert: false };
     }
-    return { ok: true, id: arr[0].id, was_insert: true };
-  }
-
-  // Default: grouped-activity row (message / inquiry / contact-*).
-  // UPSERT keyed on (recipient_account_id, source_ref). Resetting
-  // read_at + bumping created_at on conflict is the atomic "new
-  // activity → group unread again" guarantee.
-  const { data, error } = await nexSupabaseAdmin
-    .from("nex_notification")
-    .upsert(
-      { ...row, read_at: null },
-      {
-        onConflict: "recipient_account_id,source_ref",
-        // Supabase-js currently generates ON CONFLICT DO UPDATE SET …
-        // for every provided column; passing read_at:null + the row
-        // itself guarantees the reset + refresh semantics we want.
-        ignoreDuplicates: false,
-      },
-    )
-    .select("id")
-    .single();
-  if (error) {
     // eslint-disable-next-line no-console
     console.warn(
-      "[nex-notification-writer] upsert failed:",
-      error.message,
+      "[nex-notification-writer] insert (preserve) failed:",
+      ins.error.message,
       "source=",
       input.source,
       "source_ref=",
@@ -258,10 +247,137 @@ export async function writeNotification(
       id: null,
       was_insert: false,
       skipped_reason: "db_error",
-      error_message: error.message,
+      error_message: ins.error.message,
     };
   }
-  return { ok: true, id: (data as { id: string } | null)?.id ?? null, was_insert: true };
+
+  // refresh_unread · SELECT first; if present UPDATE, else INSERT.
+  // On 23505 race between SELECT and INSERT we fall through to
+  // UPDATE via a second SELECT.
+  const existing = await nexSupabaseAdmin
+    .from("nex_notification")
+    .select("id")
+    .eq("recipient_account_id", row.recipient_account_id)
+    .eq("source_ref", row.source_ref)
+    .maybeSingle();
+  if (existing.error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[nex-notification-writer] select-existing failed:",
+      existing.error.message,
+    );
+    return {
+      ok: false,
+      id: null,
+      was_insert: false,
+      skipped_reason: "db_error",
+      error_message: existing.error.message,
+    };
+  }
+  if (existing.data) {
+    const existingId = (existing.data as { id: string }).id;
+    const upd = await nexSupabaseAdmin
+      .from("nex_notification")
+      .update({
+        source: row.source,
+        category: row.category,
+        title: row.title,
+        subtitle: row.subtitle,
+        href: row.href,
+        thumbnail_url: row.thumbnail_url,
+        sender_account_id: row.sender_account_id,
+        profile_href: row.profile_href,
+        sender_has_shop: row.sender_has_shop,
+        read_at: null,
+        created_at: new Date().toISOString(),
+      })
+      .eq("id", existingId);
+    if (upd.error) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[nex-notification-writer] update failed:",
+        upd.error.message,
+      );
+      return {
+        ok: false,
+        id: null,
+        was_insert: false,
+        skipped_reason: "db_error",
+        error_message: upd.error.message,
+      };
+    }
+    return { ok: true, id: existingId, was_insert: false };
+  }
+  const ins = await nexSupabaseAdmin
+    .from("nex_notification")
+    .insert(row)
+    .select("id")
+    .single();
+  if (!ins.error) {
+    return { ok: true, id: (ins.data as { id: string }).id, was_insert: true };
+  }
+  if ((ins.error as { code?: string }).code === "23505") {
+    // Race · another writer inserted between our SELECT and INSERT.
+    // Resolve by SELECT→UPDATE.
+    const sel = await nexSupabaseAdmin
+      .from("nex_notification")
+      .select("id")
+      .eq("recipient_account_id", row.recipient_account_id)
+      .eq("source_ref", row.source_ref)
+      .single();
+    if (sel.error) {
+      return {
+        ok: false,
+        id: null,
+        was_insert: false,
+        skipped_reason: "db_error",
+        error_message: sel.error.message,
+      };
+    }
+    const racedId = (sel.data as { id: string }).id;
+    const upd = await nexSupabaseAdmin
+      .from("nex_notification")
+      .update({
+        source: row.source,
+        category: row.category,
+        title: row.title,
+        subtitle: row.subtitle,
+        href: row.href,
+        thumbnail_url: row.thumbnail_url,
+        sender_account_id: row.sender_account_id,
+        profile_href: row.profile_href,
+        sender_has_shop: row.sender_has_shop,
+        read_at: null,
+        created_at: new Date().toISOString(),
+      })
+      .eq("id", racedId);
+    if (upd.error) {
+      return {
+        ok: false,
+        id: null,
+        was_insert: false,
+        skipped_reason: "db_error",
+        error_message: upd.error.message,
+      };
+    }
+    return { ok: true, id: racedId, was_insert: false };
+  }
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[nex-notification-writer] insert (refresh) failed:",
+    ins.error.message,
+    "source=",
+    input.source,
+    "source_ref=",
+    input.source_ref,
+  );
+  return {
+    ok: false,
+    id: null,
+    was_insert: false,
+    skipped_reason: "db_error",
+    error_message: ins.error.message,
+  };
 }
 
 // ─── Per-producer helpers ────────────────────────────────────────────
@@ -295,6 +411,47 @@ export async function writeOrderPaidNotification(args: {
     href: `/nex-native/manage/orders/${args.order_id}`,
     // Immutable event · a Stripe/PayPal retry months later must NOT
     // revive a read paid-order alert. ON CONFLICT DO NOTHING semantics.
+    on_conflict: "preserve_read_state",
+  });
+}
+
+/**
+ * Buyer-facing durable row written when a seller confirms the buyer's
+ * payment (manual mark-paid or webhook settlement). Called from
+ * notifyBuyerPaymentConfirmed alongside push dispatch · independent of
+ * push outcome. A push-disabled buyer still gets the drawer row.
+ *
+ * Source reuse: migration 366's CHECK enum does not carry a dedicated
+ * buyer-side constant · we reuse `order_paid` (same immutable event,
+ * different recipient) and distinguish by source_ref. Buyer deep-link
+ * points at the buyer order view (`/nex-native/orders/<id>`) · never at
+ * the merchant management route. Buyer and seller rows never collide:
+ * the unique index is (recipient_account_id, source_ref) and the two
+ * recipients differ.
+ *
+ * source_ref = 'order:<order_id>:paid:buyer' · first-write wins so a
+ * webhook retry months after the buyer already read the confirmation
+ * does NOT revive it to unread.
+ */
+export async function writeOrderPaymentConfirmedNotification(args: {
+  recipient_account_id: NexUuid; // the buyer
+  order_id: NexUuid;
+  short_price_label: string; // generic currency+amount · catalogue-safe
+  product_name_or_blank: string; // may be empty string
+}): Promise<WriteNotificationResult> {
+  const subtitle = args.product_name_or_blank
+    ? `Payment confirmed · ${args.product_name_or_blank} · ${args.short_price_label}`
+    : `Payment confirmed · ${args.short_price_label}`;
+  return writeNotification({
+    recipient_account_id: args.recipient_account_id,
+    source: "order_paid",
+    source_ref: `order:${args.order_id}:paid:buyer`,
+    category: "orders",
+    title: `Order #${args.order_id.slice(0, 8)}`,
+    subtitle,
+    href: `/nex-native/orders/${args.order_id}`,
+    // Same immutable-event semantics as the seller row · a late provider
+    // retry must never revive a read buyer confirmation.
     on_conflict: "preserve_read_state",
   });
 }

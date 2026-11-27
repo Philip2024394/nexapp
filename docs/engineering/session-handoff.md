@@ -7,7 +7,40 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-059 retract journey promoted BLOCKED → VERIFIED + seedPeerSentMessage harness helper authored)
+## Current state · 2026-11-27 (L-060 T8 Shop merchant-order UI loop VERIFIED + buyer-notification durability fix + systemic `writeNotification` partial-unique-index defect repaired)
+
+**Delta from the L-059 block below.** Continuing launch-readiness per owner directive to verify the complete Shop merchant-to-customer order journey and fix genuine defects under standing authority.
+
+**L-060 deliverables (all source-anchored):**
+
+1. **Buyer-notification durability** — `notifyBuyerPaymentConfirmed` at `src/lib/nex-native/manage-orders/order-notification-service.ts:382` was push-only. Sibling `notifySellerPaidOrder` at `:321` writes a durable `nex_notification` row via `writeOrderPaidNotification` BEFORE the push fan-out. Buyers without an active push subscription received zero signal that the seller had confirmed payment. **Fix**: added `writeOrderPaymentConfirmedNotification` helper to `src/lib/nex-native/notifications/nex-notification-writer.ts` (source=`order_paid` [CHECK-enum permitted], source_ref=`order:<id>:paid:buyer`, category=`orders`, href=`/nex-native/orders/<id>`, on_conflict=`preserve_read_state`); wired into `notifyBuyerPaymentConfirmed` under the sibling try/catch pattern.
+
+2. **Systemic writer defect repaired** — T8 buyer-row assertion FAILED after Fix 1. Direct supabase-js probe surfaced PostgreSQL `42P10 "there is no unique or exclusion constraint matching the ON CONFLICT specification"`. Root cause: migration 366's uniqueness is a **partial** index (`WHERE source_ref IS NOT NULL`) which PostgreSQL does not accept as an `ON CONFLICT (cols)` target unless the INDEX PREDICATE is spelled out — supabase-js's upsert cannot express that. **Every** `writeNotification` call with a non-null source_ref had been silently returning `{ok:false, skipped_reason:"db_error"}` since migration 366 shipped — affecting seller paid-order rows, contact-request, contact-accepted, peer-message, product-inquiry. Defect was invisible because the writer `console.warn`s and producers stay fire-and-forget, and no shipped spec asserted the persisted row. **Fix**: rewrote `writeNotification` to use plain INSERT with explicit `error.code === "23505"` handling instead of `.upsert({onConflict})`. For `preserve_read_state`: INSERT → on 23505 → ok=true,was_insert=false. For `refresh_unread`: SELECT existing → UPDATE if present, else INSERT → on 23505 race → re-SELECT then UPDATE. Non-atomic vs the (non-working) UPSERT but correct under concurrency.
+
+3. **T8 UI-loop spec extended** — `tests/e2e/journey-merchant-order-t8-ui-loop.spec.ts` step 6b asserts exactly one `nex_notification` row with the expected shape. Spec header "Honest scope" updated.
+
+**Run evidence:**
+- `npx playwright test tests/e2e/journey-merchant-order-t8-ui-loop.spec.ts --reporter=line` → **2 passed (1.2m)** including buyer-row assertion.
+- `npx playwright test tests/e2e/journey-merchant-order-t8.spec.ts --reporter=line` → **2 passed (18.7s)**.
+- `npm test -- --run notification` → **4 files · 42 tests · 42 passed**.
+- `npm test -- --run order-notification-service` → **8 passed**.
+- Regression: `npx playwright test tests/e2e/journey-chat-send-e2e.spec.ts` → **4 passed, 2 skipped (43.0s)** · writer rewrite does not regress any producer.
+- First diagnostic run after Fix 1 alone: `allBuyerRows: []` with no error — proved Fix 1 insufficient without Fix 2.
+
+**Files changed this cycle (standing-policy commit candidates):**
+- `src/lib/nex-native/notifications/nex-notification-writer.ts`
+- `src/lib/nex-native/manage-orders/order-notification-service.ts`
+- `tests/e2e/journey-merchant-order-t8-ui-loop.spec.ts`
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (new L-060 row)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push. No `--no-verify`.
+
+**Next safe action (no approval needed):** (a) continue remaining Shop-pillar journey coverage (buyer-side checkout UI end-to-end, payment-routing specs under Stripe/PayPal sandbox where credentials configured); (b) author sender-side retract reader spec asserting server-side state transition; (c) Chat Themes three-category journey regression after the Plain reshape; (d) consider drafting migration 370 (RLS corrections per L-057) under its own review cycle — authoring permitted, apply gated.
+
+---
+
+## Previous state · 2026-11-27 (L-059 retract journey promoted BLOCKED → VERIFIED + seedPeerSentMessage harness helper authored)
 
 **Delta from the L-058 block below.** Continuing launch-readiness per owner directive. L-058 identified that the retract test's skip reason was "pending seed helper" — this cycle authored that helper and promoted the test to real coverage.
 

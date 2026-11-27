@@ -85,8 +85,9 @@
 //   · Real push-notification delivery to a device · the notification
 //     service is called (we assert the action succeeded end-to-end)
 //     but a running push subscription is not minted here, so delivery
-//     count is naturally 0. The event-trail row is the sealed
-//     audit-authoritative signal.
+//     count is naturally 0. The event-trail row + the durable
+//     nex_notification row (asserted at step 6b) are the sealed
+//     audit-authoritative signals · push is a secondary channel.
 //
 // Classification: SPEC AUTHORED · fixture-driven · sandbox-only · full
 // browser merchant session.
@@ -287,6 +288,57 @@ test.describe("T-8 · merchant order full UI loop", () => {
           manualConfirm?.actor_account_id,
           "manual_payment_confirmed names the merchant as actor_account_id",
         ).toBe(merchant.nexAccountId);
+
+        // -------------------------------------------------------------
+        // 6b · Buyer durable notification row persisted. Owner directive
+        //      2026-11-23b: in-app notifications are persisted
+        //      INDEPENDENTLY of push delivery · a buyer with no active
+        //      push subscription MUST still have a drawer row proving
+        //      the merchant confirmed their payment. The sealed
+        //      notifyBuyerPaymentConfirmed path (order-notification-
+        //      service.ts) writes a nex_notification row via
+        //      writeOrderPaymentConfirmedNotification BEFORE the push
+        //      fan-out · we assert the exact (recipient, source_ref)
+        //      key under service-role read.
+        // -------------------------------------------------------------
+        const buyerNotifSourceRef = `order:${order.orderId}:paid:buyer`;
+        const { data: buyerNotifRows, error: buyerNotifErr } = await sb
+          .from("nex_notification")
+          .select("id, source, category, href, recipient_account_id")
+          .eq("recipient_account_id", buyer.nexAccountId)
+          .eq("source_ref", buyerNotifSourceRef);
+        expect(
+          buyerNotifErr,
+          "service-role select on nex_notification succeeds",
+        ).toBeNull();
+        expect(
+          (buyerNotifRows ?? []).length,
+          "exactly one durable buyer-side payment-confirmed row exists",
+        ).toBe(1);
+        const buyerNotif = (buyerNotifRows ?? [])[0] as
+          | {
+              source: string;
+              category: string;
+              href: string;
+              recipient_account_id: string;
+            }
+          | undefined;
+        expect(
+          buyerNotif?.source,
+          "buyer-side row reuses sealed order_paid source (CHECK enum)",
+        ).toBe("order_paid");
+        expect(
+          buyerNotif?.category,
+          "buyer-side row sits under the orders category",
+        ).toBe("orders");
+        expect(
+          buyerNotif?.href,
+          "buyer deep-link points at the buyer order view · NOT the merchant management route",
+        ).toBe(`/nex-native/orders/${order.orderId}`);
+        expect(
+          buyerNotif?.recipient_account_id,
+          "recipient is the buyer · not the merchant",
+        ).toBe(buyer.nexAccountId);
 
         // -------------------------------------------------------------
         // 7 · Second-step transition via UI · paid → completed.

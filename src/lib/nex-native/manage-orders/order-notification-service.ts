@@ -45,7 +45,10 @@
 import "server-only";
 import { dispatchPushNotification } from "../notification-dispatch-service";
 import { nexSupabaseAdmin } from "../supabase-admin";
-import { writeOrderPaidNotification } from "../notifications/nex-notification-writer";
+import {
+  writeOrderPaidNotification,
+  writeOrderPaymentConfirmedNotification,
+} from "../notifications/nex-notification-writer";
 import type { NexOrderRow, NexUuid } from "../types";
 
 export type OrderNotificationKind =
@@ -391,6 +394,31 @@ export async function notifyBuyerPaymentConfirmed(
       failed: 0,
       skipped_reason: "disabled_by_env",
     };
+  }
+  // Durable in-app row FIRST · mirrors notifySellerPaidOrder. Buyers
+  // without an active push subscription previously received ZERO
+  // signal that the seller had confirmed their payment · push-only
+  // delivery is not a durable record (owner directive 2026-11-23b).
+  // Best-effort · the push below still fires even if the row write
+  // fails, and the UPSERT preserve_read_state semantics mean a webhook
+  // retry stays a no-op rather than reviving a read confirmation.
+  try {
+    const priceLabel =
+      typeof order.price_pence === "number" && order.price_pence > 0
+        ? `${order.currency ?? "EUR"} ${(order.price_pence / 100).toFixed(2)}`
+        : "payment confirmed";
+    await writeOrderPaymentConfirmedNotification({
+      recipient_account_id: order.customer_account_id,
+      order_id: order.id,
+      short_price_label: priceLabel,
+      product_name_or_blank: "",
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[order-notification] buyer durable row write failed (non-fatal):",
+      e instanceof Error ? e.message : String(e),
+    );
   }
   const result = await fanOutToAccount(
     order.customer_account_id,
