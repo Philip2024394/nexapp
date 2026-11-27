@@ -1,0 +1,23 @@
+# Cycle-4 scope-simplification · drawer-row direct-nav regression check · guest × IE slice
+# Spec: tests/e2e/journey-drawer-rows-guest-ie.spec.ts
+# Command: npx playwright test tests/e2e/journey-drawer-rows-guest-ie.spec.ts --project=stage-a-pixel7 --reporter=line
+# Result: 17 passed (35.7 s)
+# HEAD: 7a288be3
+# Evidence target: confirm cycle-4 hide-patches did not regress direct-route navigation
+# Routes exercised post-cycle-4 (all rendered body > 20 chars after hide-patches):
+#   - /nex-native/store                       (STORE_ITEMS now chat-themes + shop-themes only)
+#   - /nex-native/manage/wholesale            (drawer row hidden · route still redirects to sign-in)
+#   - /nex-generated/buying-guides            (drawer row hidden · route still renders)
+#   - /nex-native/settings                    (hero-tiles emptied · render guard prevents repeat(0,…) CSS)
+#   - /nex-native/contacts                    (CommunityNoticeCard hidden · route still redirects to sign-in)
+#   - /nex-native/create/product/category     [REDIRECT-TO-SIGNIN]
+#   - /nex-native/profile/me                  [REDIRECT-TO-SIGNIN]
+#   - /nex-native/settings/profile/edit       [REDIRECT-TO-SIGNIN]
+#   - /nex-native/manage                      [REDIRECT-TO-SIGNIN]
+#   - /nex-native/manage/shop/faq             [REDIRECT-TO-SIGNIN]
+#   - /nex-native/settings/chat-settings      [REDIRECT-TO-SIGNIN]
+#   - /nex-native/settings/payments           [PUBLIC-RENDER]
+#   - /nex-native/manage/orders               [REDIRECT-TO-SIGNIN]
+#   - /nex-native/install                     [PUBLIC-RENDER]
+#   - /nex-native/nex-1                       [PUBLIC-RENDER]
+#   - /nex-native/chat-themes-library         [PUBLIC-RENDER]

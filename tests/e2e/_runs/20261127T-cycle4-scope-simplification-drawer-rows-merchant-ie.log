@@ -1,0 +1,8 @@
+# Cycle-4 scope-simplification · drawer-row direct-nav regression check · signed-in shop-owner × IE slice
+# Spec: tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts
+# Command: npx playwright test tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts --project=stage-a-pixel7 --reporter=line
+# Result: 17 passed (3.8 min)
+# HEAD: 7a288be3
+# Evidence target: confirm cycle-4 hide-patches did not regress direct-route navigation
+#                  under an authenticated session where the drawer filter has the biggest surface area.
+# All 16 shop-owner drawer-row direct-nav routes still responsive post hide-patches.
