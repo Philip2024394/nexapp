@@ -7,7 +7,46 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-061 Chat-pillar retract READER spec authored + VERIFIED · promotes retract journey from AFFORDANCE-only to full server-state + sender-DOM)
+## Current state · 2026-11-27 (L-062 Chat-pillar peer-side retract READER spec authored + VERIFIED · completes the retract contract across both ends · also carries an uncommitted UI tweak to the Chat Themes "How it works" sheet)
+
+**Delta from the L-061 block below.** L-061 locked the SENDER surface ("You deleted this message" after server-action retract). This cycle authored the PEER-side complement — once `nex_peer_message.deleted_for_everyone = true`, the recipient account sees "This message was deleted" (and NOT the sender copy, and NOT the plaintext body).
+
+**L-062 deliverables (all source-anchored):**
+
+1. **Harness option added** · `tests/e2e/_fixtures/sandbox-test-harness.ts` · `seedPeerSentMessage` now accepts `returnPeerPassword?: boolean`. When true, threads `createTestAccount({ returnPassword: true })` so the peer handle carries `_password` for `signInAsFixtureInBrowser`. Default `false` — no existing L-059/L-061 caller changes shape.
+
+2. **New spec** · `tests/e2e/journey-chat-retract-peer-reader.spec.ts` · one test, `L-062 · peer-side retract reader`. Flow: seed viewer-authored message → service-role UPDATE flips `deleted_for_everyone=true` + `deleted_at=now()` (bypasses the gesture · L-061 already locks that path; this isolates the PEER READ branch so a red here = broken peer render, not broken sender gesture) → fresh `browser.newContext()` with `storageState: undefined` (no Dev-Pass cookies leak into peer session) → `signInAsFixtureInBrowser(peerPage, seeded.peer)` through sealed `data-nex-sign-in-form` → navigate peer to `/nex-native/chat/peer/<viewer.nexAccountId>` (route slot always points at THE OTHER account) → locate bubble by `[data-nex-msg-id]` → assert `data-nex-bloom-msg-deleted="true"` → assert `data-nex-bloom-msg-mine` is NOT "true" (peer-side render branch gates on `mine !== true` per `_portrait-bloom-shell.tsx:1615-1617`; flipped ternary would surface here) → assert "This message was deleted" visible → assert "You deleted this message" NOT present → assert plaintext seed body NOT present (device-only E2E preservation).
+
+3. **Playwright config extension** · one regex entry for `journey-chat-retract-peer-reader\.spec\.ts` added to the `stage-a-pixel7` `testMatch` allow-list.
+
+4. **No product-code change** · test coverage promotion + minor harness opt-in.
+
+**Sealed-invariant preservation:** device-only E2E chat storage intact — spec touches only `deleted_for_everyone` + `deleted_at` columns via service role, never plaintext `body`. E2E encryption path unchanged (same `encrypted=false` legacy path L-059/L-061 use). Peer sign-in goes through the sealed form, not an admin bypass.
+
+**Run evidence:**
+- `npx playwright test tests/e2e/journey-chat-retract-peer-reader.spec.ts --reporter=line` → **2 passed (36.5s)** [first run] and again **2 passed (32.0s)** [second run · stable, no flake].
+- Regression: `npx playwright test tests/e2e/journey-chat-retract-reader.spec.ts --reporter=line` → **2 passed (42.9s)** — harness option change does not regress L-061.
+
+**Uncommitted in-cycle UI tweak (separate scope, held for next commit):**
+- `src/app/nex-native/free-chat/_how-it-works-sheet.tsx` · owner-requested 2026-11-27: removed the circular orange `×` close button; bumped article top padding `22 → 48px` so the "How it works" eyebrow + "Make the first impression that lasts." title sit lower, away from the top edge where the `×` used to live; updated the stale header comment. Three close affordances remain unchanged (Esc keybinding, backdrop tap, "Got it · let's pick" CTA). No automated test exists specifically for this sheet layout — change is visual only, verified by source inspection.
+
+**Files changed this cycle (standing-policy commit candidates):**
+- `tests/e2e/_fixtures/sandbox-test-harness.ts` (MODIFIED · `seedPeerSentMessage` gained optional `returnPeerPassword` flag)
+- `tests/e2e/journey-chat-retract-peer-reader.spec.ts` (NEW)
+- `playwright.config.ts` (testMatch extension)
+- `src/app/nex-native/free-chat/_how-it-works-sheet.tsx` (MODIFIED · UI tweak)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (new L-062 row)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push. No `--no-verify`.
+
+**Next safe action (no approval needed):** (a) buyer-side Shop checkout UI coverage that is auth-unblocked (full add-to-cart → checkout review flow against sandbox stripe), (b) Chat Themes three-category journey regression after the Plain reshape, (c) begin drafting migration 370 (RLS corrections per L-057) — authoring permitted, apply gated on owner phrase, (d) commit the L-062 + "How it works" UI tweak under the standing policy.
+
+**Next action requiring owner authorisation (ONE phrase at a time):** unchanged from L-061 block — see below.
+
+---
+
+## Previous state · 2026-11-27 (L-061 Chat-pillar retract READER spec authored + VERIFIED · promotes retract journey from AFFORDANCE-only to full server-state + sender-DOM)
 
 **Delta from the L-060 block below.** Continuing launch-readiness per owner directive. L-060 landed the T8 UI loop + buyer-notification durability + the systemic `writeNotification` partial-unique-index repair, and committed+pushed as `2596579a`. This cycle authored the reader-side complement to L-059's affordance-only retract test.
 

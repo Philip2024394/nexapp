@@ -899,16 +899,26 @@ export async function seedPeerSentMessage(opts: {
    *  to it so the standard teardown + CASCADE path cleans everything
    *  up. Never includes the viewer. */
   readonly handles: FixtureHandle[];
+  /** When true, the created peer handle carries `_password` so the
+   *  caller can drive `signInAsFixtureInBrowser(page, peer)` in a
+   *  fresh browser context. Added 2026-11-27 for L-062 peer-side
+   *  retract reader spec. Default false · absent for every existing
+   *  caller which keeps the password out of memory. */
+  readonly returnPeerPassword?: boolean;
 }): Promise<{
   readonly viewerNexAccountId: string;
-  readonly peer: TestAccountHandle;
+  readonly peer: TestAccountHandle & { readonly _password?: string };
   readonly conversationId: string;
   readonly messageId: string;
   readonly sentAtIso: string;
 }> {
   assertSandboxRef();
   const viewer = await resolveFixtureViewerAccountIdByEmail(opts.viewerEmail);
-  const peer = await createTestAccount(opts.peerLabel ?? "retract-recipient");
+  const peer = await createTestAccount(
+    opts.returnPeerPassword === true
+      ? { label: opts.peerLabel ?? "retract-recipient", returnPassword: true }
+      : (opts.peerLabel ?? "retract-recipient"),
+  );
   opts.handles.push(peer);
   if (opts.seedPeerDeviceKey !== false) {
     await seedDeviceKeyForFixtureAccount(peer);
