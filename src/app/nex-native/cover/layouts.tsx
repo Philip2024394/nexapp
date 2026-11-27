@@ -756,29 +756,80 @@ export function LayoutProductHeroLandscape({
           />
         </div>
         <div style={{ marginTop: 20 }}>
-          <CoverSectionHeading
-            eyebrow="Shop"
-            title={t.catalog_heading}
-            rightSlot={
-              <div
-                aria-label={`${content.products.length} products live`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--nex-accent)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                <span aria-hidden style={{ fontSize: 16, lineHeight: 1 }}>
-                  📦
-                </span>
-                <span>{content.products.length} products live</span>
-              </div>
-            }
-          />
+          <div
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "var(--nex-accent)",
+              fontWeight: 700,
+              marginBottom: 8,
+            }}
+          >
+            Products
+          </div>
+          <div
+            data-nex-cover-product-select
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "0 12px",
+              marginBottom: 14,
+              borderRadius: 10,
+              border: "1px solid var(--nex-border, rgba(139,169,209,0.22))",
+              background: "var(--nex-panel, rgba(6,15,28,0.72))",
+              height: 40,
+            }}
+          >
+            <select
+              aria-label="Select product"
+              defaultValue=""
+              onChange={(e) => {
+                const pid = e.currentTarget.value;
+                if (!pid) return;
+                const target = document.querySelector<HTMLElement>(
+                  `[data-nex-cover-product-card][data-product-id="${CSS.escape(pid)}"]`,
+                );
+                if (target) {
+                  target.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+              }}
+              style={{
+                flex: 1,
+                height: "100%",
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: "var(--nex-text, #F2F5F8)",
+                fontSize: 14,
+                fontFamily: "inherit",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                cursor: "pointer",
+              }}
+            >
+              <option value="" disabled>
+                Select product
+              </option>
+              {content.products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <span
+              aria-hidden
+              style={{
+                fontSize: 12,
+                color: "var(--nex-text-dim, #7D9BC0)",
+                marginLeft: 8,
+                pointerEvents: "none",
+              }}
+            >
+              ▾
+            </span>
+          </div>
           <CoverCatalog
             sections={content.sections}
             products={content.products}

@@ -33,6 +33,29 @@ for (const vp of VIEWPORTS) {
       // --- Page 1: 8 cards + pagination 1 / 3 -------------------------------
       await expect(page.locator("[data-nex-cover-product-card]")).toHaveCount(8);
 
+      // Owner-sealed 2026-11-28 heading restructure:
+      //   · "Products" eyebrow present (replaces "Shop")
+      //   · "Select product" dropdown present above the cards
+      //   · Legacy "📦 17 products live" badge REMOVED
+      //   · Legacy section title (t.catalog_heading) REMOVED from this layout
+      await expect(
+        page.locator("[data-nex-cover-product-select]"),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("combobox", { name: "Select product" }),
+      ).toBeVisible();
+      await expect(page.locator("body")).not.toContainText(
+        /\d+\s*products\s*live/i,
+      );
+      // Dropdown must list every live product (8 shown + 9 more = 17 live
+      // products on the sandbox shop · regardless of current page).
+      const optionCount = await page
+        .getByRole("combobox", { name: "Select product" })
+        .locator("option")
+        .count();
+      // +1 for the disabled "Select product" placeholder
+      expect(optionCount).toBe(17 + 1);
+
       const pagerNav = page.getByRole("navigation", { name: "Product pages" });
       await expect(pagerNav).toBeVisible();
       await expect(pagerNav).toContainText(/1\s*\/\s*3/);

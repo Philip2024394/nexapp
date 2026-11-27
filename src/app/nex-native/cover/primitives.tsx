@@ -1002,6 +1002,7 @@ export function CoverProductCard({
       <Link
         href={chatHref}
         data-nex-cover-product-card
+        data-product-id={product.id}
         style={{
           display: isLandscape ? "flex" : "block",
           flexDirection: isLandscape ? "row" : undefined,
