@@ -83,15 +83,24 @@ export function HowItWorksSheet({
         style={{
           // Owner directive 2026-11-12 · How It Works sheet now paints
           // Pale Ivory (cream) #F5EDD3 (was solid black 2026-11-10).
-          // Orange bullets + orange CTA + orange close × stay for brand
-          // warmth · ink flips to dark warm brown for readability on
-          // the cream card.
+          // Orange bullets + orange CTA stay for brand warmth · ink
+          // flips to dark warm brown for readability on the cream
+          // card. (The orange circular close × was removed 2026-11-27
+          // per owner directive · close via Esc, backdrop tap, or the
+          // "Got it · let's pick" CTA.)
           position: "relative",
           maxWidth: 460,
           width: "min(92vw, 460px)",
           maxHeight: "88vh",
           overflowY: "auto",
-          padding: "22px 22px 20px",
+          // Owner directive 2026-11-27 · the circular × close button
+          // was removed from this sheet, so the eyebrow + title now
+          // sit directly inside the card's top edge. Bump top padding
+          // from 22 → 48 so "How it works" / "Make the first
+          // impression that lasts." move down from the header area.
+          // Esc, backdrop tap, and the "Got it · let's pick" CTA
+          // remain as the three independent close affordances.
+          padding: "48px 22px 20px",
           borderRadius: 20,
           background: "#F5EDD3",
           border: "1px solid rgba(26, 21, 18, 0.10)",
@@ -100,37 +109,6 @@ export function HowItWorksSheet({
           color: INK,
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          style={{
-            position: "absolute",
-            top: 22,
-            right: 16,
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            // Owner directive 2026-11-03 · solid NEX Orange close
-            // buttons across every modal / sheet. Dark glyph for
-            // AAA contrast against the warm fill.
-            background: "#FF7200",
-            border: "1px solid rgba(0, 0, 0, 0.35)",
-            color: "#1a0a00",
-            cursor: "pointer",
-            fontSize: 20,
-            fontWeight: 800,
-            lineHeight: 1,
-            padding: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 10px rgba(255, 114, 0, 0.5)",
-          }}
-        >
-          ×
-        </button>
-
         <p
           style={{
             margin: 0,
