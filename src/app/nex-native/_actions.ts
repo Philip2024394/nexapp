@@ -889,7 +889,50 @@ export async function signInAction(formData: FormData): Promise<void> {
     redirectToSignInWithError("missing_credentials", "email and password required");
   }
   const supabase = await nexAppSsrServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  // Owner directive 2026-11-27 · dev-founder typed-form bypass.
+  // The visible "⚡ Dev Pass" button is retired; the founder's
+  // localhost sign-in now flows through this normal form. If
+  // (localhost build) + (email ∈ NEX_ADMIN_EMAILS) + (password ===
+  // NEX_ADMIN_DEV_PASSWORD) and the first signInWithPassword fails
+  // because the Supabase user does not yet exist, provision it
+  // inline then re-attempt — mirrors the retired devPassAction
+  // recovery. All three gates must be true; a production build
+  // (NODE_ENV === "production") short-circuits to `false` and the
+  // founder sees exactly the same credential prompt as any user.
+  const isDevFounderBypass =
+    process.env.NODE_ENV !== "production" &&
+    password.length > 0 &&
+    password === process.env.NEX_ADMIN_DEV_PASSWORD &&
+    (process.env.NEX_ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0)
+      .includes(email);
+
+  let { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error && isDevFounderBypass) {
+    const msg = error.message?.toLowerCase() ?? "";
+    const looksLikeMissingUser =
+      msg.includes("invalid") ||
+      msg.includes("credential") ||
+      msg.includes("not found");
+    if (looksLikeMissingUser) {
+      const signUp = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: email.split("@")[0] || "nex admin",
+          },
+        },
+      });
+      if (!signUp.error) {
+        ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+      }
+    }
+  }
+
   if (error) {
     redirectToSignInWithError("sign_in_failed", error.message);
   }

@@ -1287,23 +1287,25 @@ function IdentityBar({
         data-nex-control-drawer-anon
       >
         <div style={identityBarAnonTextColumnStyle}>
+          {/* Owner directive 2026-11-27 (revised) · the guest sign-in
+              row now reads as a single tight stack: "Sign in to NEX"
+              on row 1 (one line · no wrap · ellipsis if forced), and
+              a smaller "to access your account →" sub-line underneath
+              with a trailing arrow glyph to signal the selection
+              affordance. The earlier right-side blue "Sign in →"
+              chip has been retired · the arrow on the sub-line now
+              carries the selection semantics, which matches the
+              NEX-handle pattern on signed-in rows (smaller sub-line
+              + inline affordance). The whole row remains a clickable
+              <Link> so the hit-target is unchanged. */}
           <span style={identityBarAnonLabelStyle}>Sign in to NEX</span>
           <span style={identityBarAnonHintStyle}>
-            to access your account
+            to access your account{" "}
+            <span aria-hidden style={{ fontWeight: 700 }}>
+              →
+            </span>
           </span>
         </div>
-        {/* Owner directive 2026-10-18 (iteration) · right-side blue
-            chip button matching the Close button style · small
-            height (26px) · small round corners (6px) · blue fill ·
-            arrow glyph. aria-hidden because the entire Link is
-            already labelled by its visible "Sign in to NEX" text. */}
-        <span
-          aria-hidden
-          data-nex-control-drawer-anon-chip
-          style={identityBarAnonChipStyle}
-        >
-          Sign in →
-        </span>
       </Link>
     );
   }
@@ -1854,12 +1856,17 @@ const drawerTitleStyle: React.CSSProperties = {
 // Close chip was retired per owner request. Text is now the sealed
 // NEX gold so the label still contrasts against the red fill but
 // reads as brand-forward, not alarm-signal white.
+// Owner directive 2026-11-27 (revised 12) · side-drawer Close button
+// flipped from dark red (#8B0000 bg · #6B0E0E rim · #C6A15B gold text)
+// to NEX ORANGE. Matches the sealed Apply button treatment in the
+// plain-themes preview and the orange card eye icon · one accent
+// family across every chat surface that mounts the side drawer.
 const closeButtonStyle: React.CSSProperties = {
   minHeight: 26,
   padding: "3px 10px",
-  background: "#8B0000",
-  border: "1px solid #6B0E0E",
-  color: "#C6A15B",
+  background: "#FF7200",
+  border: "1px solid rgba(0, 0, 0, 0.35)",
+  color: "#1A0A00",
   fontSize: 12,
   fontWeight: 800,
   letterSpacing: 0.4,
@@ -2059,6 +2066,13 @@ const identityBarAnonLabelStyle: React.CSSProperties = {
   color: CYAN,
   fontSize: 14,
   fontWeight: 700,
+  // Owner directive 2026-11-27 (revised) · the "Sign in to NEX" label
+  // must sit on EXACTLY ONE row with no wrap · the smaller hint
+  // sub-line + arrow below carries the selection affordance. Ellipsis
+  // guards against extreme accessibility text-scaling.
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 const identityBarAnonHintStyle: React.CSSProperties = {
   color: MUTED,

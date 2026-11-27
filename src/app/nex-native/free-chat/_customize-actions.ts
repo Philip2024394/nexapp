@@ -42,16 +42,29 @@ import { setBubbleColours } from "@/lib/nex-native/bubble-colours-service";
 const COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
 /** Build the cookie name for a given themeId. One cookie per theme so
- *  switching themes keeps each theme's customisation. */
+ *  switching themes keeps each theme's customisation.
+ *
+ *  Owner directive 2026-11-27 (revised 5) · Option-A merge · the plain
+ *  background library now submits via this action with ids of the form
+ *  `plain:<hue>@<shade>` (e.g. `plain:red@50`). The `:` and `@` are
+ *  RFC 6265 cookie-octet-safe but fail the slug regex below, so we
+ *  normalise plain ids to `plain-<hue>-<shade>` (`plain-red-50`) for
+ *  the cookie-name segment only. Because BOTH save and read go through
+ *  this function, the round-trip stays intact without any caller
+ *  change. Non-plain ids pass through untouched. */
 function cookieNameFor(themeId: string): string {
-  // The themeId is already a safe slug (e.g. "ireland-1", "theme-3").
-  // Reject anything with characters that would mangle the cookie name.
-  if (!/^[a-z0-9-]{1,32}$/i.test(themeId)) {
+  const normalised = themeId.startsWith("plain:")
+    ? themeId.replace(/[:@]/g, "-")
+    : themeId;
+  // The themeId is already a safe slug (e.g. "ireland-1", "theme-3",
+  // or the normalised "plain-red-50"). Reject anything with characters
+  // that would mangle the cookie name.
+  if (!/^[a-z0-9-]{1,32}$/i.test(normalised)) {
     throw new Error(
       `saveBubbleCustomizationAction · invalid themeId: ${themeId}`,
     );
   }
-  return `nex-free-chat-bubble-${themeId}`;
+  return `nex-free-chat-bubble-${normalised}`;
 }
 
 export interface SaveBubbleCustomizationInput {

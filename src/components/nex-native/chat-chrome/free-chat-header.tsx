@@ -171,11 +171,21 @@ export function FreeChatHeader({
         style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
       >
         {/* Owner directive 2026-11-05 later-same-day iter 5 · sealed
-            NexPingBadge always renders · colored rim retired. */}
+            NexPingBadge always renders · colored rim retired.
+            Owner directive 2026-11-27 · when the viewer has no
+            drawerSession (guest · has not created an account yet)
+            AND no avatar, the badge auto-paints the sealed NEX
+            guest wordmark on white. One source of truth for every
+            chat surface that mounts this header. */}
         <NexPingBadge
           size={48}
           accent={pingBadgeAccent}
           dataTestId="free-chat-nex"
+          guestLogoUrl={
+            !avatarUrl && drawerSession === null
+              ? "/nex-brand/nex-guest-logo.png"
+              : null
+          }
         />
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

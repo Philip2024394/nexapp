@@ -29,6 +29,12 @@ export interface NexPingBadgeProps {
    *  NEX identity surface still reads as the same primitive. Null /
    *  undefined falls back to the sealed "NEX" wordmark. */
   readonly avatarUrl?: string | null;
+  /** Owner directive 2026-11-27 · when the viewer HAS NOT created an
+   *  account yet (guest), the badge paints a WHITE inner circle and
+   *  renders the sealed NEX guest wordmark logo instead of the dark
+   *  navy + "NEX" text. Applied only when `avatarUrl` is null · a
+   *  signed-in viewer with a real avatar always wins. */
+  readonly guestLogoUrl?: string | null;
 }
 
 export function NexPingBadge({
@@ -37,6 +43,7 @@ export function NexPingBadge({
   disablePing = false,
   dataTestId,
   avatarUrl,
+  guestLogoUrl,
 }: NexPingBadgeProps): React.ReactElement {
   // Core measurements · derived once per render so a bigger badge
   // scales ring thickness, inner text, and ping diameter together.
@@ -93,9 +100,13 @@ export function NexPingBadge({
             }}
           />
         )}
-        {/* Solid outer ring + inner "NE" lettering. The outer rim
-            uses two layers (border + inner box-shadow) for a crisp
-            neon look without extra DOM. */}
+        {/* Solid outer ring + inner content. The outer rim uses two
+            layers (border + inner box-shadow) for a crisp neon look
+            without extra DOM. Owner directive 2026-11-27 · when
+            `guestLogoUrl` is supplied and no avatar is present, the
+            inner circle paints WHITE (brand request · guest profile
+            slot) and hosts the NEX logo image instead of the dark
+            navy + "NEX" text. */}
         <div
           aria-hidden
           style={{
@@ -103,7 +114,10 @@ export function NexPingBadge({
             inset: 0,
             borderRadius: "50%",
             border: `${ringThickness}px solid ${accent}`,
-            background: "rgba(2, 9, 20, 0.55)",
+            background:
+              !avatarUrl && guestLogoUrl
+                ? "#FFFFFF"
+                : "rgba(2, 9, 20, 0.55)",
             boxShadow: `
               0 0 ${Math.round(size * 0.14)}px ${accent}88,
               inset 0 0 ${Math.round(size * 0.08)}px ${accent}55
@@ -121,11 +135,15 @@ export function NexPingBadge({
             overflow: "hidden",
           }}
         >
-          {/* Owner directive 2026-10-20 · when a profile avatar URL
-              is passed in, the badge paints the user's photo inside
-              the sealed ring instead of the "NEX" wordmark. Ring +
-              halo + glow are preserved so every identity surface
-              reads as the same NEX primitive. */}
+          {/* Priority:
+              1. Real profile photo (signed-in viewer) · cover-cropped
+                 so the face fills the circle.
+              2. Guest logo (viewer has not created an account yet) ·
+                 contain-fit with a small padding so the full NEX
+                 wordmark reads inside the circle without clipping.
+              3. Sealed "NEX" text (legacy fallback · no logo URL + no
+                 photo · preserves pre-2026-11-27 behaviour at every
+                 call site that has not opted in). */}
           {avatarUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -136,6 +154,18 @@ export function NexPingBadge({
                 height: "100%",
                 objectFit: "cover",
                 borderRadius: "50%",
+                display: "block",
+              }}
+            />
+          ) : guestLogoUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={guestLogoUrl}
+              alt="NEX"
+              style={{
+                width: "88%",
+                height: "88%",
+                objectFit: "contain",
                 display: "block",
               }}
             />

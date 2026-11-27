@@ -7,6 +7,13 @@
 // to this shared module so the client canvas and the server page both
 // reference the same union without a cyclic import.
 
+import {
+  parsePlainThemeId,
+  parsePlainHexThemeId,
+  resolvePlainHex,
+  pickBubbleAccentForPlainHex,
+} from "@/app/nex-native/chat-themes-library/plain/_plain-palette";
+
 /** Owner directive 2026-10-21 (iteration 37) · outgoing bubble
  *  delivery indicator REPLACED tick checkmarks with a single
  *  colour-coded DOT:
@@ -267,9 +274,22 @@ export function getDailyFreeChatPicker(
 
 /** Resolve a theme id to its accent hex · defaults to NEX cyan when
  *  the id is null or unknown. Spotlight tiles live in LIBRARY_THEMES ·
- *  checked as a fallback so a picked spotlight paints correctly. */
+ *  checked as a fallback so a picked spotlight paints correctly.
+ *  Plain theme ids (`plain:<hue>@<shade>`, owner directive 2026-11-27)
+ *  resolve to a luminance-picked bubble accent so chat bubbles stay
+ *  readable on the chosen background. */
 export function resolveFreeChatAccentHex(themeId: string | null | undefined): string {
   if (!themeId) return "#00AFFF";
+  // Owner directive 2026-11-27 (revised 8 · Scope B) · the hex
+  // branch of the plain grammar carries its own background colour,
+  // so pick a readable bubble accent off its luminance too.
+  const plainHex = parsePlainHexThemeId(themeId);
+  if (plainHex) return pickBubbleAccentForPlainHex(plainHex.hex);
+  const plain = parsePlainThemeId(themeId);
+  if (plain) {
+    const bg = resolvePlainHex(plain.hueId, plain.shade);
+    if (bg) return pickBubbleAccentForPlainHex(bg);
+  }
   const match = FREE_CHAT_THEMES.find((t) => t.id === themeId);
   if (match) return match.accentHex;
   const library = LIBRARY_THEMES.find((t) => t.id === themeId);
@@ -395,6 +415,37 @@ export function defaultBubbleCustomizationForTheme(
   themeId: string | null | undefined,
 ): BubbleCustomization {
   const accent = resolveFreeChatAccentHex(themeId);
+  // Owner directive 2026-11-27 · plain theme ids (`plain:<hue>@<shade>`)
+  // paint the ENTIRE background with the resolved hex AND expose a
+  // luminance-picked bubble accent so bubbles stay readable. The
+  // background hex travels through `containerColor` so page.tsx and
+  // _canvas-client.tsx pick it up via their existing fallback branch.
+  const plain = parsePlainThemeId(themeId);
+  if (plain) {
+    const bg = resolvePlainHex(plain.hueId, plain.shade);
+    return {
+      peerColor: accent,
+      peerDarken: 0,
+      selfColor: accent,
+      selfDarken: 0,
+      containerColor: bg,
+    };
+  }
+  // Owner directive 2026-11-27 (revised 8 · Scope B) · hex-form
+  // plain theme ids paint the free-hex background and expose the
+  // luminance-picked accent. Peer/self default to that accent; the
+  // viewer's explicit bubble choice (saved alongside via
+  // saveBubbleCustomizationAction) still overrides this.
+  const plainHex = parsePlainHexThemeId(themeId);
+  if (plainHex) {
+    return {
+      peerColor: accent,
+      peerDarken: 0,
+      selfColor: accent,
+      selfDarken: 0,
+      containerColor: plainHex.hex,
+    };
+  }
   // Owner directive 2026-11-03 · "page back ground is not displaying
   // the nex green global color" · default container colour for the
   // nex-default tile is the sealed Ireland Emerald #123D2B so the

@@ -62,6 +62,7 @@ import {
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { FreeChatComposerClient } from "./_composer-client";
+import { resolvePlainBackgroundHex } from "@/app/nex-native/chat-themes-library/plain/_plain-palette";
 // Owner directive 2026-11-05 iter 17 · FreeChatCallCenterDrawerClient
 // import removed · the component is retired from /free-chat (the old
 // lower-right 3-dot FAB · Call Centre scaffolding). Component source
@@ -214,8 +215,14 @@ export default async function FreeChatPage({
   // in sync. Guests see the "NEX" / "NEX - Guest" brand strings in
   // both places (see headerDisplayName / headerSubtitle below).
   let drawerSession: ControlDrawerSession | null = null;
-  let headerDisplayName = "NEX";
-  let headerSubtitle = "NEX - Guest";
+  // Owner directive 2026-11-27 (revised 2) · guest viewers see
+  // "Guest" on the main line and "Guest Account" as the smaller
+  // gray sub-line. Previous iterations ("NEX - Guest" / "Account
+  // Type - Guest" / empty) all retired. Subtitle colour stays with
+  // the sealed free-chat #B5C3D6 dim on /free-chat; the plain-themes
+  // preview overrides to a darker gray because that canvas is light.
+  let headerDisplayName = "Guest";
+  let headerSubtitle = "Guest Account";
   let headerAvatarUrl: string | null = null;
   try {
     // Dev-impersonation parity · identical sealed pattern to profile page.
@@ -564,11 +571,17 @@ export default async function FreeChatPage({
   // `nex-default` tile is active AND a background colour was saved,
   // use it as the pre-hydration background paint so there is no
   // flash of navy before the client effect takes over.
+  // Owner directive 2026-11-27 · when the active theme is a plain
+  // colour pick (`plain:<hue>@<shade>`), paint the resolved hex
+  // directly. This runs BEFORE hydration so returning viewers see
+  // their chosen plain colour on first paint.
+  const initialPlainHex = resolvePlainBackgroundHex(initialThemeId);
   const initialBackgroundFallback =
-    initialThemeId === "nex-default" &&
+    initialPlainHex ??
+    (initialThemeId === "nex-default" &&
     initialBubbleCustomization?.containerColor
       ? initialBubbleCustomization.containerColor
-      : NEX.bg;
+      : NEX.bg);
 
   return (
     <>
@@ -639,7 +652,13 @@ export default async function FreeChatPage({
           drawerSession={drawerSession}
           pingBadgeAccent="#16D66B"
           textColor={NEX.text}
-          subtitleColor={NEX.textDim}
+          // Owner directive 2026-11-27 · guest viewers see the smaller
+          // "Guest Account" sub-line in the canonical NEX cream
+          // (#FBF5E9 · same cream as the side-drawer background surface
+          // in cream-themed deployments) so the sub-line reads as one
+          // family with the drawer identity. Signed-in viewers keep
+          // the sealed NEX.textDim for their nex-handle sub-line.
+          subtitleColor={drawerSession ? NEX.textDim : "#FBF5E9"}
           hideMagnifier={true}
           currentSurface="chat"
           drawerVisitor={drawerVisitor}

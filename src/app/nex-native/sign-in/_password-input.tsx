@@ -26,13 +26,20 @@ export function SignInPasswordInput(): React.ReactElement {
           minWidth: 0,
           background: "transparent",
           border: "none",
-          color: "#F2F5F8",
+          color: "#1A1512",
           fontSize: 14,
           padding: "12px 2px",
           outline: "none",
           fontFamily: "inherit",
         }}
       />
+      {/* Owner directive 2026-11-27 · 3D eye instead of a flat blue
+          SVG. Uses the native color-emoji glyph which renders as a
+          glossy 3D icon on Windows 11 / macOS / iOS / Android (Segoe
+          UI Emoji / Apple Color Emoji / Noto Color Emoji). No new
+          asset shipped. Hidden state uses the see-no-evil glyph so
+          the action-icon convention (icon shows the ACTION, not the
+          state) is preserved: eye = tap to see, monkey = tap to hide. */}
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
@@ -49,51 +56,15 @@ export function SignInPasswordInput(): React.ReactElement {
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#00AFFF",
           padding: 0,
+          fontSize: 22,
+          lineHeight: 1,
+          fontFamily:
+            '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif',
         }}
       >
-        {visible ? <EyeOff /> : <Eye />}
+        <span aria-hidden>{visible ? "🙈" : "👁️"}</span>
       </button>
     </>
-  );
-}
-
-function Eye(): React.ReactElement {
-  return (
-    <svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-      <circle cx={12} cy={12} r={3} />
-    </svg>
-  );
-}
-
-function EyeOff(): React.ReactElement {
-  return (
-    <svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-6.5 0-10-7-10-7a19.7 19.7 0 0 1 4.22-5.19" />
-      <path d="M9.9 5.24A10.94 10.94 0 0 1 12 5c6.5 0 10 7 10 7a19.55 19.55 0 0 1-2.79 3.78" />
-      <line x1={1} y1={1} x2={23} y2={23} />
-    </svg>
   );
 }

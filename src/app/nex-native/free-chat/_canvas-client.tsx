@@ -24,6 +24,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HowItWorksSheet } from "./_how-it-works-sheet";
+import { resolvePlainBackgroundHex } from "@/app/nex-native/chat-themes-library/plain/_plain-palette";
 import {
   FREE_CHAT_THEMES,
   freeChatBackgroundCss,
@@ -262,6 +263,13 @@ export function FreeChatCanvasClient({
   // other tile (wallpaper themes) ignores containerColor.
   const activeBackgroundFallback = React.useMemo<string>(() => {
     if (activeWallpaperUrl) return NEX.bg;
+    // Owner directive 2026-11-27 · plain theme ids
+    // (`plain:<hue>@<shade>`) always paint their resolved hex as the
+    // whole background. Resolve from the active `themeId` (not just
+    // the initial one) so the post-hydration picker updates repaint
+    // immediately when the user picks a different shade.
+    const plainHex = resolvePlainBackgroundHex(themeId);
+    if (plainHex) return plainHex;
     if (
       bubbleCustomization?.containerColor &&
       initialThemeId === "nex-default"
@@ -269,7 +277,7 @@ export function FreeChatCanvasClient({
       return bubbleCustomization.containerColor;
     }
     return NEX.bg;
-  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId]);
+  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId, themeId]);
 
   React.useEffect(() => {
     const main = document.querySelector<HTMLElement>(

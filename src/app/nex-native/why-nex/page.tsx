@@ -254,13 +254,15 @@ function WhyHeader({
       >
         ← Back
       </Link>
+      {/* Owner directive 2026-11-27 · GLOBAL side-drawer button size
+          = 36×36 across every nexapp header (was 44×44 locally). */}
       <span
         style={{
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 44,
-          height: 44,
+          width: 36,
+          height: 36,
           borderRadius: "50%",
           background: "#C6A15B",
           border: "1.5px solid #8B6A32",

@@ -127,15 +127,17 @@ export function FullLibraryClient({
           border: none !important;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
           color: #FFFFFF !important;
-          width: 32px !important;
-          height: 32px !important;
+          /* Owner directive 2026-11-27 · GLOBAL side-drawer button
+             size = 36×36 across every nexapp header. Was 32×32. */
+          width: 36px !important;
+          height: 36px !important;
           font-size: 20px !important;
         }
         [data-nex-chat-themes-global-drawer] svg {
           color: #FFFFFF !important;
           stroke: #FFFFFF !important;
-          width: 14px !important;
-          height: 14px !important;
+          width: 16px !important;
+          height: 16px !important;
         }
         [data-nex-chat-themes-global-drawer] svg * {
           stroke: #FFFFFF !important;
@@ -194,8 +196,9 @@ export function FullLibraryClient({
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 32,
-              height: 32,
+              // Owner directive 2026-11-27 · GLOBAL 36×36. Was 32×32.
+              width: 36,
+              height: 36,
               borderRadius: "50%",
               background: "#000000",
               border: "none",

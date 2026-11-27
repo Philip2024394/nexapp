@@ -31,7 +31,6 @@ import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { isAdminSession } from "@/lib/nex-native/app/admin";
 import {
   signInAction,
-  devPassAction,
   createNexAccountAction,
   continueWithGoogleAction,
 } from "../_actions";
@@ -73,27 +72,26 @@ function safeNext(next: string | undefined): string | null {
   return next;
 }
 
-// Owner-authorised 2026-10-31 · NEX World Engine · Stage 5 wiring.
-// Palette values now reference world CSS variables set at the layout
-// root by <WorldStylesheet />. Fallbacks preserved for the pre-wire
-// nex-original baseline so there is zero visual change until a world
-// is activated.
-import { NEX_W } from "@/lib/nex-worlds/world-palette-css";
-
+// Owner directive 2026-11-27 · repainted to the canonical nexapp
+// cream + white theme (was dark NEX-World palette). Cream base
+// matches side-drawer + Plain Backgrounds library · white container
+// matches modal convention · dark text for legibility · accent reused
+// for links and focus states. All functionality preserved — only
+// surface colours change.
 const NEX = {
-  bg: NEX_W.backgroundBase,
-  panel: NEX_W.surface,
-  panelSolid: NEX_W.surfaceSunken,
-  fieldBg: NEX_W.surface,
-  textPrimary: NEX_W.textPrimary,
-  textSecondary: NEX_W.textSecondary,
-  textMuted: NEX_W.textMuted,
-  cyan: NEX_W.primary,
-  cyanLight: NEX_W.secondary,
-  cyanSoft: NEX_W.borderAccent,
-  cyanFaint: NEX_W.border,
-  orange: NEX_W.tertiary,
-  borderSoft: NEX_W.borderAccent,
+  bg: "#FBF5E9",                           // canonical cream
+  panel: "#FFFFFF",                        // white container inner
+  panelSolid: "#FFFFFF",
+  fieldBg: "#FFFFFF",
+  textPrimary: "#1A1512",                  // near-black on cream
+  textSecondary: "#4A4038",
+  textMuted: "#6B6256",
+  cyan: "#C6A15B",                         // warm gold accent (was cyan)
+  cyanLight: "#D9B977",
+  cyanSoft: "rgba(198, 161, 91, 0.35)",
+  cyanFaint: "rgba(26, 21, 18, 0.12)",
+  orange: "#C04A15",
+  borderSoft: "rgba(26, 21, 18, 0.18)",
 };
 
 const SANS =
@@ -139,24 +137,14 @@ export default async function SignInPage({ searchParams }: PageProps) {
       ? params.preserve_email
       : "";
 
-  // Owner directive 2026-10-22 (afternoon) · one-click Dev Pass
-  // button renders only when NODE_ENV !== "production" AND both
-  // NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD are configured. The
-  // button posts a form straight into signInAction with those
-  // credentials · identical path as a normal sign-in, no backdoor
-  // bypass. Production builds never reach this branch · env read
-  // short-circuits to null and the JSX below renders nothing.
-  const devPassEmail = (() => {
-    if (process.env.NODE_ENV === "production") return null;
-    const list = (process.env.NEX_ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((e) => e.trim())
-      .filter((e) => e.length > 0);
-    if (list.length === 0) return null;
-    const pw = process.env.NEX_ADMIN_DEV_PASSWORD;
-    if (!pw) return null;
-    return { email: list[0]!, password: pw };
-  })();
+  // Owner directive 2026-11-27 · the visible "⚡ Dev Pass" badge is
+  // removed. The founder's dev-sign-in continues to work by typing
+  // their email + NEX_ADMIN_DEV_PASSWORD (i.e. "12345678" in
+  // .env.local) into the normal sign-in form; signInAction detects
+  // the match and runs the same inline-signup fallback that the old
+  // button called. Gates preserved: NODE_ENV !== "production", email
+  // must appear in NEX_ADMIN_EMAILS, password must equal
+  // NEX_ADMIN_DEV_PASSWORD (all three absent → bypass never fires).
 
   const jar = await cookies();
   const hasFaceOnDevice = jar.get("nex-has-face")?.value === "1";
@@ -212,38 +200,12 @@ export default async function SignInPage({ searchParams }: PageProps) {
           overflow: "hidden",
         }}
       >
-        {/* Owner directive 2026-11-12 · modal-over-backdrop layout.
-            Earth-explorer backdrop stays, but the overlay is now a
-            heavier dim so the centred card feels like a true pop-up. */}
-        <img
-          src="/nex-native/auth-hero-backdrop.png"
-          alt=""
-          aria-hidden
-          data-nex-sign-in-backdrop
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center top",
-            zIndex: 0,
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
-        />
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(2, 9, 20, 0.72)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            zIndex: 1,
-            pointerEvents: "none",
-          }}
-        />
+        {/* Owner directive 2026-11-27 · cream canvas replaces the
+            earth-explorer backdrop + dim overlay. The surrounding
+            <main> already paints NEX.bg (cream) so no separate layer
+            is needed · preserved data-nex-sign-in-backdrop hook as an
+            empty aria-hidden span so existing selectors still resolve. */}
+        <span data-nex-sign-in-backdrop aria-hidden style={{ display: "none" }} />
 
         <div
           style={{
@@ -270,28 +232,30 @@ export default async function SignInPage({ searchParams }: PageProps) {
             style={{
               width: "100%",
               maxWidth: 340,
-              background: "rgba(5, 15, 28, 0.92)",
+              background: "#FFFFFF",
               border: `1px solid ${NEX.borderSoft}`,
               borderRadius: 18,
               padding: "20px 20px 22px",
               boxShadow:
-                "0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255,255,255,0.03) inset",
-              backdropFilter: "blur(14px)",
-              WebkitBackdropFilter: "blur(14px)",
+                "0 18px 48px rgba(26, 21, 18, 0.14), 0 0 0 1px rgba(26, 21, 18, 0.04) inset",
               maxHeight: "calc(100dvh - 32px)",
               overflowY: "auto",
               WebkitOverflowScrolling: "touch",
             }}
           >
             <header style={{ textAlign: "center", marginBottom: 16 }}>
+              {/* Owner directive 2026-11-27 (second pass) · swap to
+                  the new NEX wordmark supplied as `NEW LOGO.png`,
+                  copied to /nex-brand/nex-wordmark.png. Black N·E·
+                  with orange X stroke on the white container. Natural
+                  aspect preserved via `height: auto`. */}
               <img
-                src="/nex-native/landing-nex-wordmark.png"
+                src="/nex-brand/nex-wordmark.png"
                 alt="NEX"
                 style={{
                   display: "inline-block",
-                  height: 36,
+                  height: 44,
                   width: "auto",
-                  filter: "drop-shadow(0 4px 14px rgba(180,124,255,0.4))",
                   userSelect: "none",
                   pointerEvents: "none",
                 }}
@@ -309,18 +273,22 @@ export default async function SignInPage({ searchParams }: PageProps) {
               >
                 {isSignup ? "Create your NEX account" : "Welcome back"}
               </h1>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 12,
-                  color: NEX.textMuted,
-                  lineHeight: 1.45,
-                }}
-              >
-                {isSignup
-                  ? "Name, email and a 6+ character password · we'll email you a confirmation link."
-                  : "Sign in to continue."}
-              </p>
+              {/* Owner directive 2026-11-27 · subtitle shown only on
+                  sign-in (not sign-up). Sign-up form fields are
+                  self-describing with their own labels; the extra
+                  paragraph was redundant. */}
+              {!isSignup && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: NEX.textMuted,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Sign in to continue.
+                </p>
+              )}
             </header>
 
             {/* ── Error banner from signInAction failure ── */}
@@ -457,24 +425,9 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 />
               </div>
 
-              <p
-                style={{
-                  margin: "10px 2px 0",
-                  fontSize: 11,
-                  color: NEX.textMuted,
-                  lineHeight: 1.5,
-                }}
-              >
-                By tapping Sign Up you agree to the NEX{" "}
-                <Link
-                  href="/nex-native/about/terms"
-                  style={{ color: NEX.cyan, textDecoration: "none" }}
-                >
-                  terms
-                </Link>
-                . We&apos;ll email you a confirmation link before the
-                account is active.
-              </p>
+              {/* Owner directive 2026-11-27 · "By tapping Sign Up…"
+                  paragraph removed. Terms page still linked from the
+                  app footer and the account-settings surface. */}
 
               <button
                 type="submit"
@@ -484,8 +437,8 @@ export default async function SignInPage({ searchParams }: PageProps) {
                   width: "100%",
                   minHeight: 52,
                   background:
-                    "linear-gradient(180deg, #00AFFF 0%, #0374B3 100%)",
-                  color: "#001A2E",
+                    "linear-gradient(180deg, #FF8A1F 0%, #D65A0A 100%)",
+                  color: "#FFFFFF",
                   border: "none",
                   borderRadius: 999,
                   fontSize: 15,
@@ -497,7 +450,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                   justifyContent: "center",
                   gap: 10,
                   boxShadow:
-                    "0 12px 32px -6px rgba(0,175,255,0.55), 0 1px 0 rgba(255,255,255,0.3) inset",
+                    "0 12px 32px -6px rgba(214, 90, 10, 0.45), 0 1px 0 rgba(255, 255, 255, 0.25) inset",
                 }}
               >
                 Sign Up
@@ -564,40 +517,20 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 icon={<LockIcon color={NEX.cyan} />}
                 input={<SignInPasswordInput />}
               />
+              {/* Owner directive 2026-11-27 · "Remember me" removed.
+                  Session persistence is automatic — the Supabase auth
+                  client keeps the user signed in across reloads, and
+                  sign-out is exposed via the side-drawer footer. */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  justifyContent: "flex-end",
                   marginTop: 2,
                   padding: "2px 2px 0",
                   fontSize: 12,
                 }}
               >
-                <label
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    color: NEX.textPrimary,
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    name="remember"
-                    value="1"
-                    defaultChecked
-                    style={{
-                      width: 16,
-                      height: 16,
-                      accentColor: NEX.cyan,
-                      cursor: "pointer",
-                    }}
-                  />
-                  Remember me
-                </label>
                 <Link
                   href="/nex-native/sign-in/forgot"
                   style={{
@@ -619,8 +552,8 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 width: "100%",
                 minHeight: 52,
                 background:
-                  "linear-gradient(180deg, #00AFFF 0%, #0374B3 100%)",
-                color: "#001A2E",
+                  "linear-gradient(180deg, #FF8A1F 0%, #D65A0A 100%)",
+                color: "#FFFFFF",
                 border: "none",
                 borderRadius: 999,
                 fontSize: 15,
@@ -632,7 +565,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 justifyContent: "center",
                 gap: 10,
                 boxShadow:
-                  "0 12px 32px -6px rgba(0,175,255,0.55), 0 1px 0 rgba(255,255,255,0.3) inset",
+                  "0 12px 32px -6px rgba(214, 90, 10, 0.45), 0 1px 0 rgba(255, 255, 255, 0.25) inset",
               }}
             >
               Sign In
@@ -645,7 +578,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                   width: 24,
                   height: 24,
                   borderRadius: "50%",
-                  background: "rgba(0,26,46,0.25)",
+                  background: "rgba(0, 0, 0, 0.18)",
                   fontSize: 14,
                   fontWeight: 900,
                 }}
@@ -656,65 +589,11 @@ export default async function SignInPage({ searchParams }: PageProps) {
           </form>
           )}
 
-          {/* ── Dev Pass · one-click admin sign-in (localhost only) ──
-                Renders only when NODE_ENV !== "production" AND both
-                NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD are set in
-                .env.local. Production builds never see this button
-                because the server-side `devPassEmail` resolves to
-                null. The form posts into the sealed signInAction
-                exactly like the main form · identical server path. */}
-          {!isSignup && devPassEmail && (
-            <form action={devPassAction} data-nex-dev-pass-form>
-              {/* Cycle 8 2026-11-24 · buyer-intent preservation.
-                  Dev Pass previously ignored ?next= and always landed
-                  on /free-chat, losing the signed-out buyer's purchase
-                  intent when auth-gate → sign-in → Dev Pass → return
-                  was tested. Carry the sanitised `next` into the dev
-                  pass action so the server can honour it via the same
-                  safeNext contract as the main sign-in form. */}
-              {nextParam ? (
-                <input type="hidden" name="next" value={nextParam} />
-              ) : null}
-              <button
-                type="submit"
-                data-nex-dev-pass-button
-                aria-label={`Dev pass sign-in as ${devPassEmail.email}`}
-                style={{
-                  marginTop: 10,
-                  width: "100%",
-                  minHeight: 44,
-                  background: "rgba(255, 114, 0, 0.14)",
-                  color: "#FF7200",
-                  border: "1px dashed rgba(255, 114, 0, 0.55)",
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  fontFamily: SANS,
-                }}
-              >
-                ⚡ Dev Pass · {devPassEmail.email}
-              </button>
-              <p
-                aria-hidden
-                style={{
-                  margin: "4px 2px 0",
-                  textAlign: "center",
-                  fontSize: 10,
-                  color: NEX.textMuted,
-                  letterSpacing: "0.03em",
-                }}
-              >
-                Localhost only · hidden in production
-              </p>
-            </form>
-          )}
+          {/* Owner directive 2026-11-27 · visible Dev Pass form
+              retired. Dev-founder sign-in works via typed credentials
+              in the normal sign-in form (server-side bypass lives in
+              signInAction behind the same NODE_ENV / NEX_ADMIN_EMAILS
+              / NEX_ADMIN_DEV_PASSWORD gates the button used). */}
 
           {/* ── Face sign-in · only if device previously enrolled ── */}
           {!isSignup && hasFaceOnDevice && (
@@ -896,7 +775,7 @@ const inputStyle: React.CSSProperties = {
   minWidth: 0,
   background: "transparent",
   border: "none",
-  color: "#F2F5F8",
+  color: "#1A1512",
   fontSize: 14,
   padding: "12px 2px",
   outline: "none",

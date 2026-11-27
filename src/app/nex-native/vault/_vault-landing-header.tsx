@@ -40,11 +40,12 @@ export function VaultLandingHeader({
       }}
     >
       {/* Owner directive 2026-11-09 · drawer trigger wrapped in a solid
-          theme-gold circle. 44×44 matches the sealed vault icon-button
-          size. The nested CSS forces the inner drawer button's SVG +
-          text colours to the dark-emerald vault bg so the glyph reads
-          against the gold fill regardless of UnifiedDrawer's default
-          stroke colour. */}
+          theme-gold circle. Owner directive 2026-11-27 · GLOBAL side-
+          drawer button size = 36×36 across every nexapp header (was
+          44×44 locally). The nested CSS forces the inner drawer
+          button's SVG + text colours to the dark-emerald vault bg so
+          the glyph reads against the gold fill regardless of
+          UnifiedDrawer's default stroke colour. */}
       <style>{`
         [data-nex-vault-landing-drawer-chip] button,
         [data-nex-vault-landing-drawer-chip] svg {
@@ -61,8 +62,8 @@ export function VaultLandingHeader({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 44,
-          height: 44,
+          width: 36,
+          height: 36,
           borderRadius: "50%",
           background: "#C6A15B",
           border: "1.5px solid #8B6A32",
