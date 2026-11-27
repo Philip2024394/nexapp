@@ -1,0 +1,41 @@
+
+Running 2 tests using 1 worker
+
+  ✘  1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (2.1s)
+
+
+  1) [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json 
+
+    Error: sign-in page responds 200 against the local dev server
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 500
+
+      91 |     response?.status(),
+      92 |     "sign-in page responds 200 against the local dev server",
+    > 93 |   ).toBe(200);
+         |     ^
+      94 |
+      95 |   // ── Gate 2 · Dev Pass form is present (proves env vars set) ─────
+      96 |   const devPassForm = page.locator("[data-nex-dev-pass-form]");
+        at C:\Users\Victus\nexapp\tests\e2e\auth.setup.ts:93:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json 
+  1 did not run

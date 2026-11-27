@@ -55,24 +55,21 @@
 
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import {
+  mergeShopInstallRecords,
+  type ServerRow,
+  type ShopInstallClientRecord,
+} from "./merge-shop-install-records";
 
 // ─── Public shapes ───────────────────────────────────────────────────────────
 
-/** Client-side record shape · mirrors `ShopDismissalRecord` +
- *  INSTALLED_FLAGS_KEY in use-shop-install-flow.ts. Kept here (not
- *  imported from the client module) so this server file does not pull
- *  the "use client" hook into a server bundle. */
-export interface ShopInstallClientRecord {
-  readonly shopSlug: string;
-  readonly dismissals: 0 | 1 | 2;
-  /** Wall-clock ms of the FIRST dismissal · null when dismissals=0. */
-  readonly firstDismissAt: number | null;
-  readonly suppressed: boolean;
-  readonly installed: boolean;
-}
+// `ShopInstallClientRecord` lives in ./merge-shop-install-records so this
+// "use server" module can satisfy Next.js 16's rule that every runtime
+// export be an async function. The shape is re-used in the result type
+// below via the imported alias.
 
 /** Return envelope · never throws. */
-export type SyncShopInstallPrefsResult =
+type SyncShopInstallPrefsResult =
   | {
       readonly ok: true;
       /** The post-merge record · the caller should write this to
@@ -123,53 +120,6 @@ function validateClientRecord(rec: unknown): ShopInstallClientRecord | null {
     firstDismissAt: fda as number | null,
     suppressed: r.suppressed,
     installed: r.installed,
-  };
-}
-
-// ─── Merge rule ──────────────────────────────────────────────────────────────
-
-interface ServerRow {
-  readonly dismissals: 0 | 1 | 2;
-  /** ISO string from Postgres timestamptz. */
-  readonly first_dismiss_at: string | null;
-  readonly suppressed: boolean;
-  readonly installed: boolean;
-}
-
-/** Exported for unit testing · pure function · no I/O. */
-export function mergeShopInstallRecords(
-  client: ShopInstallClientRecord,
-  server: ServerRow | null,
-): ShopInstallClientRecord {
-  if (!server) return client;
-  const serverFirstMs =
-    server.first_dismiss_at == null
-      ? null
-      : Date.parse(server.first_dismiss_at);
-  const mergedDismissals = Math.max(client.dismissals, server.dismissals) as 0 | 1 | 2;
-  // Earlier-non-null · null only when both inputs are null (which the
-  // CHECK constraint says only happens at dismissals=0).
-  let mergedFirstDismissAt: number | null = null;
-  if (client.firstDismissAt != null && serverFirstMs != null) {
-    mergedFirstDismissAt = Math.min(client.firstDismissAt, serverFirstMs);
-  } else if (client.firstDismissAt != null) {
-    mergedFirstDismissAt = client.firstDismissAt;
-  } else if (serverFirstMs != null) {
-    mergedFirstDismissAt = serverFirstMs;
-  }
-  // Invariant: dismissals ≥ 1 implies firstDismissAt is non-null.
-  // If this ever fails we treat it as a data-integrity defect · fall
-  // forward by stamping now() so the state machine keeps moving
-  // rather than surfacing an impossible record to the UI.
-  if (mergedDismissals >= 1 && mergedFirstDismissAt == null) {
-    mergedFirstDismissAt = Date.now();
-  }
-  return {
-    shopSlug: client.shopSlug,
-    dismissals: mergedDismissals,
-    firstDismissAt: mergedDismissals === 0 ? null : mergedFirstDismissAt,
-    suppressed: client.suppressed || server.suppressed,
-    installed: client.installed || server.installed,
   };
 }
 

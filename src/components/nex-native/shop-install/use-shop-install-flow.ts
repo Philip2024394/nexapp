@@ -39,10 +39,8 @@
 //   · Nothing here persists PII · only a shop slug → counts map.
 
 import * as React from "react";
-import {
-  syncShopInstallPrefs,
-  type ShopInstallClientRecord,
-} from "@/lib/nex-native/shop-install/sync-shop-install-prefs";
+import { syncShopInstallPrefs } from "@/lib/nex-native/shop-install/sync-shop-install-prefs";
+import { type ShopInstallClientRecord } from "@/lib/nex-native/shop-install/merge-shop-install-records";
 
 // ────────────────────────────────────────────────────────────────────────
 // Shared types

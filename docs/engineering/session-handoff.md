@@ -7,7 +7,31 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-053 · migration 369 corrections + app-side sync + free-chat themes UI refresh · HEAD advanced to `f868474e`)
+## Current state · 2026-11-27 (L-054 build-breaker fix + L-055 Dev-Pass-harness blocker · HEAD advanced to `<pending commit>`)
+
+**Delta from the L-053 block below.** Attempting to verify L-043 (Chat portrait-bloom hydration regression) surfaced a build-breaking defect introduced by L-053 itself: `sync-shop-install-prefs.ts` was a `"use server"` module exporting a sync pure function (`mergeShopInstallRecords`), which Next.js 16 rejects with *"Server Actions must be async functions"*. Every route touching the compiled chunk 500'd — including `/nex-native/sign-in`. Two new ledger rows:
+
+- **L-054 (this cycle, FIXED).** Split the pure merge rule into a dedicated non-`"use server"` module. NEW `src/lib/nex-native/shop-install/merge-shop-install-records.ts` owns `ShopInstallClientRecord`, `ServerRow`, and `mergeShopInstallRecords`. `sync-shop-install-prefs.ts` keeps `"use server"` and imports those symbols. Vitest spec and the client hook `use-shop-install-flow.ts` updated to import from the new module. `npx vitest run src/lib/nex-native/__tests__/sync-shop-install-prefs.test.ts` → 11 passed · 0 failed. Dev-server HTTP post-HMR: `/nex-native/sign-in` → 200, `/nex-native` → 200 (previously 500 with Build Error overlay).
+- **L-055 (surfaced this cycle, BLOCKED on harness refactor).** With the build error gone, `tests/e2e/auth.setup.ts` failed a different assertion: the Dev Pass form (`[data-nex-dev-pass-form]`) returns 0 elements. Reason: visible Dev Pass form was **retired per owner directive 2026-11-27** (see `src/app/nex-native/sign-in/page.tsx:598-602` — "Dev-founder sign-in works via typed credentials in the normal sign-in form"). Server-side bypass inside `signInAction` still gated behind `NODE_ENV!=='production' + NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD`. The auth-harness needs a non-drive-by refactor (types `NEX_ADMIN_EMAILS[0]` + `NEX_ADMIN_DEV_PASSWORD` into the normal email/password form and clicks normal Sign In, preserving all five existing safety gates). Blocks L-043 verification and every downstream authenticated Playwright spec. The L-043 spec itself is fully authored and wired — only the shared auth-setup dependency is stale.
+
+**Files changed this cycle (standing-policy commit candidates):**
+
+- `src/lib/nex-native/shop-install/merge-shop-install-records.ts` (NEW · pure · no `"use server"`)
+- `src/lib/nex-native/shop-install/sync-shop-install-prefs.ts` (MODIFIED · removed local defs · imports from new module)
+- `src/lib/nex-native/__tests__/sync-shop-install-prefs.test.ts` (MODIFIED · import path re-pointed)
+- `src/components/nex-native/shop-install/use-shop-install-flow.ts` (MODIFIED · type-only import split from server-action value import)
+- `tests/e2e/_runs/20261127T-L043-chat-hydration-verify.log` (NEW · evidence of L-053 defect)
+- `tests/e2e/_runs/20261127T-L043-chat-hydration-verify-retry1.log` (NEW · evidence Build Error gone + L-055 harness blocker)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-054 + L-055 rows)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Commit pending under the sealed 2026-11-27 standing source-control policy. Push target `Philip2024394/nexapp` `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
+
+**Next safe action (no approval needed · continue inside Rule 7):** Refactor `tests/e2e/auth.setup.ts` per the L-055 "next concrete action" paragraph so authenticated Playwright specs (including L-043) run again. Then run L-043 and promote from BUILT → VERIFIED. Then continue the finish-the-application queue.
+
+---
+
+## Prior state · 2026-11-27 (L-053 · migration 369 corrections + app-side sync + free-chat themes UI refresh · HEAD advanced to `f868474e`)
 
 **Delta from the NEX-024 cycle 2 block below.** Owner directives:
 (a) comprehensive migration 369 review — 6 numbered sections flagged (RLS identity model, rollback data-loss disclosure, sync monotonicity, shop identity canonicality, migration conventions, continuation to implementation);

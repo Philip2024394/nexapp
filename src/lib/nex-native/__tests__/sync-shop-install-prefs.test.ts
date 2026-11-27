@@ -21,7 +21,7 @@ import { describe, test, expect } from "vitest";
 import {
   mergeShopInstallRecords,
   type ShopInstallClientRecord,
-} from "../shop-install/sync-shop-install-prefs";
+} from "../shop-install/merge-shop-install-records";
 
 const SLUG = "example-shop";
 
