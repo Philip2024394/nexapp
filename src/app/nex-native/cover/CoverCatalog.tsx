@@ -80,7 +80,11 @@ export function CoverCatalog({
 }): React.JSX.Element {
   const effectivePageSize =
     pageSize ??
-    (variant === "landscape" ? 8 : variant === "round" ? 6 : 4);
+    (variant === "landscape"
+      ? 8
+      : variant === "round"
+        ? 6
+        : 4);
   // Founder direction 2026-09-30 · FIRST tab active on arrival · not
   // empty. Buyer lands filtered to the seller's first category, sees
   // its underline, taps it again (toggle) if they want to see all.
