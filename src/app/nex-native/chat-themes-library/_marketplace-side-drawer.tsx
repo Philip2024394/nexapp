@@ -62,9 +62,20 @@ const ITEMS: ReadonlyArray<DrawerItem> = [
     icon: <CrownIcon />,
   },
   {
+    // 2026-11-27 · dead-link repair · `/nex-native/welcome` has no
+    // root `page.tsx` (only child routes `account-active`, `shop-
+    // active`, `shop-offer` survive); the route returns 404 for every
+    // session. The owner-sealed 2026-11-23 brief relabelled the
+    // `/nex-native` splash as "NEX splash page" (display name) · path
+    // unchanged · and that splash IS the owner-sealed "NEX welcome
+    // surface" with built-in G-2 branching (signed-in →
+    // `/nex-native/contacts`, signed-out+known → `/nex-native/sign-in`,
+    // signed-out+new → `/nex-native/free-chat?show-themes=1`, SOS-
+    // configured → decision screen). Label + sub copy preserved; only
+    // the href target migrated.
     label: "Back to Welcome",
     sub: "Return to the NEX welcome surface",
-    href: "/nex-native/welcome",
+    href: "/nex-native",
     icon: <HomeIcon />,
   },
 ];
