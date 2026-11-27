@@ -12,22 +12,28 @@ What requires the owner before continuing?
 **Delta from the L-053 block below.** Attempting to verify L-043 (Chat portrait-bloom hydration regression) surfaced a build-breaking defect introduced by L-053 itself: `sync-shop-install-prefs.ts` was a `"use server"` module exporting a sync pure function (`mergeShopInstallRecords`), which Next.js 16 rejects with *"Server Actions must be async functions"*. Every route touching the compiled chunk 500'd — including `/nex-native/sign-in`. Two new ledger rows:
 
 - **L-054 (this cycle, FIXED).** Split the pure merge rule into a dedicated non-`"use server"` module. NEW `src/lib/nex-native/shop-install/merge-shop-install-records.ts` owns `ShopInstallClientRecord`, `ServerRow`, and `mergeShopInstallRecords`. `sync-shop-install-prefs.ts` keeps `"use server"` and imports those symbols. Vitest spec and the client hook `use-shop-install-flow.ts` updated to import from the new module. `npx vitest run src/lib/nex-native/__tests__/sync-shop-install-prefs.test.ts` → 11 passed · 0 failed. Dev-server HTTP post-HMR: `/nex-native/sign-in` → 200, `/nex-native` → 200 (previously 500 with Build Error overlay).
-- **L-055 (surfaced this cycle, BLOCKED on harness refactor).** With the build error gone, `tests/e2e/auth.setup.ts` failed a different assertion: the Dev Pass form (`[data-nex-dev-pass-form]`) returns 0 elements. Reason: visible Dev Pass form was **retired per owner directive 2026-11-27** (see `src/app/nex-native/sign-in/page.tsx:598-602` — "Dev-founder sign-in works via typed credentials in the normal sign-in form"). Server-side bypass inside `signInAction` still gated behind `NODE_ENV!=='production' + NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD`. The auth-harness needs a non-drive-by refactor (types `NEX_ADMIN_EMAILS[0]` + `NEX_ADMIN_DEV_PASSWORD` into the normal email/password form and clicks normal Sign In, preserving all five existing safety gates). Blocks L-043 verification and every downstream authenticated Playwright spec. The L-043 spec itself is fully authored and wired — only the shared auth-setup dependency is stale.
+- **L-055 (surfaced + fixed + verified this cycle).** With the L-054 build error gone, `tests/e2e/auth.setup.ts` failed a different assertion: the Dev Pass form (`[data-nex-dev-pass-form]`) returns 0 elements. Reason: visible Dev Pass form was **retired per owner directive 2026-11-27** (see `src/app/nex-native/sign-in/page.tsx:598-602`). Server-side bypass inside `signInAction` still gated behind `NODE_ENV!=='production' + NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD`. Refactored `tests/e2e/auth.setup.ts` to read `NEX_ADMIN_EMAILS[0]` + `NEX_ADMIN_DEV_PASSWORD` from `.env.local`, type them into `[data-nex-sign-in-form] input[name="email"]` + `input[name="password"]`, click `[data-nex-sign-in-submit]`. All five original safety gates preserved (HTTP 200 · no error banner · authenticated URL · sandbox cookie present · zero production cookies). Env values never printed/logged/returned.
+- **L-043 (promoted BUILT → VERIFIED this cycle).** `npx playwright test tests/e2e/regression-l043-chat-portrait-bloom-hydration.spec.ts --project=stage-a-pixel7 --reporter=list` → **2 passed (47.3 s)**: auth-setup 9.9 s + L-043 regression 33.5 s. All three contracts hold (SSR placeholder + `Rp 1,000,000` no `17:00` · post-hydration `17:00` placeholder gone and `Rp 1,000,000` still present · zero hydration warnings). Log: `tests/e2e/_runs/20261127T-L043-chat-hydration-verify-retry2.log`. Ledger L-043 body updated with real run evidence (prior premature VERIFIED-with-stale-body noted + corrected).
 
-**Files changed this cycle (standing-policy commit candidates):**
+**Files changed this cycle (standing-policy commit candidates · commit 1 = L-054 fix · commit 2 = L-055 harness + L-043 verification):**
 
+Commit 1 already pushed as `5a802f40`:
 - `src/lib/nex-native/shop-install/merge-shop-install-records.ts` (NEW · pure · no `"use server"`)
 - `src/lib/nex-native/shop-install/sync-shop-install-prefs.ts` (MODIFIED · removed local defs · imports from new module)
 - `src/lib/nex-native/__tests__/sync-shop-install-prefs.test.ts` (MODIFIED · import path re-pointed)
-- `src/components/nex-native/shop-install/use-shop-install-flow.ts` (MODIFIED · type-only import split from server-action value import)
-- `tests/e2e/_runs/20261127T-L043-chat-hydration-verify.log` (NEW · evidence of L-053 defect)
-- `tests/e2e/_runs/20261127T-L043-chat-hydration-verify-retry1.log` (NEW · evidence Build Error gone + L-055 harness blocker)
-- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-054 + L-055 rows)
+- `src/components/nex-native/shop-install/use-shop-install-flow.ts` (MODIFIED · type-only import split)
+- `tests/e2e/_runs/20261127T-L043-chat-hydration-verify.log` + `-retry1.log` (NEW · evidence)
+- Initial L-054/L-055 ledger rows
+
+Commit 2 pending (L-055 harness refactor + L-043 verification):
+- `tests/e2e/auth.setup.ts` (MODIFIED · Dev Pass click replaced with typed-credentials flow)
+- `tests/e2e/_runs/20261127T-L043-chat-hydration-verify-retry2.log` (NEW · 2 passed evidence)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-043 real run evidence appended · L-055 BLOCKED → VERIFIED)
 - `docs/engineering/session-handoff.md` (this block)
 
-**Rule 7 posture:** Commit `5a802f40` pushed to `Philip2024394/nexapp` `release-audit-v1-2026-11-14` under the sealed 2026-11-27 standing source-control policy. Prior HEAD `f868474e` (L-053) advanced to `5a802f40`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
+**Rule 7 posture:** Commit `5a802f40` pushed to `Philip2024394/nexapp` `release-audit-v1-2026-11-14` under the sealed 2026-11-27 standing source-control policy. Second commit pending for L-055 harness refactor + L-043 real-evidence. Prior HEAD `f868474e` (L-053) advanced to `5a802f40`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
 
-**Next safe action (no approval needed · continue inside Rule 7):** Refactor `tests/e2e/auth.setup.ts` per the L-055 "next concrete action" paragraph so authenticated Playwright specs (including L-043) run again. Then run L-043 and promote from BUILT → VERIFIED. Then continue the finish-the-application queue.
+**Next safe action (no approval needed · continue inside Rule 7):** Continue the finish-the-application queue. Candidate items per the delivery ledger remaining-work section: pick the next unblocked P1 regression that requires an authenticated session and was previously blocked on the auth-setup harness; or pivot to Shop / Chat Themes journey work per the three launch pillars.
 
 ---
 
