@@ -7,7 +7,7 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-054 build-breaker fix + L-055 Dev-Pass-harness blocker · HEAD advanced to `<pending commit>`)
+## Current state · 2026-11-27 (L-054 build-breaker fix + L-055 Dev-Pass-harness blocker · HEAD advanced to `5a802f40`)
 
 **Delta from the L-053 block below.** Attempting to verify L-043 (Chat portrait-bloom hydration regression) surfaced a build-breaking defect introduced by L-053 itself: `sync-shop-install-prefs.ts` was a `"use server"` module exporting a sync pure function (`mergeShopInstallRecords`), which Next.js 16 rejects with *"Server Actions must be async functions"*. Every route touching the compiled chunk 500'd — including `/nex-native/sign-in`. Two new ledger rows:
 
@@ -25,7 +25,7 @@ What requires the owner before continuing?
 - `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-054 + L-055 rows)
 - `docs/engineering/session-handoff.md` (this block)
 
-**Rule 7 posture:** Commit pending under the sealed 2026-11-27 standing source-control policy. Push target `Philip2024394/nexapp` `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
+**Rule 7 posture:** Commit `5a802f40` pushed to `Philip2024394/nexapp` `release-audit-v1-2026-11-14` under the sealed 2026-11-27 standing source-control policy. Prior HEAD `f868474e` (L-053) advanced to `5a802f40`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
 
 **Next safe action (no approval needed · continue inside Rule 7):** Refactor `tests/e2e/auth.setup.ts` per the L-055 "next concrete action" paragraph so authenticated Playwright specs (including L-043) run again. Then run L-043 and promote from BUILT → VERIFIED. Then continue the finish-the-application queue.
 
