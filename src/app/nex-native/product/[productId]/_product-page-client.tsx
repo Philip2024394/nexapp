@@ -391,9 +391,15 @@ export function ProductPageClient({
       </header>
 
       {/* ── Gallery · vertical thumbs (left) + main image (right) ─
-          Matches sealed 2026-11-16 mock. On a single-image product the
-          thumbs column collapses so the main image can use the full
-          width · the image itself is never cropped out of frame. */}
+          Owner directive 2026-11-28 (forty-fourth pass) · the main
+          image now paints directly on the page (no card chrome, no
+          inset panel) · matches the front-card editorial treatment
+          one-for-one. The thumb column always renders four fixed
+          slots — three product-image thumbs + one video slot at the
+          bottom — so the gallery reads the same whether the seller
+          has filled every slot or not. Empty image slots show a
+          subtle outline; the video slot shows a play glyph until
+          the seller attaches a product video. */}
       <div
         data-nex-product-gallery
         style={{
@@ -402,47 +408,58 @@ export function ProductPageClient({
           gap: 10,
         }}
       >
-        {images.length > 1 ? (
-          <div
-            data-nex-product-gallery-thumbs
-            role="list"
-            aria-label="Product images"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              width: 56,
-              flexShrink: 0,
-            }}
-          >
-            {images.map((src, i) => {
-              const isActive = src === activeImage;
-              return (
-                <button
-                  key={`${src}-${i}`}
-                  type="button"
-                  role="listitem"
-                  data-nex-product-thumb-index={i}
-                  aria-label={`Show image ${i + 1} of ${images.length}`}
-                  aria-pressed={isActive}
-                  onClick={() => setActiveImage(src)}
-                  style={{
-                    width: 56,
-                    height: 56,
-                    minWidth: 44,
-                    minHeight: 44,
-                    borderRadius: 12,
-                    background: "#fff",
-                    border: isActive
-                      ? `2px solid ${ORANGE}`
-                      : "1px solid rgba(0,0,0,0.08)",
-                    padding: 2,
-                    cursor: "pointer",
-                    overflow: "hidden",
-                    display: "block",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+        <div
+          data-nex-product-gallery-thumbs
+          role="list"
+          aria-label="Product images"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            width: 56,
+            flexShrink: 0,
+          }}
+        >
+          {Array.from({ length: MAX_THUMBS }).map((_, i) => {
+            const src = images[i] ?? null;
+            const isActive = src !== null && src === activeImage;
+            const hasImage = src !== null;
+            return (
+              <button
+                key={`thumb-${i}`}
+                type="button"
+                role="listitem"
+                data-nex-product-thumb-index={i}
+                aria-label={
+                  hasImage
+                    ? `Show image ${i + 1}`
+                    : `Image slot ${i + 1} · empty`
+                }
+                aria-pressed={isActive}
+                disabled={!hasImage}
+                onClick={() => {
+                  if (src) setActiveImage(src);
+                }}
+                style={{
+                  width: 56,
+                  height: 56,
+                  minWidth: 44,
+                  minHeight: 44,
+                  borderRadius: 12,
+                  background: hasImage ? "#fff" : "transparent",
+                  border: isActive
+                    ? `2px solid ${ORANGE}`
+                    : hasImage
+                      ? "1px solid rgba(0,0,0,0.08)"
+                      : "1px dashed rgba(0,0,0,0.15)",
+                  padding: 2,
+                  cursor: hasImage ? "pointer" : "default",
+                  overflow: "hidden",
+                  display: "block",
+                }}
+              >
+                {src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={src}
                     alt=""
@@ -454,11 +471,42 @@ export function ProductPageClient({
                       display: "block",
                     }}
                   />
-                </button>
-              );
-            })}
+                ) : null}
+              </button>
+            );
+          })}
+          {/* Video slot · placeholder container until a product-video
+              field lands on nex_product. Owner directive 2026-11-28
+              (forty-fourth pass) · "1 container for video". */}
+          <div
+            data-nex-product-gallery-video-slot
+            role="listitem"
+            aria-label="Product video · coming soon"
+            style={{
+              width: 56,
+              height: 56,
+              minWidth: 44,
+              minHeight: 44,
+              borderRadius: 12,
+              background: "#111418",
+              border: "1px solid rgba(0,0,0,0.12)",
+              display: "grid",
+              placeItems: "center",
+              color: "#fff",
+              overflow: "hidden",
+            }}
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
           </div>
-        ) : null}
+        </div>
 
         <div
           data-nex-product-gallery-main
@@ -467,9 +515,9 @@ export function ProductPageClient({
           style={{
             flex: 1,
             aspectRatio: "1 / 1",
-            borderRadius: 18,
-            background: activeImage ? "#fff" : PLACEHOLDER_BG,
-            border: "1px solid rgba(0,0,0,0.06)",
+            background: "transparent",
+            border: "none",
+            borderRadius: 0,
             overflow: "hidden",
             display: "grid",
             placeItems: "center",

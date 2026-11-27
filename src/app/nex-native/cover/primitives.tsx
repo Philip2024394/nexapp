@@ -25,6 +25,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { SocialBrandIcon } from "@/components/nex-native/social/brand-icon";
+import {
+  isSupportedCurrency,
+  type ShopCurrencyCode,
+} from "@/lib/nex-native/shop-locale/data";
+import { useShopLocale } from "@/lib/nex-native/shop-locale/locale-context";
 
 // ─── Charm glyph registry ────────────────────────────────────────────
 // One SVG per theme "family." Themes without a bespoke charm get a
@@ -192,6 +197,11 @@ export interface CoverIdentityBadgeProps {
    *  silhouette. Default false keeps the ping rings on existing
    *  templates. Template 15 (product_hero_landscape) passes true. */
   hidePing?: boolean;
+  /** Owner directive 2026-11-28 (sixth pass) · X-Rated Tool Belts
+   *  design iteration · hide the 📍 glyph on the location row so the
+   *  city/country reads as plain text directly beneath the hero logo.
+   *  Default false keeps the pin on every other template. */
+  hideLocationPin?: boolean;
 }
 
 /**
@@ -307,8 +317,12 @@ export function CoverIdentityBadge(
               // NEX presence green" rule · green ping lives on the
               // outer ring above so presence is still signalled.
               border: "2px solid var(--nex-accent, #16D66B)",
-              boxShadow:
-                "0 6px 22px rgba(0,0,0,0.45), 0 0 18px rgba(22, 214, 107, 0.45)",
+              // Owner directive 2026-11-28 (twenty-fifth pass) · flat
+              // portrait on every template · the legacy dark-cast +
+              // green-glow bloom is dropped so the ping rings read on
+              // their own. Clean rim + pulsing accent rings tell the
+              // "live and reachable" story without competing shadows.
+              boxShadow: "none",
               display: "grid",
               placeItems: "center",
               color: "var(--nex-text)",
@@ -337,7 +351,11 @@ export function CoverIdentityBadge(
             // now paints a real flag image (flagcdn PNG) so Windows
             // Chromium, which doesn't ship country-flag emojis, no
             // longer shows "ID" text in place of the Indonesia flag.
-            const badgeSize = 29;
+            // Owner directive 2026-11-28 (fifth pass) · reduce the
+            // whole badge ~30% (29 → 20) so it sits further back in
+            // the identity hierarchy on templates that use an
+            // uploaded header logo.
+            const badgeSize = 20;
             return (
               <div
                 aria-label={`Country ${props.countryCode}`}
@@ -387,6 +405,9 @@ export function CoverIdentityBadge(
             // + object-fit:contain) prevent an oversized upload from
             // blowing out the identity badge. Alt text still carries
             // the typed name for screen readers.
+            // Thirty-eighth pass · logo max height bumped 10% (52→57)
+            // so the X-Rated wordmark reads a touch bolder next to the
+            // hero portrait.
             <img
               src={props.headerLogoUrl}
               alt={props.name}
@@ -394,11 +415,23 @@ export function CoverIdentityBadge(
               style={{
                 display: "block",
                 maxWidth: 180,
-                maxHeight: 52,
+                maxHeight: 57,
                 width: "auto",
                 height: "auto",
                 objectFit: "contain",
                 objectPosition: "left center",
+                // Owner directive 2026-11-28 (eighth pass) · the uploaded
+                // PNG for X-Rated Tool Belts has transparent padding
+                // baked into the bottom of the asset, which the <img>
+                // box still reserves as layout space. The text below
+                // could not visually rise into that band no matter how
+                // negative its marginTop. Negative marginBottom lets
+                // the next sibling overlap the transparent region —
+                // nothing is drawn there, so there's no collision. If
+                // a future shop uploads a logo with NO transparent
+                // padding, drop this to 0 for that slug.
+                marginTop: -6,
+                marginBottom: -12,
               }}
             />
           ) : (
@@ -470,30 +503,68 @@ export function CoverIdentityBadge(
           {props.location && (
             <div
               style={{
+                // Owner directive 2026-11-28 (seventh + eighth pass) ·
+                // when the pin is hidden (X-Rated / Template 15), lift
+                // the row closer to the hero logo, bump the text to
+                // 12px, and drop the dark drop-shadow so the city/
+                // country reads crisply on the cream/dark backdrop.
+                // The header-logo <img> now carries its own negative
+                // marginBottom (eats the transparent padding baked into
+                // the PNG asset), so we no longer need an aggressive
+                // negative marginTop here — the row now sits flush
+                // under the glyph with a calm 2px gap. Other templates
+                // keep the legacy 2 / 11 / shadowed treatment.
+                //
+                // Owner directive 2026-11-28 (thirty-fifth pass) · the
+                // address row now carries its own SVG map pin even when
+                // hideLocationPin is true (previously the "hide" flag
+                // meant "no glyph at all" · we now hide the 📍 emoji
+                // and render a proper map pin icon instead). The row
+                // is nudged a touch to the right so it sits under the
+                // hero logo rather than hugging the left edge.
                 marginTop: 2,
+                marginLeft: 8,
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 4,
-                fontSize: 11,
+                gap: 6,
+                fontSize: props.hideLocationPin ? 12 : 11,
                 color: "var(--nex-text-dim)",
                 letterSpacing: "0.02em",
                 lineHeight: 1.3,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                textShadow: "0 1px 4px rgba(0,0,0,0.65)",
+                textShadow: props.hideLocationPin
+                  ? "none"
+                  : "0 1px 4px rgba(0,0,0,0.65)",
               }}
             >
-              <span
-                aria-hidden
-                style={{
-                  color: "var(--nex-accent)",
-                  fontSize: 12,
-                  lineHeight: 1,
-                }}
-              >
-                📍
-              </span>
+              {props.hideLocationPin ? (
+                <svg
+                  aria-hidden
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  style={{
+                    color: "var(--nex-accent, #F97316)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 0 1 9.5 9 2.5 2.5 0 0 1 12 6.5 2.5 2.5 0 0 1 14.5 9a2.5 2.5 0 0 1-2.5 2.5z" />
+                </svg>
+              ) : (
+                <span
+                  aria-hidden
+                  style={{
+                    color: "var(--nex-accent)",
+                    fontSize: 12,
+                    lineHeight: 1,
+                  }}
+                >
+                  📍
+                </span>
+              )}
               {props.location}
             </div>
           )}
@@ -736,6 +807,13 @@ export interface CoverProduct {
    *  name and price. Clamped visually to 2 lines. Optional · card
    *  hides the row when absent. */
   description?: string | null;
+  /** Owner directive 2026-11-28 (fortieth pass) · available colour
+   *  variants as CSS colour strings (hex, named, or any valid CSS
+   *  colour). Rendered as small round circles to the LEFT of the
+   *  price pill on Template 15's editorial variant. Absent / empty
+   *  → no dots render. Template 15 only for now · other variants
+   *  ignore the field. */
+  colors?: readonly string[];
 }
 
 // ─── Category Tabs (sealed 2026-09-30) ────────────────────────────────
@@ -872,7 +950,22 @@ export function CoverProductCard({
   textOnly?: boolean;
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
-  const priceLabel = formatMoney(product.currency, product.price_pence);
+  // Owner directive 2026-11-28 (fourth pass) · when a ShopLocaleProvider
+  // is in scope (Template 15 today), route the price through the
+  // buyer-picked currency with approximate conversion · displays the
+  // converted value with a leading "~" so no one reads it as exact.
+  // When outside the provider, fall back to the original formatter
+  // so every other template renders identically.
+  const locale = useShopLocale();
+  const fromCode: ShopCurrencyCode | null = isSupportedCurrency(
+    product.currency,
+  )
+    ? (product.currency.toUpperCase() as ShopCurrencyCode)
+    : null;
+  const priceLabel =
+    locale && fromCode
+      ? locale.formatPrice(product.price_pence, fromCode).display
+      : formatMoney(product.currency, product.price_pence);
   // Owner-authorised 2026-11-16 · product-detail-slider → full
   // product page migration. Tapping a product card now opens the
   // dedicated product page (`/nex-native/product/<id>`) carrying
@@ -1125,19 +1218,30 @@ export function CoverProductCard({
         data-product-id={product.id}
         data-text-only={textOnly ? "true" : undefined}
         style={{
-          display: isLandscape ? "flex" : "block",
-          flexDirection: isLandscape ? "row" : undefined,
-          alignItems: isLandscape ? "stretch" : undefined,
+          // Owner directive 2026-11-28 (twenty-ninth pass) · Template 15
+          // drops the cream card entirely · each product renders as a
+          // full-width image on top with a name/price/description block
+          // underneath, directly on top of the shop backdrop. A hairline
+          // separates products so the list doesn't become a wall. The
+          // old landscape-row + flex layout only applies when textOnly
+          // is false (the generic landscape variant used elsewhere).
+          display: isLandscape && textOnly ? "block" : isLandscape ? "flex" : "block",
+          flexDirection: isLandscape && !textOnly ? "row" : undefined,
+          alignItems: isLandscape && !textOnly ? "stretch" : undefined,
           position: "relative",
-          borderRadius: "var(--nex-card-radius)",
-          border: "var(--nex-card-border)",
-          background: "var(--nex-card-bg)",
-          color: "var(--nex-text)",
-          backdropFilter: "blur(14px) saturate(1.1)",
-          WebkitBackdropFilter: "blur(14px) saturate(1.1)",
-          overflow: "hidden",
+          borderRadius: isLandscape && textOnly ? 0 : "var(--nex-card-radius)",
+          border: isLandscape && textOnly ? "none" : "var(--nex-card-border)",
+          background: isLandscape && textOnly ? "transparent" : "var(--nex-card-bg)",
+          color: isLandscape && textOnly ? "var(--nex-text)" : "var(--nex-text)",
+          backdropFilter: isLandscape && textOnly ? "none" : "blur(14px) saturate(1.1)",
+          WebkitBackdropFilter: isLandscape && textOnly ? "none" : "blur(14px) saturate(1.1)",
+          overflow: isLandscape && textOnly ? "visible" : "hidden",
           textDecoration: "none",
-          boxShadow: "0 8px 22px rgba(0,0,0,0.4)",
+          boxShadow: isLandscape && textOnly ? "none" : "0 8px 22px rgba(0,0,0,0.4)",
+          padding: isLandscape && textOnly ? "0 0 16px 0" : undefined,
+          borderBottom:
+            isLandscape && textOnly ? "1px solid rgba(255,255,255,0.14)" : undefined,
+          marginBottom: isLandscape && textOnly ? 16 : undefined,
           opacity: soldOut ? 0.7 : 1,
         }}
       >
@@ -1164,25 +1268,47 @@ export function CoverProductCard({
           role={product.image_url ? undefined : "img"}
           aria-label={product.image_url ? undefined : "Image placeholder"}
           style={{
-            aspectRatio: "1 / 1",
-            width: isLandscape ? 112 : "100%",
-            flex: isLandscape ? "0 0 112px" : undefined,
-            height: isLandscape ? 112 : undefined,
+            // Owner directive 2026-11-28 (twenty-ninth pass) · Template 15
+            // editorial layout · image spans the full width of the row
+            // (no card chrome, no inset panel). Thirtieth pass · image
+            // height halved from a 1:1 square to a 2:1 landscape banner
+            // so the row breathes and the name/description read sooner
+            // on the fold. Generic landscape branch keeps its 112px
+            // thumbnail. Grid branch stays square 100%.
+            aspectRatio: isLandscape && textOnly ? "2.5 / 1" : "1 / 1",
+            width:
+              isLandscape && textOnly
+                ? "100%"
+                : isLandscape
+                  ? 112
+                  : "100%",
+            flex:
+              isLandscape && textOnly
+                ? undefined
+                : isLandscape
+                  ? "0 0 112px"
+                  : undefined,
+            height: isLandscape && !textOnly ? 112 : undefined,
+            // Keep every background-* property as a long-hand so React
+            // never has to reconcile a `background` shorthand against
+            // sibling long-hands (mixing the two fires a dev warning
+            // and can drop the long-hands on rerender).
             backgroundImage: product.image_url
               ? `url(${product.image_url})`
-              : undefined,
-            background: product.image_url
-              ? undefined
               : `linear-gradient(135deg, var(--nex-accent-faint), var(--nex-panel))`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
             position: "relative",
+            // Editorial variant · no rounding (sits flush with the row).
             // Grid mode · image bottom corners rounded so meta stack
-            // sits under a curve. Landscape mode · right side rounded
-            // so meta column sits AGAINST the curve on its left edge.
-            borderBottomLeftRadius: isLandscape ? 0 : 12,
-            borderBottomRightRadius: isLandscape ? 12 : 12,
-            borderTopRightRadius: isLandscape ? 12 : 0,
+            // sits under a curve. Landscape (non-editorial) · right
+            // side rounded so meta column sits AGAINST the curve.
+            borderRadius: isLandscape && textOnly ? 0 : undefined,
+            borderBottomLeftRadius: isLandscape && textOnly ? 0 : isLandscape ? 0 : 12,
+            borderBottomRightRadius: isLandscape && textOnly ? 0 : isLandscape ? 12 : 12,
+            borderTopLeftRadius: isLandscape && textOnly ? 0 : undefined,
+            borderTopRightRadius: isLandscape && textOnly ? 0 : isLandscape ? 12 : 0,
             overflow: "hidden",
             display: !product.image_url ? "grid" : undefined,
             placeItems: !product.image_url ? "center" : undefined,
@@ -1288,68 +1414,87 @@ export function CoverProductCard({
               move to the image lower right side · this allows price
               1 row". The magnifier now sits as an overlay on the
               image, freeing the meta stack below so the price gets
-              its own row and no longer shares with the icon. */}
-          <span
-            aria-hidden
-            data-nex-cover-view-product
-            style={{
-              position: "absolute",
-              bottom: 8,
-              right: 8,
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "var(--nex-accent)",
-              color: "#03101D",
-              display: "grid",
-              placeItems: "center",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
-            }}
-          >
-            <svg
-              width={15}
-              height={15}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              its own row and no longer shares with the icon.
+              Owner directive 2026-11-28 (twenty-eighth pass) · the
+              glossy-cream landscape variant replaces this in-image
+              magnifier with an orange cart button pinned to the
+              right edge of the whole card · hide this overlay in
+              that mode so we don't double-stamp a View affordance. */}
+          {!(isLandscape && textOnly) && (
+            <span
               aria-hidden
+              data-nex-cover-view-product
+              style={{
+                position: "absolute",
+                bottom: 8,
+                right: 8,
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "var(--nex-accent)",
+                color: "#03101D",
+                display: "grid",
+                placeItems: "center",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
+              }}
             >
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.5" y2="16.5" />
-            </svg>
-          </span>
+              <svg
+                width={15}
+                height={15}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.5" y2="16.5" />
+              </svg>
+            </span>
+          )}
+          {/* Owner directive 2026-11-28 (thirty-sixth pass) · the
+              standalone round View button on the image was removed ·
+              the price pill in the text row below now carries the
+              "open product page" affordance so the image stays clean. */}
         </div>
         {/* Founder direction 2026-09-30 (revised) · card meta stack ·
               name → 2-line description → price + round magnifier.
             The magnifier signals tap-to-open without a text pill
             hogging horizontal space (previous "VIEW" pill overflowed
             on narrow cards with long prices). Whole card is still the
-            <Link>; the magnifier is the visible affordance. */}
+            <Link>; the magnifier is the visible affordance.
+            Owner directive 2026-11-28 (twenty-ninth pass) · Template
+            15 editorial layout · meta block now sits BELOW the
+            full-width image, name on the left with price top-right of
+            the same row, description underneath. No card chrome · the
+            shop backdrop shows through. */}
         <div
           data-nex-cover-meta-column
           style={{
-            padding: isLandscape ? "10px 12px" : "10px 12px 12px",
+            padding:
+              isLandscape && textOnly
+                ? "10px 2px 0 2px"
+                : isLandscape
+                  ? "10px 12px"
+                  : "10px 12px 12px",
             display: "grid",
             gap: 6,
             minWidth: 0,
-            flex: isLandscape ? "1 1 auto" : undefined,
-            alignContent: isLandscape ? "center" : undefined,
-            // Owner directive 2026-11-28 (third pass) · light-gray
-            // surface behind the text column ONLY · the product image
-            // on the left keeps its own styling.
-            background: isLandscape && textOnly ? "#E5E7EB" : undefined,
-            color: isLandscape && textOnly ? "#111827" : undefined,
+            flex: isLandscape && !textOnly ? "1 1 auto" : undefined,
+            alignContent: isLandscape && !textOnly ? "center" : undefined,
+            background: undefined,
+            color: undefined,
           }}
         >
           <div
             style={{
-              fontSize: 14,
+              fontSize: isLandscape && textOnly ? 15 : 14,
               fontWeight: 700,
               lineHeight: 1.25,
               letterSpacing: "-0.005em",
+              color: isLandscape && textOnly ? "#000000" : undefined,
               minWidth: 0,
               display: "-webkit-box",
               WebkitLineClamp: 1,
@@ -1365,7 +1510,10 @@ export function CoverProductCard({
               style={{
                 fontSize: 11,
                 lineHeight: 1.35,
-                color: isLandscape && textOnly ? "#374151" : "var(--nex-text-dim)",
+                color:
+                  isLandscape && textOnly
+                    ? "var(--nex-text-dim)"
+                    : "var(--nex-text-dim)",
                 minWidth: 0,
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -1380,21 +1528,138 @@ export function CoverProductCard({
           {/* Owner directive 2026-11-06 · magnifier moved to the
               image (bottom-right overlay) · price now owns its own
               full row · no flex-wrapper needed · long prices wrap
-              naturally without fighting for space with an icon. */}
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 800,
-              color: "var(--nex-accent)",
-              letterSpacing: "0.01em",
-              lineHeight: 1.25,
-              marginTop: 2,
-              wordBreak: "break-word",
-              overflowWrap: "anywhere",
-            }}
-          >
-            {priceLabel}
-          </div>
+              naturally without fighting for space with an icon.
+              Owner directive 2026-11-28 (twenty-ninth pass) · editorial
+              Template 15 moved the price into the name row above, so
+              this standalone price block only renders in the other
+              variants (grid + non-editorial landscape). */}
+          {!(isLandscape && textOnly) && (
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color: "var(--nex-accent)",
+                letterSpacing: "0.01em",
+                lineHeight: 1.25,
+                marginTop: 2,
+                wordBreak: "break-word",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {priceLabel}
+            </div>
+          )}
+          {/* Owner directive 2026-11-28 (thirty-seventh pass) · editorial
+              Template 15 · price + "open product page" affordance merged
+              into a single orange pill · positioned UNDER the 2-line
+              description (previously sat top-right of the name row).
+              Leading "~" stripped so the pill reads as a clean price ·
+              the chevron signals navigation to the product page. The
+              outer <Link> handles the actual nav · pill is a visual
+              cue, not a nested anchor. */}
+          {isLandscape && textOnly && (
+            <div
+              style={{
+                marginTop: 6,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                minWidth: 0,
+              }}
+            >
+              {/* Owner directive 2026-11-28 (fortieth pass) · color
+                  variants render as small round circles to the LEFT
+                  of the price pill. Each dot carries a translucent
+                  white rim so dark colours (black, coffee) still read
+                  on a dark backdrop, and a translucent dark rim
+                  wouldn't lift pale colours (cream, tanned) off a
+                  light backdrop. Combined inset ring handles both.
+                  Max five swatches render inline · beyond that a
+                  "+N" chip signals overflow so the strip doesn't push
+                  the pill off-screen. */}
+              <div
+                aria-hidden
+                data-nex-cover-color-swatches
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  minWidth: 0,
+                  flexShrink: 1,
+                  overflow: "hidden",
+                }}
+              >
+                {(product.colors ?? []).slice(0, 5).map((c, i) => (
+                  <span
+                    key={`${c}-${i}`}
+                    title={c}
+                    style={{
+                      // Owner directive 2026-11-28 (forty-first pass) ·
+                      // swatches now match the price-pill height (24px)
+                      // and use a crisp solid border instead of a
+                      // dual-shadow halo (which read as a blur against
+                      // the editorial backdrop). Pure, sharp rims.
+                      display: "inline-block",
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: c,
+                      border: "1px solid rgba(0,0,0,0.35)",
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+                {(product.colors?.length ?? 0) > 5 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--nex-text-dim)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    +{(product.colors?.length ?? 0) - 5}
+                  </span>
+                )}
+              </div>
+              <span
+                aria-hidden
+                data-nex-cover-price-cta
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 10px 5px 12px",
+                  background: "var(--nex-accent, #F97316)",
+                  color: "#FFFFFF",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "0.01em",
+                  lineHeight: 1.1,
+                  borderRadius: 999,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.25)",
+                }}
+              >
+                <span>{priceLabel.replace(/^~\s*/, "")}</span>
+                <svg
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
+              </span>
+            </div>
+          )}
         </div>
       </Link>
     </>
@@ -1438,7 +1703,11 @@ export function CoverProductGrid({
       ? products
       : products.filter((p) => p.section_id === activeSectionId);
   const effectiveColumns =
-    variant === "landscape" ? 1 : variant === "round" ? 3 : columns;
+    variant === "landscape"
+      ? 1
+      : variant === "round"
+        ? 3
+        : columns;
   return (
     <div
       style={{

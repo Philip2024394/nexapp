@@ -325,16 +325,37 @@ export default async function PublicShopPage({
   // Shape the real business + products into the CoverLayoutSwitch
   // content contract. Fields the owner hasn't filled fall back to
   // sensible blanks so the template still reads as a finished page.
-  const coverProducts: CoverProduct[] = products.map((p) => ({
+  //
+  // Owner directive 2026-11-28 (thirty-second pass) · X-Rated Tool
+  // Belts · the first product in the list gets a hardcoded image
+  // override until the owner wires product-image uploads through the
+  // shop settings surface. Same slug-gated pattern already in use for
+  // brandStripUrl / headerLogoUrl above. The asset lives at
+  // /nex-native/brand/x-rated-tool-belts-product-1.png.
+  const coverProducts: CoverProduct[] = products.map((p, index) => ({
     id: p.id,
     slug: null,
     name: p.name,
     price_pence: p.price_pence,
     currency: p.currency,
-    image_url: p.image_url,
+    image_url:
+      business.slug === "x-rated-tool-belts" && index === 0
+        ? "/nex-native/brand/x-rated-tool-belts-product-1.png"
+        : p.image_url,
     stock_status: p.stock_status,
     section_id: p.section_id ?? null,
     description: p.description,
+    // Owner directive 2026-11-28 (fortieth pass) · placeholder colour
+    // variants for the first X-Rated Tool Belts product · maroon /
+    // coffee / black / tanned leather tones · rendered as small round
+    // dots to the left of the price pill on Template 15. Same slug-
+    // gated pattern as the image override above · until a shop-settings
+    // "product colours" field lands, every X-Rated product gets the
+    // same four so the design reads as intended.
+    colors:
+      business.slug === "x-rated-tool-belts"
+        ? ["#6B1E2C", "#4B2E1F", "#0A0A0A", "#B48A5E"]
+        : undefined,
   }));
 
   // Grouping placeholder · owners can add nex_product_section rows in
@@ -364,7 +385,16 @@ export default async function PublicShopPage({
     handle: business.slug ? `@${business.slug}` : "",
     tagline: "",
     portraitUrl: business.logo_url ?? "",
-    location: coverContent?.city ?? "",
+    // Owner directive 2026-11-28 (sixth pass) · X-Rated Tool Belts
+    // design iteration · the hero-logo badge shows "Yogyakarta,
+    // Indonesia" directly under the logo. Slug-gated like the brand
+    // strip + header logo so every other shop keeps city-only from
+    // coverContent.city. A future shop-settings surface will let the
+    // seller author their own city/country pair.
+    location:
+      business.slug === "x-rated-tool-belts"
+        ? "Yogyakarta, Indonesia"
+        : (coverContent?.city ?? ""),
     presenceOnline: true,
     social: socialHandles,
     sections,

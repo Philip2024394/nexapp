@@ -48,6 +48,11 @@ import {
 // install-flow state via useShopInstallFlow; we only pass the shop
 // slug + display name + sealed row styles.
 import { BurgerInstallRow } from "@/components/nex-native/shop-install/burger-install-row";
+// Owner directive 2026-11-28 (thirty-ninth pass) · ShopCurrencySwitch
+// moved out of the Products header row and into the burger menu so
+// the shop header reads as a single Categories control. Rendered as
+// a row below.
+import { ShopCurrencySwitch } from "./_shop-currency-switch";
 
 interface BurgerMenuProps {
   /** Owner's NEX handle so the "Chat with us" row can deep-link
@@ -200,32 +205,29 @@ export function BurgerMenu({
         style={{
           position: "absolute",
           top: 12,
+          // Owner directive 2026-11-28 (twenty-seventh pass) · burger
+          // nudged back toward the viewport edge · both chips enlarged
+          // 10% (25→28) so the cluster reads a touch bolder. Cart now
+          // shares the burger's black/orange treatment.
           right: 12,
-          width: 32,
-          height: 32,
-          borderRadius: 0,
-          background: "transparent",
-          border: "none",
-          // Owner directive 2026-11-27 · burger icon colour locked to
-          // black on the shop surface (supersedes the prior CREAM /
-          // off-white stroke) so the control reads as a solid tap-
-          // target against any cover image including the Scaffolding
-          // in the Mist greyscale backdrop.
-          color: "#000000",
+          width: 28,
+          height: 28,
+          borderRadius: "50%",
+          background: "#000000",
+          border: "1px solid #000000",
+          color: "var(--nex-accent, #F97316)",
           display: "grid",
           placeItems: "center",
           cursor: "pointer",
           zIndex: 50,
           WebkitTapHighlightColor: "transparent",
           padding: 0,
-          // Pale drop-shadow halo so the black strokes stay visible
-          // against dark cover photos without fighting the cover tint.
-          filter: "drop-shadow(0 1px 4px rgba(255,255,255,0.85))",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
         }}
       >
         <svg
-          width="28"
-          height="28"
+          width="22"
+          height="22"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -233,45 +235,164 @@ export function BurgerMenu({
           strokeLinecap="round"
           aria-hidden
         >
-          <line x1="4" y1="7" x2="20" y2="7" />
-          <line x1="4" y1="12" x2="20" y2="12" />
-          <line x1="4" y1="17" x2="20" y2="17" />
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
       </button>
 
       {open ? (
         <>
-          {/* Click-outside backdrop. */}
+          {/* Owner directive 2026-11-28 (forty-second pass) · the
+              dropdown promotes to a proper side drawer that slides in
+              from the right edge of the shop frame. Scrim backdrop
+              dims the shop behind + closes on click. The drawer has
+              a thin orange "running edge light" along its left edge —
+              a vertical gradient segment that loops, with an outer
+              glow bloom so the drawer reads as actively lit. The
+              trigger button (burger) stays visually above the scrim
+              so the user can keep tapping to toggle. */}
+          <style>{`
+            @keyframes nex-drawer-slide-in {
+              from { transform: translateX(100%); }
+              to   { transform: translateX(0); }
+            }
+            @keyframes nex-drawer-edge-run {
+              0%   { background-position: 0% 100%; }
+              100% { background-position: 0% -100%; }
+            }
+          `}</style>
           <div
             aria-hidden
             onClick={() => setOpen(false)}
             style={{
               position: "absolute",
               inset: 0,
-              background: "transparent",
+              background: "rgba(0,0,0,0.45)",
+              backdropFilter: "blur(2px)",
+              WebkitBackdropFilter: "blur(2px)",
               zIndex: 49,
             }}
           />
-          {/* Dropdown. */}
           <nav
             aria-label="Shop menu"
             data-nex-shop-burger-menu
             style={{
               position: "absolute",
-              top: 54,
-              right: 10,
-              width: 240,
-              maxWidth: "calc(100% - 20px)",
-              background: SURFACE,
-              border: `1px solid ${BORDER_HI}`,
-              borderRadius: 14,
-              boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
-              overflow: "hidden",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: 280,
+              maxWidth: "calc(100% - 48px)",
+              // Owner directive 2026-11-28 (forty-fourth pass) · drawer
+              // background promoted to the sealed Warm Ivory #FFF9E9
+              // used as free-chat's page base (CSS var
+              // --nex-world-background-base). Matches the free-chat
+              // drawer look-and-feel. Orange left rim + halo kept so
+              // the drawer still reads as belonging to the X-Rated
+              // theme. Sublabel/caret colour is threaded via a CSS
+              // variable so the hardcoded dark-theme #B5C3D6 dim is
+              // overridden only within THIS drawer (other sheets that
+              // share the same style constant stay unchanged).
+              background: "var(--nex-world-background-base, #FFF9E9)",
+              borderLeft: "1.5px solid rgba(249,115,22,0.75)",
+              boxShadow:
+                "-8px 0 32px rgba(0,0,0,0.25), -2px 0 32px rgba(249,115,22,0.22)",
+              overflowY: "auto",
+              overflowX: "hidden",
               zIndex: 50,
-              color: INK,
+              color: "#1A1F2B",
               fontFamily: "Inter, system-ui, sans-serif",
+              paddingTop: 0,
+              paddingBottom: 12,
+              animation: "nex-drawer-slide-in 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+              ["--nex-shop-burger-sublabel" as unknown as string]: "#5A6472",
             }}
           >
+            {/* Scoped style override · bumps the sublabel + row caret
+                colours (hard-coded dim blue for the dark theme) to a
+                warm gray that reads on the cream background. Scoped
+                to this drawer only via [data-nex-shop-burger-menu]. */}
+            <style>{`
+              [data-nex-shop-burger-menu] span[data-nex-shop-burger-sublabel],
+              [data-nex-shop-burger-menu] span[data-nex-shop-burger-caret] {
+                color: #5A6472 !important;
+              }
+              [data-nex-shop-burger-menu] [data-nex-shop-burger-row-divider] {
+                border-bottom-color: rgba(0,0,0,0.08) !important;
+              }
+            `}</style>
+            {/* Running edge light · thin orange gradient bar on the
+                drawer's LEFT edge (the edge that faces into the shop)
+                · loops endlessly so the drawer feels alive. Pointer-
+                events disabled so it never catches taps. */}
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: 3,
+                pointerEvents: "none",
+                backgroundImage:
+                  "linear-gradient(180deg, rgba(249,115,22,0) 0%, rgba(249,115,22,1) 45%, rgba(255,180,90,1) 50%, rgba(249,115,22,1) 55%, rgba(249,115,22,0) 100%)",
+                backgroundSize: "100% 220%",
+                backgroundRepeat: "no-repeat",
+                filter: "drop-shadow(0 0 6px rgba(249,115,22,0.95)) drop-shadow(0 0 14px rgba(249,115,22,0.55))",
+                animation: "nex-drawer-edge-run 2.4s linear infinite",
+              }}
+            />
+            {/* Owner directive 2026-11-28 (forty-third pass) · drawer
+                header matches the sealed free-chat ControlDrawer
+                pattern: single-row header with a title on the left
+                and an orange "Close" pill on the right. Divider line
+                beneath picks up the orange accent so the chrome lines
+                up with the drawer's left rim. */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 16px 10px 16px",
+                borderBottom: "1px solid rgba(249,115,22,0.45)",
+              }}
+            >
+              <h2
+                style={{
+                  margin: 0,
+                  color: "#1A1F2B",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  letterSpacing: 0.3,
+                }}
+              >
+                SHOP MENU
+              </h2>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close menu"
+                style={{
+                  minHeight: 26,
+                  padding: "3px 10px",
+                  background: "#FF7200",
+                  border: "1px solid rgba(0,0,0,0.35)",
+                  color: "#1A0A00",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 0.4,
+                  lineHeight: 1,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 6,
+                  fontFamily: "inherit",
+                }}
+              >
+                Close
+              </button>
+            </div>
             {/* Visit us · opens combined slider (address · hours · map
                 · directions). Hours was previously an inline expand;
                 merged into this single sheet 2026-11-06. */}
@@ -307,6 +428,29 @@ export function BurgerMenu({
               sublabel="Your story · what you make"
               onClick={() => openSheet("about")}
             />
+            {/* Owner directive 2026-11-28 (thirty-ninth pass) · currency
+                picker as a dedicated burger row · trigger renders inline
+                on the right side of the row showing the active flag ·
+                tapping it opens the per-currency popover from the
+                ShopCurrencySwitch component (click-outside + Escape
+                handled inside the component). */}
+            <div
+              style={{
+                ...menuRowStyle(false),
+                cursor: "default",
+              }}
+            >
+              <span style={iconStyle} aria-hidden>
+                💱
+              </span>
+              <span style={{ flex: 1, textAlign: "left" }}>
+                <span style={labelStyle}>Currency</span>
+                <span data-nex-shop-burger-sublabel style={sublabelStyle}>
+                  Convert prices to your currency
+                </span>
+              </span>
+              <ShopCurrencySwitch />
+            </div>
             {/* FAQ · owner-authorised 2026-11-17. Only renders when
                 this shop has at least one published + answered FAQ
                 entry · keeps the dropdown shape identical for shops
@@ -330,7 +474,9 @@ export function BurgerMenu({
                 </span>
                 <span style={{ flex: 1, textAlign: "left" }}>
                   <span style={labelStyle}>Share shop</span>
-                  <span style={sublabelStyle}>Copy link / share</span>
+                  <span data-nex-shop-burger-sublabel style={sublabelStyle}>
+                    Copy link / share
+                  </span>
                 </span>
               </button>
             ) : null}
@@ -516,9 +662,15 @@ function SheetRow({
       </span>
       <span style={{ flex: 1, textAlign: "left" }}>
         <span style={labelStyle}>{label}</span>
-        <span style={sublabelStyle}>{sublabel}</span>
+        <span data-nex-shop-burger-sublabel style={sublabelStyle}>
+          {sublabel}
+        </span>
       </span>
-      <span style={{ color: INK_DIM, fontSize: 12 }} aria-hidden>
+      <span
+        data-nex-shop-burger-caret
+        style={{ color: INK_DIM, fontSize: 12 }}
+        aria-hidden
+      >
         ›
       </span>
     </button>
@@ -1715,14 +1867,17 @@ function ShopHeaderCartIcon(): React.JSX.Element {
       style={{
         position: "absolute",
         top: 12,
-        // Burger sits at right:12 with width:32 · leave an 8px gap.
-        right: 52,
-        width: 32,
-        height: 32,
-        borderRadius: 0,
-        background: "transparent",
-        border: "none",
-        color: "#000000",
+        // Burger sits at right:12 width:28 · leave a 6px gap · cart
+        // adopts the burger's black-chip / orange-glyph treatment so
+        // the pair reads as one themed cluster (owner directive
+        // 2026-11-28 twenty-seventh pass · +10% size).
+        right: 46,
+        width: 28,
+        height: 28,
+        borderRadius: "50%",
+        background: "#000000",
+        border: "1px solid #000000",
+        color: "var(--nex-accent, #F97316)",
         display: "grid",
         placeItems: "center",
         cursor: "pointer",
@@ -1730,23 +1885,25 @@ function ShopHeaderCartIcon(): React.JSX.Element {
         WebkitTapHighlightColor: "transparent",
         padding: 0,
         textDecoration: "none",
-        filter: "drop-shadow(0 1px 4px rgba(255,255,255,0.85))",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
       }}
     >
+      {/* Owner directive 2026-11-28 (eighteenth pass) · "more clear
+          quality cart". Swapped the custom mixed-stroke shape for the
+          Material shopping_cart filled silhouette · single fill, no
+          stroke math · reads crisply at 20px on every DPI and matches
+          what shoppers expect a cart icon to look like. */}
       <svg
-        width="28"
-        height="28"
+        width="16"
+        height="16"
         viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
         aria-hidden
+        shapeRendering="geometricPrecision"
       >
-        <circle cx="9" cy="21" r="1.5" />
-        <circle cx="18" cy="21" r="1.5" />
-        <path d="M3 3h2l2.7 12.3a2 2 0 0 0 2 1.7h7.6a2 2 0 0 0 2-1.6L21 8H6" />
+        <path
+          d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"
+          fill="currentColor"
+        />
       </svg>
       {hydrated && count > 0 && (
         <span
@@ -1754,22 +1911,25 @@ function ShopHeaderCartIcon(): React.JSX.Element {
           data-nex-shop-cart-badge
           style={{
             position: "absolute",
-            top: -4,
-            right: -6,
+            top: -5,
+            right: -7,
             minWidth: 18,
             height: 18,
-            padding: "0 5px",
+            padding: "0 6px",
             borderRadius: 999,
-            background: "linear-gradient(180deg, #CC1818, #7A0000)",
+            // Owner directive 2026-11-28 (eighteenth pass) · solid
+            // dark red pill with white count · gradient dropped so
+            // the number reads clean at every size.
+            background: "#991B1B",
             color: "#FFFFFF",
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 800,
             lineHeight: 1,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             border: "1.5px solid #FFFFFF",
-            boxShadow: "0 4px 10px rgba(122,0,0,0.65)",
+            boxShadow: "0 3px 8px rgba(0,0,0,0.45)",
             fontFamily:
               "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
           }}

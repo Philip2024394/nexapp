@@ -51,6 +51,31 @@ import {
 import { CoverCatalog } from "./CoverCatalog";
 import type { MockCoverContent } from "./mock-data";
 import { terminologyForContent } from "./mock-data";
+import {
+  ShopLocaleProvider,
+  useShopLocale,
+} from "@/lib/nex-native/shop-locale/locale-context";
+import {
+  defaultCurrencyForCountry,
+  type ShopCurrencyCode,
+} from "@/lib/nex-native/shop-locale/data";
+import { ShopCurrencySwitch } from "./_shop-currency-switch";
+
+/**
+ * Small helper that renders the translated shop UI chrome string
+ * when inside a ShopLocaleProvider, or the English fallback when
+ * the provider isn't mounted (e.g. preview playground).
+ */
+function LocalizedShopLabel({
+  k,
+  fallback,
+}: {
+  k: string;
+  fallback: string;
+}): React.JSX.Element {
+  const locale = useShopLocale();
+  return <>{locale ? locale.t(k) : fallback}</>;
+}
 
 interface LayoutProps {
   content: MockCoverContent;
@@ -736,20 +761,34 @@ export function LayoutProductHeroLandscape({
   // the catalog filter via controlled props so the parent owns the
   // active section id. Empty string = no filter (show every product).
   const [categoryId, setCategoryId] = React.useState<string>("");
+  // Owner directive 2026-11-28 (fourth pass) · pass the shop's own
+  // country as a seed to the locale provider so the first paint can
+  // skip USD when the shop sits in Indonesia / Japan / etc. The IP-
+  // derived suggestion still wins once the client handshake lands.
+  const seedCurrency: ShopCurrencyCode | null = defaultCurrencyForCountry(
+    content.countryCode ?? null,
+  );
   return (
-    <>
+    <ShopLocaleProvider initialCurrency={seedCurrency}>
       <CoverPage>
+        {/* Owner directive 2026-11-28 (sixth pass) · X-Rated Tool
+            Belts design iteration · country flag badge removed
+            (countryCode withheld) · "online now" + green dot removed
+            (presenceOnline withheld) · city/country rendered as plain
+            text directly under the hero logo WITHOUT the 📍 pin glyph
+            (hideLocationPin · location still threaded so the string
+            comes from content, which the shop page slug-overrides to
+            "Yogyakarta, Indonesia" for X-Rated). Every other template
+            that calls CoverIdentityBadge keeps its full badge. */}
         <CoverIdentityBadge
           portraitUrl={content.portraitUrl}
           name={content.businessName}
           subtitle={content.tagline}
           themeId={themeId}
           size="compact"
-          presenceOnline={content.presenceOnline}
-          countryCode={content.countryCode ?? null}
           location={content.location}
           headerLogoUrl={content.headerLogoUrl ?? null}
-          hidePing
+          hideLocationPin
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -762,84 +801,91 @@ export function LayoutProductHeroLandscape({
           />
         </div>
         <div style={{ marginTop: 20 }}>
+          {/* Owner directive 2026-11-28 (ninth pass) · "Products"
+              heading removed · Currency + Categories now sit on a
+              SINGLE row as two sibling dropdown buttons with matching
+              ▾ chevrons. Both drive the catalog beneath · currency
+              → price formatting + shop UI language via
+              ShopLocaleProvider · categories → catalog filter via
+              controlled categoryId. */}
           <div
-            style={{
-              fontSize: 10,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: "var(--nex-accent)",
-              fontWeight: 700,
-              marginBottom: 8,
-            }}
-          >
-            Products
-          </div>
-          {/* Owner directive 2026-11-28 (third pass) · orange text +
-              chevron arrow on a BLACK dropdown panel. The <select>
-              options inherit the black background from the control
-              (modern Chromium honours background-color on <option>
-              within the popup; Safari falls back to system styling,
-              which still shows the orange text on a light panel · we
-              accept that fallback on iOS). Lists CATEGORIES, not
-              products · parent drives the filter via categoryId. */}
-          <div
-            data-nex-cover-product-select
+            data-nex-cover-products-header-row
             style={{
               display: "flex",
-              alignItems: "center",
-              padding: "0 12px",
+              alignItems: "stretch",
+              gap: 10,
               marginBottom: 14,
-              borderRadius: 10,
-              border: "1px solid var(--nex-accent, #F97316)",
-              background: "#000000",
-              height: 40,
             }}
           >
-            <select
-              aria-label="Select category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.currentTarget.value)}
+            {/* Owner directive 2026-11-28 (tenth pass) · categories
+                moves to the LEFT and both buttons share the row 50/50
+                via flex:1 so they read as a matched pair. ShopCurrencySwitch
+                is wrapped in a scoped style override so its chrome
+                stretches to fill its half of the row (its default
+                stylesheet is width-auto).
+                Thirty-ninth pass · currency switch moved OUT of the
+                header row and into the side drawer so the header reads
+                as a single Categories control. Categories now spans
+                the row. */}
+            <div
+              data-nex-cover-product-select
               style={{
-                flex: 1,
-                height: "100%",
-                background: "#000000",
+                display: "flex",
+                alignItems: "center",
+                // Owner directive 2026-11-28 (twenty-third pass) · no
+                // button chrome at all · plain gray text + gray icon
+                // so the controls read as quiet metadata rather than
+                // call-to-actions.
+                padding: 0,
+                borderRadius: 0,
                 border: "none",
-                outline: "none",
-                color: "var(--nex-accent, #F97316)",
-                fontSize: 14,
-                fontWeight: 700,
-                fontFamily: "inherit",
-                appearance: "none",
-                WebkitAppearance: "none",
-                MozAppearance: "none",
-                cursor: "pointer",
+                background: "transparent",
+                height: 40,
+                flex: "1 1 100%",
+                minWidth: 0,
+                gap: 8,
               }}
             >
-              <option value="" style={{ background: "#000000", color: "var(--nex-accent, #F97316)" }}>
-                All categories
-              </option>
-              {content.sections.map((s) => (
-                <option
-                  key={s.id}
-                  value={s.id}
-                  style={{ background: "#000000", color: "var(--nex-accent, #F97316)" }}
-                >
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <span
-              aria-hidden
-              style={{
-                fontSize: 14,
-                color: "var(--nex-accent, #F97316)",
-                marginLeft: 8,
-                pointerEvents: "none",
-                lineHeight: 1,
-              }}
-            >
-              ▾
-            </span>
+              {/* Owner directive 2026-11-28 (twelfth pass) · 2x2 grid of
+                  four small white squares sits to the LEFT of the label.
+                  Button background is now orange (owner-sealed) and the
+                  chevron flips to white so the drop-affordance still
+                  reads against the orange surface. */}
+              <span
+                aria-hidden
+                data-nex-cover-cat-icon
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gridTemplateRows: "1fr 1fr",
+                  gap: 2,
+                  width: 12,
+                  height: 12,
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ display: "block", background: "#000000", borderRadius: 1 }} />
+                <span style={{ display: "block", background: "#000000", borderRadius: 1 }} />
+                <span style={{ display: "block", background: "#000000", borderRadius: 1 }} />
+                <span style={{ display: "block", background: "#000000", borderRadius: 1 }} />
+              </span>
+              <CategorySelectLocalized
+                value={categoryId}
+                onChange={setCategoryId}
+                sections={content.sections}
+              />
+              <span
+                aria-hidden
+                style={{
+                  display: "none",
+                }}
+              >
+                ▾
+              </span>
+            </div>
+            {/* Thirty-ninth pass · ShopCurrencySwitch removed from
+                this row · lives inside the side drawer now (see
+                `_burger-menu.tsx`). */}
           </div>
           <CoverCatalog
             sections={content.sections}
@@ -885,7 +931,63 @@ export function LayoutProductHeroLandscape({
           themeId={themeId}
         />
       </CoverPage>
-    </>
+    </ShopLocaleProvider>
+  );
+}
+
+// Owner directive 2026-11-28 (fourth pass) · category select that
+// re-reads the shop UI language so the "All categories" placeholder
+// swaps to the buyer-picked language. Styling identical to the
+// previous inline <select> so no other visual regression.
+function CategorySelectLocalized({
+  value,
+  onChange,
+  sections,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  sections: ReadonlyArray<{ id: string; name: string; sort_order?: number }>;
+}): React.JSX.Element {
+  const locale = useShopLocale();
+  const allLabel = "Categories";
+  const ariaLabel = locale ? locale.t("select_category") : "Select category";
+  return (
+    <select
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(e) => onChange(e.currentTarget.value)}
+      style={{
+        flex: 1,
+        height: "100%",
+        background: "transparent",
+        border: "none",
+        outline: "none",
+        color: "var(--nex-accent, #F97316)",
+        fontSize: 14,
+        fontWeight: 700,
+        fontFamily: "inherit",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        cursor: "pointer",
+      }}
+    >
+      <option
+        value=""
+        style={{ background: "#111111", color: "#F97316" }}
+      >
+        {allLabel}
+      </option>
+      {sections.map((s) => (
+        <option
+          key={s.id}
+          value={s.id}
+          style={{ background: "#111111", color: "#F97316" }}
+        >
+          {s.name}
+        </option>
+      ))}
+    </select>
   );
 }
 
