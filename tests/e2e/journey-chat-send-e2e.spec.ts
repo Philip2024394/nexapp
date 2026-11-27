@@ -15,19 +15,29 @@
 //       · /contacts (the sealed destination) renders a contacts hub.
 //       · The composer branch is BLOCKED-PENDING-SANDBOX-PEER-FIXTURE.
 //         We do NOT invent an accountId. We do NOT seed data.
-//   · Outbox under forced-offline: typing + pressing send records the
-//     message locally and reflects a pending-send state in the UI.
-//     Going back online transitions the message to delivered.
-//   · Retract (sender-side deletion of a sent message) is reachable
-//     from the sealed message context menu.
-//   · Delete-for-me is distinct from retract and does not remove the
-//     peer's copy (assert UI label only · we cannot observe the peer
-//     side without a second test account).
+//   · Outbox under forced-offline: ORIGINALLY assumed a durable
+//     offline outbox. 2026-11-27 inspection corrected this: the
+//     composer only has an in-memory useFormStatus().pending flag
+//     (_composer.tsx:1174, 1180) · no persisted queue exists · a
+//     reload while offline loses the typed message. This is a
+//     product gap, not a fixture gap.
+//   · Retract: ORIGINALLY stated as a "sealed message context menu"
+//     entry. 2026-11-27 inspection corrected this: retract is a
+//     long-press gesture (500ms hold on own bubble < 1 hour old)
+//     that opens a portaled confirm modal with
+//     `role="dialog" aria-label="Delete this message?"`
+//     (_message-bubble-client.tsx:9-10, :247-250). The bubble action
+//     menu (_bubble-action-menu-client.tsx:400-437) exposes only
+//     Reply/Copy/Forward/Edit — no retract entry.
+//   · Delete-for-me: ORIGINALLY assumed shipped alongside retract.
+//     2026-11-27 inspection corrected this: delete-for-me is listed
+//     as a future action (_bubble-action-menu-client.tsx:26-30) and
+//     the current retract flow is delete-for-everyone only.
 //
-// BLOCKED scenarios:
-//   · A full A→C new-conversation round-trip requires a second test
-//     account. We assert the composer + outbox + offline branches
-//     from the primary account only.
+// BLOCKED scenarios (updated 2026-11-27):
+//   · offline outbox · BLOCKED-ON-UNIMPLEMENTED-FEATURE
+//   · retract         · BLOCKED-PENDING-SEED-HELPER (seedPeerSentMessage)
+//   · delete-for-me   · BLOCKED-ON-UNIMPLEMENTED-FEATURE
 //
 // Doctrine respected:
 //   · Device-only E2E (sealed 2026-11-09): we do NOT inspect the server-
@@ -126,28 +136,66 @@ test.describe.serial("T-1.1 · chat send end-to-end", () => {
     page,
     context,
   }) => {
+    // 2026-11-27 investigation · the composer uses `useFormStatus().pending`
+    // (src/app/nex-native/chat/peer/[accountId]/_composer.tsx:1174, 1180)
+    // to toggle the submit-button `aria-label` between "Send message" and
+    // "Sending message" while the server action is in-flight. There is
+    // NO durable outbox layer: no IndexedDB queue, no localStorage retry
+    // list, no `data-nex-outbox` / `data-nex-pending-send` DOM anchor.
+    // If the user closes or reloads the tab while offline, the typed
+    // message is lost. This is a PRODUCT GAP, not a fixture gap — the
+    // prior skip reason "requires a second test account" was wrong.
     test.skip(
       true,
-      "BLOCKED-PENDING-SECOND-TEST-ACCOUNT · offline outbox requires a " +
-        "conversation targeted at a known peer so the pending-send " +
-        "indicator can be asserted without polluting a real account",
+      "BLOCKED-ON-UNIMPLEMENTED-FEATURE · composer has no durable " +
+        "offline outbox · pending state is pure in-memory useFormStatus " +
+        "(see _composer.tsx:1174, 1180) · no persisted queue exists · " +
+        "spec cannot assert durable-outbox behaviour that is not built",
     );
     void page;
     void context;
   });
 
-  test("retract · sender-side retract affordance renders in the message menu", async () => {
+  test("retract · long-press on own bubble opens confirm-delete modal", async () => {
+    // 2026-11-27 investigation · the retract flow is NOT a message-menu
+    // entry. The sealed bubble action menu (_bubble-action-menu-client
+    // .tsx:400-437) renders only Reply / Copy / Forward / Edit. Retract
+    // is a separate gesture flow in _message-bubble-client.tsx:9-10:
+    // long-press (500ms pointer hold, < 10px movement) on YOUR OWN
+    // bubble aged < 1 hour opens a portaled confirm modal with
+    // `role="dialog" aria-label="Delete this message?"` (:247-250).
+    // Confirming posts to deletePeerMessageAction via a hidden
+    // `message_id` input (:312-313).
+    //
+    // Executing this flow requires a real sent message on the primary
+    // test account's peer conversation. That seed needs either a
+    // service-role insert into nex_message or an authentic send round-
+    // trip — both are implementable under the sandbox harness but
+    // require a dedicated seedPeerSentMessage() helper that does not
+    // yet exist in _fixtures/sandbox-test-harness.
     test.skip(
       true,
-      "BLOCKED-PENDING-SEED-CONVERSATION · retract requires at least " +
-        "one sent message to exist on the test account",
+      "BLOCKED-PENDING-SEED-HELPER · retract is a long-press gesture + " +
+        "confirm modal (_message-bubble-client.tsx:9-10, :247-250), NOT " +
+        "a menu item · asserting it requires seedPeerSentMessage() in " +
+        "the sandbox harness · follow-up ledger task",
     );
   });
 
-  test("delete-for-me · distinct label from retract", async () => {
+  test("delete-for-me · placeholder for future distinct action", async () => {
+    // 2026-11-27 investigation · delete-for-me is NOT a shipped feature.
+    // _bubble-action-menu-client.tsx:26-30 lists it as "Future (option
+    // A expansion when authorised): Forward · Delete-for-me · Delete-
+    // for-everyone". The confirm modal text at _message-bubble-client
+    // .tsx:290 ("It disappears for both of you") describes retract /
+    // delete-for-everyone, not delete-for-me. The two actions are not
+    // distinguished anywhere in the current UI.
     test.skip(
       true,
-      "BLOCKED-PENDING-SEED-CONVERSATION · same reason as retract",
+      "BLOCKED-ON-UNIMPLEMENTED-FEATURE · delete-for-me is not shipped " +
+        "(see _bubble-action-menu-client.tsx:26-30 future list) · " +
+        "current retract flow is delete-for-everyone only · no distinct " +
+        "label exists to assert",
     );
   });
 });

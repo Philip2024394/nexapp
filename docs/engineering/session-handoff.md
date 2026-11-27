@@ -7,7 +7,42 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-056 three-category-hub test fix + cyan harmonisation + L-057 RLS adjacent-defect finding)
+## Current state · 2026-11-27 (L-058 chat-send spec skip-reason corrections after source-anchored investigation)
+
+**Delta from the L-056/L-057 block below.** User-issued "9 continue" directive — continue with Optional Next Step #9 from previous end-of-cycle report ("wire fixture seeding on `journey-chat-send-e2e`"). Investigation showed the three skipped tests had incorrect skip reasons rooted in untested UI assumptions, not in missing fixtures. Honest correction applied: spec truth only; no product change.
+
+**L-058 findings (all source-anchored):**
+
+1. **Offline outbox** — no durable outbox exists in the composer. `useFormStatus().pending` at `_composer.tsx:1174, 1180` is purely in-memory; toggles submit button `aria-label` between "Send message" and "Sending message". No IndexedDB / localStorage / `data-nex-outbox` DOM anchor. Reload while offline = typed message lost. **PRODUCT GAP**, not fixture gap. Prior skip reason "requires a second test account" was wrong.
+
+2. **Retract** — retract is **not a menu entry**. Bubble action menu at `_bubble-action-menu-client.tsx:400-437` renders only Reply/Copy/Forward/Edit. Retract is a **long-press gesture** (500ms hold, <10px movement) on sender's own bubble aged <1 hour old → portaled confirm modal at `_message-bubble-client.tsx:197-205, :247-250` with `role="dialog" aria-label="Delete this message?"`. Posts to `deletePeerMessageAction` via hidden `message_id` input (`:312-313`). Prior skip reason "retract requires at least one sent message" conflated the gesture flow with a non-existent menu entry. The seed helper needed is `seedPeerSentMessage()` — currently not in `_fixtures/sandbox-test-harness.ts`.
+
+3. **Delete-for-me** — feature not shipped. `_bubble-action-menu-client.tsx:26-30` lists it as "Future (option A expansion when authorised)". Modal copy at `_message-bubble-client.tsx:290` ("It disappears for both of you") is delete-for-everyone (retract), not delete-for-me. **PRODUCT GAP**.
+
+**Spec corrections applied** to `tests/e2e/journey-chat-send-e2e.spec.ts`:
+- Header doctrine block (lines 18-39) rewritten with "ORIGINALLY stated / 2026-11-27 inspection corrected" annotations and BLOCKED enum updated.
+- Three skip reasons replaced with source-anchored classifications: offline outbox → `BLOCKED-ON-UNIMPLEMENTED-FEATURE` with composer line refs; retract → `BLOCKED-PENDING-SEED-HELPER` with message-bubble line refs; delete-for-me → `BLOCKED-ON-UNIMPLEMENTED-FEATURE` with menu-client line refs.
+
+**Run evidence:** `npx playwright test tests/e2e/journey-chat-send-e2e.spec.ts --reporter=list` → **3 passed, 3 skipped (35.9s)**. The two real tests (sanity `/chat → /contacts` redirect + composer renders on peer route) still pass unmodified. Skipped tests now carry honest reasons.
+
+**Rule 8 classification:** VERIFIED applies ONLY to the spec-correction scope — skip reasons now accurately describe shipped UI. The Chat-pillar send / retract / delete journeys themselves remain NOT VERIFIED and are tracked as separate ledger items.
+
+**Flow-on implications surfaced:**
+- Offline outbox and delete-for-me are now **product-gap items**: owner / product decision required before engineering. Not fixture problems.
+- Retract is implementable with a new `seedPeerSentMessage()` harness helper (direct service-role `nex_message` insert, mirroring `seedDeviceKeyForFixtureAccount` pattern). Deferred to focused next cycle.
+
+**Files changed this cycle (standing-policy commit candidates):**
+- `tests/e2e/journey-chat-send-e2e.spec.ts` (MODIFIED · header doctrine + 3 skip reasons corrected)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-058 row)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Standing 2026-11-27 source-control policy in force for `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
+
+**Next safe action (no approval needed):** (a) author `seedPeerSentMessage()` helper in `_fixtures/sandbox-test-harness.ts` and promote the retract test to a real assertion of the long-press gesture + confirm modal flow, (b) run `journey-merchant-order-t8-ui-loop` and `journey-merchant-order-t8` Shop-pillar specs that are auth-unblocked under L-055, (c) continue migration 370 drafting under its own review cycle.
+
+---
+
+## Prior state · 2026-11-27 (L-056 three-category-hub test fix + cyan harmonisation + L-057 RLS adjacent-defect finding)
 
 **Delta from the L-054/L-055 block below.** Owner priorities issued 2026-11-27 (branded-install failure, RLS review, continued launch work). Three outcomes this cycle:
 
