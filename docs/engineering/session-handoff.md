@@ -7,7 +7,44 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-058 chat-send spec skip-reason corrections after source-anchored investigation)
+## Current state · 2026-11-27 (L-059 retract journey promoted BLOCKED → VERIFIED + seedPeerSentMessage harness helper authored)
+
+**Delta from the L-058 block below.** Continuing launch-readiness per owner directive. L-058 identified that the retract test's skip reason was "pending seed helper" — this cycle authored that helper and promoted the test to real coverage.
+
+**L-059 deliverables (all source-anchored):**
+
+1. **Two new harness exports** in `tests/e2e/_fixtures/sandbox-test-harness.ts`:
+   - `resolveFixtureViewerAccountIdByEmail(email)` — service-role lookup of the Dev-Pass viewer's `nex_account.id`. Paginated `auth.admin.listUsers()` (200/page, 20-page cap), case-insensitive email match, then `nex_account.select("id").eq("supabase_user_id", …)`. Never prints the email. Throws descriptive errors on each failure branch.
+   - `seedPeerSentMessage(opts)` — composite: resolve viewer → create fresh fixture peer (pushed to `handles[]` for CASCADE cleanup) → optional device-key seed → `createTestConversation` with canonical ordering → `createTestMessage` with `sender_account_id = viewer`, `encrypted=false`, `sent_at` within 1-hour retract window. Viewer is **never** added to handles.
+
+2. **Retract test promoted to VERIFIED** in `tests/e2e/journey-chat-send-e2e.spec.ts`. Full flow: seed one viewer-authored message → navigate to peer chat route → locate bubble by `[data-nex-msg-id]` → sanity-gate on `data-nex-bloom-msg-mine="true"` → press-and-hold via `page.mouse.move/down` + 650 ms hold → assert `div[role="dialog"][aria-label="Delete this message?"]` becomes visible → `page.mouse.up()` → `page.keyboard.press("Escape")` → assert modal hidden → teardown + residual-fixture check.
+
+3. **Classification per Rule 8** — VERIFIED applies to the retract **affordance** journey. Spec intentionally does NOT click the delete submit button; server-side retract state transition is a separate, follow-on assertion.
+
+**Run evidence:** `npx playwright test tests/e2e/journey-chat-send-e2e.spec.ts --reporter=list` → **4 passed, 2 skipped (46.5s)**; retract test body 13.0s on second run (16.3s first). Both runs stable. Log: `tests/e2e/_runs/20261127T-L058-retract-promoted.log`.
+
+**Remaining skips still honestly classified as PRODUCT GAPS per L-058:**
+- Offline outbox → `BLOCKED-ON-UNIMPLEMENTED-FEATURE` (no durable queue exists in composer)
+- Delete-for-me → `BLOCKED-ON-UNIMPLEMENTED-FEATURE` (future list item at `_bubble-action-menu-client.tsx:26-30`)
+
+**Files changed this cycle (standing-policy commit candidates):**
+- `tests/e2e/_fixtures/sandbox-test-harness.ts` (two new exports after line 777)
+- `tests/e2e/journey-chat-send-e2e.spec.ts` (new local env-reader helper · retract test rewritten from `test.skip()` to full E2E)
+- `tests/e2e/_runs/20261127T-L058-retract-promoted.log` (NEW · 4 passed 2 skipped)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (new L-059 row)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Standing 2026-11-27 source-control policy in force. No migration applied. No production touched. No credential activated. No sealed invariant broken (device-only chat storage preserved: harness insert uses legacy plaintext mode `encrypted=false` which the shell renders when no device keys present; E2E encryption path unchanged). No push to `main`. No force-push.
+
+**Next safe action (no approval needed):** (a) run `journey-merchant-order-t8-ui-loop` and `journey-merchant-order-t8` Shop-pillar specs that are auth-unblocked under L-055; (b) author sender-side retract reader spec asserting the server-side state transition (`row.deleted_for_everyone=true` and "message was deleted" placeholder rendered post-confirm), (c) continue migration 370 drafting under its own review cycle.
+
+**Next action requiring owner authorisation (ONE phrase at a time):**
+- `APPROVE NEX_ACCOUNT SHOP_INSTALL_PREFS MIGRATION SANDBOX (REVISED 2026-11-27)` → sandbox-apply migration 369 → unblocks L-053 RLS integration spec.
+- `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` → authorises authoring + sandbox-apply of migration 370.
+
+---
+
+## Prior state · 2026-11-27 (L-058 chat-send spec skip-reason corrections after source-anchored investigation)
 
 **Delta from the L-056/L-057 block below.** User-issued "9 continue" directive — continue with Optional Next Step #9 from previous end-of-cycle report ("wire fixture seeding on `journey-chat-send-e2e`"). Investigation showed the three skipped tests had incorrect skip reasons rooted in untested UI assumptions, not in missing fixtures. Honest correction applied: spec truth only; no product change.
 

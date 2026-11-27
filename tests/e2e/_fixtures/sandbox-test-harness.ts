@@ -775,6 +775,172 @@ export async function seedChatPeer(opts: {
   };
 }
 
+/**
+ * L-058 follow-up (2026-11-27) · resolves the primary signed-in
+ * viewer's `nex_account.id` from their email address. The dev-founder
+ * typed-credentials bypass used by `auth.setup.ts` signs in via
+ * `NEX_ADMIN_EMAILS[0]` + `NEX_ADMIN_DEV_PASSWORD`; the resulting
+ * session carries a `nex_account` row keyed by `supabase_user_id`.
+ *
+ * Specs that need to seed messages where the viewer is the SENDER
+ * (retract, delete-for-me, read-receipt sender-side assertions) must
+ * know that viewer's `nex_account.id`. This helper performs the
+ * lookup via service-role: `auth.admin.listUsers()` → filter by email
+ * → `nex_account.select("id").eq("supabase_user_id", auth_user.id)`.
+ *
+ * Returns the `nexAccountId` + `supabaseUserId`. Throws a descriptive
+ * error if either lookup fails · never prints the email, never
+ * returns a password. Safe because `assertSandboxRef()` runs first
+ * (same gate every other harness write passes through).
+ *
+ * NOTE: the viewer is NOT a fixture. Do NOT add the returned ids to
+ * `handles[]` for teardown — this helper only RESOLVES, it never
+ * creates. Deleting the viewer's account would break every other
+ * spec in the suite.
+ */
+export async function resolveFixtureViewerAccountIdByEmail(
+  email: string,
+): Promise<{ readonly nexAccountId: string; readonly supabaseUserId: string }> {
+  assertSandboxRef();
+  const sb = supabaseAdmin();
+  // `listUsers` is paginated (default perPage=50). The admin pool in
+  // sandbox is small; loop through pages until we find the match.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type ListUsersResp = { data?: { users?: Array<{ id: string; email?: string | null }> } ; error?: { message: string } | null };
+  let page = 1;
+  const perPage = 200;
+  while (true) {
+    const resp = (await sb.auth.admin.listUsers({ page, perPage })) as unknown as ListUsersResp;
+    if (resp.error) {
+      throw new Error(
+        `resolveFixtureViewerAccountIdByEmail: auth.admin.listUsers failed · ${resp.error.message}`,
+      );
+    }
+    const users = resp.data?.users ?? [];
+    if (users.length === 0) break;
+    const match = users.find(
+      (u) => typeof u.email === "string" && u.email.toLowerCase() === email.toLowerCase(),
+    );
+    if (match) {
+      const supabaseUserId = match.id;
+      const { data, error } = await sb
+        .from("nex_account")
+        .select("id")
+        .eq("supabase_user_id", supabaseUserId)
+        .maybeSingle();
+      if (error || !data?.id) {
+        throw new Error(
+          `resolveFixtureViewerAccountIdByEmail: nex_account lookup failed for supabase_user_id ` +
+            `· ${error?.message ?? "no row returned (did the viewer complete registration?)"}`,
+        );
+      }
+      return { nexAccountId: data.id as string, supabaseUserId };
+    }
+    if (users.length < perPage) break;
+    page += 1;
+    if (page > 20) {
+      throw new Error(
+        "resolveFixtureViewerAccountIdByEmail: scanned 20 pages of 200 users each without " +
+          "finding a match · verify the admin email configured in NEX_ADMIN_EMAILS exists in auth.users",
+      );
+    }
+  }
+  throw new Error(
+    "resolveFixtureViewerAccountIdByEmail: no auth.users row matched the supplied email · " +
+      "cannot resolve the viewer's nex_account.id",
+  );
+}
+
+/**
+ * L-058 (2026-11-27) · composite helper · seeds a conversation plus
+ * a single sent message where the SIGNED-IN VIEWER is the sender
+ * and a freshly-minted fixture account is the recipient. Required
+ * by the retract spec in `journey-chat-send-e2e.spec.ts` (and any
+ * future delete-for-me, edit-sender-side, read-receipt-sender-side
+ * specs) because those flows gate on `mine = true` which the shell
+ * computes at `page.tsx:936` via `sender_account_id === session.account.id`.
+ *
+ * Steps:
+ *   1. Resolve the viewer's `nex_account.id` from the supplied email.
+ *   2. Create a fresh fixture peer account (returned in `handles`).
+ *   3. Seed the peer's public device key (so client-side encryption
+ *      does not fail-closed · same step the existing composer-renders
+ *      test takes).
+ *   4. Create a `nex_peer_conversation` row with the viewer + peer.
+ *   5. Insert a `nex_peer_message` row with
+ *      `sender_account_id = viewer` · `encrypted=false` ·
+ *      `sent_at = sentAtIso ?? now()`.
+ *
+ * The caller passes in the `handles[]` array · this helper appends
+ * the fixture peer to it so the spec's `teardownAll(handles)` + the
+ * CASCADE on `nex_account.id` delete (mig 047:50, 75-76) clean up
+ * the conversation + message implicitly. The viewer's account is
+ * NEVER added to `handles` — deleting it would break every other
+ * spec in the suite.
+ *
+ * Returns the `conversationId`, `messageId`, resolved `viewerNexAccountId`,
+ * the created peer handle, and the ISO sent-at used.
+ */
+export async function seedPeerSentMessage(opts: {
+  readonly viewerEmail: string;
+  readonly peerLabel?: string;
+  readonly body?: string;
+  /** When omitted, defaults to `new Date().toISOString()` which keeps
+   *  the message within the 1-hour retract window (shell constant
+   *  `DELETE_WINDOW_MS = 60 * 60 * 1000` · see
+   *  `_message-bubble-client.tsx:37`). */
+  readonly sentAtIso?: string;
+  /** When true, also seeds the peer's public device key (no private
+   *  half retained). Defaults to true · the composer encryption path
+   *  fails-closed on peers with no published key, so almost every
+   *  spec will want this on. */
+  readonly seedPeerDeviceKey?: boolean;
+  /** Mutable handles array · this helper will PUSH the fixture peer
+   *  to it so the standard teardown + CASCADE path cleans everything
+   *  up. Never includes the viewer. */
+  readonly handles: FixtureHandle[];
+}): Promise<{
+  readonly viewerNexAccountId: string;
+  readonly peer: TestAccountHandle;
+  readonly conversationId: string;
+  readonly messageId: string;
+  readonly sentAtIso: string;
+}> {
+  assertSandboxRef();
+  const viewer = await resolveFixtureViewerAccountIdByEmail(opts.viewerEmail);
+  const peer = await createTestAccount(opts.peerLabel ?? "retract-recipient");
+  opts.handles.push(peer);
+  if (opts.seedPeerDeviceKey !== false) {
+    await seedDeviceKeyForFixtureAccount(peer);
+  }
+  // Synthesise a TestAccountHandle-shaped object for the viewer so
+  // `createTestConversation` can reuse its canonical-ordering logic
+  // without changes. The viewer is NEVER added to handles · this
+  // shim lives only for the duration of this call.
+  const viewerShim: TestAccountHandle = {
+    kind: "account",
+    supabaseUserId: viewer.supabaseUserId,
+    nexAccountId: viewer.nexAccountId,
+    email: opts.viewerEmail,
+    displayName: "e2e-viewer-shim",
+  };
+  const conv = await createTestConversation(viewerShim, peer);
+  const sentAtIso = opts.sentAtIso ?? new Date().toISOString();
+  const { messageId } = await createTestMessage({
+    conversationId: conv.conversationId,
+    sender: viewerShim,
+    body: opts.body ?? "retract fixture · do not read",
+    sentAtIso,
+  });
+  return {
+    viewerNexAccountId: viewer.nexAccountId,
+    peer,
+    conversationId: conv.conversationId,
+    messageId,
+    sentAtIso,
+  };
+}
+
 // ---------------------------------------------------------------------
 // Teardown · reverse FK order · tolerant
 // ---------------------------------------------------------------------
