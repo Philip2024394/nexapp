@@ -7,6 +7,51 @@ What requires the owner before continuing?
 
 ---
 
+## Current state · 2026-11-27 (continuation cycle addendum 8 · sign-in public-surface regression PROMOTED + VERIFIED)
+
+**Delta from addendum 7.** Continuation of 2026-11-27 directive *"continue with next"*. No new owner authorisation. Rule 7 preserved: no commit · no push · no migration applied · no credential activated · no production touched. HEAD remains `9dfa90b4`.
+
+**Deltas:**
+
+- **Sign-in public-surface regression PROMOTED to durable spec + VERIFIED.** Addendum 6 recorded a throwaway diagnostic (`tests/e2e/probe-signin-crash.spec.ts` + `tests/e2e/probe.playwright.config.ts`) that proved the cream fallback appears only on genuine error states. The investigation is closed. Rather than delete the signal, it is promoted into `tests/e2e/regression-sign-in-public-branches.spec.ts` under the public `mobile-chromium-pixel7` project (no auth dependency). The spec covers 6 URL branches — `/nex-native/sign-in`, `?mode=signup`, 3 OAuth error-copy variants (`oauth_unavailable` / `oauth_cancelled` / `oauth_exchange_failed`), and `?next=/nex-native/profile` — and asserts on each: HTTP status > 0, `[data-nex-segment-error='auth']` NOT visible, and `page.on('pageerror')` list is empty at the end of the test window. Evidence: `tests/e2e/_runs/20261127T-regression-sign-in-public-branches-run2.log` · **6/6 passed · 41.1 s · EXIT=0**. The initial run against `stage-a-pixel7` failed on the `auth-setup` dependency (`locator('[data-nex-dev-pass-form]') ... 13 × resolved to 0 elements`); the regression was moved to the public project where this surface is genuinely tested as unauthenticated. The two probe files were removed to prevent a stale duplicate.
+- **playwright.config.ts:80** testMatch for `mobile-chromium-pixel7` extended with `regression-sign-in-public-branches\.spec\.ts`. No change to any product code. The stage-a-pixel7 project was not modified — its auth-dependency chain is preserved intact.
+- **Shared SegmentErrorBoundary contract remains anchored** at `src/components/nex-native/section-boundary/__tests__/SegmentErrorBoundary.test.tsx`. The new regression is a browser-level signal that complements (does not duplicate) the vitest contract at `src/app/nex-native/sign-in/__tests__/error-fallback-contract.test.tsx` from addendum 7.
+
+**Rule 7 posture:** No commit executed. No push executed. No migration applied. No credential activated. No production touched. HEAD remains `9dfa90b4`. All sealed invariants preserved.
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- Chat/Shop/Themes regression slices as catalogued in addendum 6 (harness capability already supports plaintext peer-chat seeding).
+- Nav inventory extension for drawer-rows reachable without migration dependency.
+- Author additional perf-regression specs under the §10 DoD.
+
+**Next action requiring owner authorisation (ONE phrase at a time):** unchanged — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+
+---
+
+## Current state · 2026-11-27 (continuation cycle addendum 7 · sign-in cream fallback contract VERIFIED + L-006 fresh baseline captured)
+
+**Delta from addendum 6.** Owner directive 2026-11-27 (late cycle): *"Continue NEX engineering. Do not wait for migration 286 approval or further layout instructions. Pick up the next genuinely unblocked launch-critical work: (1) advance L-006 to the extent that does not require a founder decision; (2) continue closing navigation browser-verification gaps; (3) preserve verified work; (4) continue with independent launch-critical fixes."* Rule 7 preserved: no commit · no push · no migration applied · no credential activated · no production touched. HEAD remains `9dfa90b4`.
+
+**Deltas:**
+
+- **L-006 fresh baseline captured** against unchanged HEAD per correction plan § 4.1. Ran `npx playwright test tests/e2e/mobile-public-surfaces.spec.ts --reporter=line` → **3 passed · 5 failed · EXIT=1 · 27.8 s**. Failure fingerprint matches the preserved 2026-11-26 baseline exactly (lines 58 · 103 · 113 · 123 · 139). Hazard has not drifted since diagnosis. Evidence: `tests/e2e/_runs/20261127T-L006-fresh-baseline.log`. The 5 failures remain BLOCKED-AT-APPROVAL on L-006 Options A/B/C (owner URL-surface decision). Picking A/B/C requires founder authorisation per correction plan § 6 — not attempted this cycle.
+- **Sign-in cream error fallback contract VERIFIED (new).** Previous cycle report noted "Try again + Go home buttons on cream fallback · NOT VERIFIED (requires synthetic crash to exercise)". Closed as a focused unit regression via vitest/jsdom at `src/app/nex-native/sign-in/__tests__/error-fallback-contract.test.tsx` · **9 tests · all passed · 102 ms tests / 5.09 s total · EXIT=0**. Contracts proven (observable DOM + wired callbacks): (1) `role="alert"` + `data-nex-segment-error="auth"` + `aria-live="polite"` shell; (2) sealed copy "Sign in couldn't load right now." + "other surfaces are unaffected" rendered; raw `error.message` NEVER leaked into DOM (leak canary assertion); (3) Try again rendered as a real `<button type="button">` + Go home rendered as `<a href="/nex-native">`; (4) clicking Try again invokes the Next.js `reset` callback exactly once; (5) `Reference · <digest>` line renders inside `<code>` when `error.digest` is set and is entirely absent when not; (6) mount emits exactly one POST to `/api/nex-native/incident/section-error` with `section:"auth"`, `keepalive:true`, `cache:"no-store"`, and `message_short` clipped to the 120-char cap; (7) `\n` / `\t` in the message are flattened by the `clipMessage()` `/\s+/` replace before POST; (8) rejected incident POST does not throw and the alert DOM remains mounted. Evidence: `tests/e2e/_runs/20261127T-L006-signin-fallback-contract-run1.log`.
+- **Shared SegmentErrorBoundary already tested** at `src/components/nex-native/section-boundary/__tests__/SegmentErrorBoundary.test.tsx`. Not a gap. The new sign-in test is self-contained per the 2026-11-27 directive (cream fallback is a palette-matched replacement for the sign-in segment only · dark-emerald shared boundary preserved for ~15 other segments).
+- **L-006 Options A/B/C / mig 286 / F3 / T10 / mig 206 / region_pref migration remain BLOCKED-AT-APPROVAL** · catalogue unchanged from `docs/engineering/consolidated-approval-queue-2026-11-27.md`. No approval phrase issued or acted on this cycle. Mig 286 revised SQL (2026-11-27 DO $$ guard correction) still awaits the exact phrase `APPROVE MIG 286 SANDBOX APPLY (REVISED 2026-11-27)`.
+
+**Rule 7 posture:** No commit executed. No push executed. No migration applied. No credential activated. No production touched. HEAD remains `9dfa90b4`. All sealed invariants preserved.
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- Chat/Shop/Themes regression slices as catalogued in addendum 6 (do not require new fixture roles beyond existing harness capability).
+- Nav inventory extension for drawer-rows reachable without migration dependency.
+- Author additional perf-regression specs under the §10 DoD.
+
+**Next action requiring owner authorisation (ONE phrase at a time):** unchanged from addendum 6 — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`. The 2026-11-27 revised mig 286 SQL is held pending `APPROVE MIG 286 SANDBOX APPLY (REVISED 2026-11-27)`.
+
+---
+
 ## Current state · 2026-11-27 (continuation cycle addendum 6 · reconciliation · F3 safe-prep + L-006 correction plan + consolidated approval queue)
 
 **Delta from addendum 5.** Owner directive 2026-11-27 (7-point): mark the final 16-section launch report complete in the 60-task tracker; record mig 368, NAV-04/05, L-006 diagnosis and F3 accurately as drafted or diagnosed (NOT implemented or verified); prioritise F3 safe preparation; prepare the complete L-006 correction + verification plan; check for any independent authorised work; keep all ten approval gates in one consolidated queue; do not reopen VERIFIED tasks without evidence; deliver fixes where authorised. Launch readiness remains NOT READY.

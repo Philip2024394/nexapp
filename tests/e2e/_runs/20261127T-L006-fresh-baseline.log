@@ -1,0 +1,189 @@
+
+Running 8 tests using 1 worker
+
+[1/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:38:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page renders at phone viewport without horizontal overflow
+[2/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances
+  1) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/create-account"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('a[href*="/nex-native/create-account"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/create-account"]').first()
+
+
+      65 |     const createAccountLink = page.locator('a[href*="/nex-native/create-account"]').first();
+      66 |     const signInLink = page.locator('a[href*="/nex-native/sign-in"]').first();
+    > 67 |     await expect(createAccountLink).toBeVisible();
+         |                                     ^
+      68 |     await expect(signInLink).toBeVisible();
+      69 |   });
+      70 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:67:37
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-3b39a-unt-and-Sign-in-affordances-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[3/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:73:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › sign-in page loads at phone viewport without horizontal overflow
+[4/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:87:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › create-account page loads at phone viewport without horizontal overflow
+[5/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome
+  2) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome 
+
+    Error: redirect chain ends with 200
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      107 |       waitUntil: "networkidle",
+      108 |     });
+    > 109 |     expect(response?.status(), "redirect chain ends with 200").toBe(200);
+          |                                                                ^
+      110 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      111 |   });
+      112 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:109:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-76fed-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[6/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome
+  3) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      117 |       waitUntil: "networkidle",
+      118 |     });
+    > 119 |     expect(response?.status()).toBe(200);
+          |                                ^
+      120 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      121 |   });
+      122 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:119:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-b939a-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[7/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome
+  4) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+      128 |       { waitUntil: "networkidle" },
+      129 |     );
+    > 130 |     expect(response?.status()).toBe(200);
+          |                                ^
+      131 |     await expect(page).toHaveURL(/\/nex-native\/welcome\b/);
+      132 |   });
+      133 |
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:130:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-93e80-ts-unauth-viewer-to-welcome-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[8/8] [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target
+  5) [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('a[href*="/nex-native/create-account"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('a[href*="/nex-native/create-account"]').first() with timeout 5000ms
+      - waiting for locator('a[href*="/nex-native/create-account"]').first()
+
+
+      144 |       .locator('a[href*="/nex-native/create-account"]')
+      145 |       .first();
+    > 146 |     await expect(createAccount).toBeVisible();
+          |                                 ^
+      147 |     const box = await createAccount.boundingBox();
+      148 |     expect(box, "create-account CTA has a bounding box").not.toBeNull();
+      149 |     // 24-px floor · we don't police a specific NEX tap-target spec here,
+        at C:\Users\Victus\nexapp\tests\e2e\mobile-public-surfaces.spec.ts:146:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\mobile-public-surfaces-NEX-461f4-easonable-mobile-tap-target-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  5 failed
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:58:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome page offers both 'Create free account' and 'Sign in' affordances 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:103:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:113:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/shop redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:123:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › /nex-native/chat/first-visit/personalize redirects unauth viewer to /welcome 
+    [mobile-chromium-pixel7] › tests\e2e\mobile-public-surfaces.spec.ts:139:7 › NEX mobile · unauthenticated journey · Pixel 7 (412×915) › welcome primary CTA has a reasonable mobile tap target 
+  3 passed (27.8s)
