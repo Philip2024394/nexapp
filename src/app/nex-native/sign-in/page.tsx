@@ -32,7 +32,13 @@ import { isAdminSession } from "@/lib/nex-native/app/admin";
 import {
   signInAction,
   createNexAccountAction,
-  continueWithGoogleAction,
+  // continueWithGoogleAction intentionally NOT imported here.
+  // Owner directive 2026-11-27 · "Continue with Google" button
+  // removed from the sign-in surface for launch. The server-side
+  // helpers (continueWithGoogleAction, /nex-native/auth/callback,
+  // google-oauth.ts) are preserved for future re-enablement, and
+  // the regression test (google-oauth.test.ts) still runs against
+  // them. See reasoning in the cycle log.
 } from "../_actions";
 // 2026-11-19 · Prompt-7 round 2 · owner-stated access-policy.
 // When prelaunch is on, the sign-in page is allowlisted so a signed-
@@ -620,78 +626,21 @@ export default async function SignInPage({ searchParams }: PageProps) {
             </>
           )}
 
-          {/* ── Continue with Google ─────────────────────────────────
-                Owner-authorised 2026-11-19 (Prompt-7 round 3). The
-                button posts to continueWithGoogleAction which calls
-                supabase.auth.signInWithOAuth({provider:'google'}) and
-                redirects to Google's consent page. The /nex-native/
-                auth/callback route completes the exchange and runs
-                the prelaunch gate (non-founder Google identities are
-                signed OUT before any NEX-native surface is reached).
-                If the provider is not enabled on the Supabase
-                project, the action surfaces an honest "unavailable"
-                banner rather than a mock success state. ── */}
-          <div
-            style={{
-              marginTop: 18,
-              display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
-              alignItems: "center",
-              gap: 12,
-              color: NEX.cyan,
-              fontSize: 11,
-              letterSpacing: "0.14em",
-            }}
-          >
-            <span style={{ height: 1, background: NEX.cyanFaint }} />
-            <span>OR</span>
-            <span style={{ height: 1, background: NEX.cyanFaint }} />
-          </div>
-          <form
-            action={continueWithGoogleAction}
-            data-nex-google-oauth-form
-            style={{ marginTop: 12 }}
-          >
-            {nextParam ? (
-              <input
-                type="hidden"
-                name="next"
-                value={nextParam}
-                data-nex-google-oauth-next
-              />
-            ) : null}
-            <button
-              type="submit"
-              data-nex-google-oauth-submit
-              aria-label={
-                isSignup
-                  ? "Continue with Google to create your NEX account"
-                  : "Continue with Google to sign in"
-              }
-              style={{
-                width: "100%",
-                minHeight: 48,
-                background: "#FFFFFF",
-                color: "#1F1F1F",
-                border: `1px solid ${NEX.borderSoft}`,
-                borderRadius: 999,
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: "0.01em",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                fontFamily: SANS,
-                boxShadow: "0 8px 20px -6px rgba(0,0,0,0.25)",
-              }}
-            >
-              <GoogleGlyph />
-              Continue with Google
-            </button>
-          </form>
-
+          {/* Owner directive 2026-11-27 · "Continue with Google"
+              button REMOVED for launch. Reasons: (1) prelaunch gate
+              signs non-founder Google identities OUT; (2) Supabase
+              provider enablement + client-id + redirect-URL were
+              never configured operator-side; (3) misaligned with
+              NEX's device-only privacy positioning; (4) FTUE still
+              requires country / agreement / phone so "one-tap
+              signup" was never real for NEX. Server-side helpers
+              (continueWithGoogleAction, /auth/callback, google-
+              oauth.ts) are preserved unmounted so the button can
+              be re-enabled post-launch after a design decision on
+              new-user routing (direct auto-provision vs divert to
+              create-account form). Regression test
+              google-oauth.test.ts remains active against the pure
+              decideCallbackOutcome helper. */}
 
             {/* ── Mode-toggle link ──
                 2026-11-15 · Checkpoint 2. In signin mode: shows the
@@ -840,28 +789,3 @@ function LockIcon({ color }: { color: string }): React.ReactElement {
   );
 }
 
-function GoogleGlyph(): React.ReactElement {
-  // Google "G" mark · inline SVG so we do not ship another image
-  // request for the sign-in surface. Shape + colour swatches match
-  // the Google brand guideline for the sign-in button.
-  return (
-    <svg width={18} height={18} viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="#FFC107"
-        d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
-      />
-      <path
-        fill="#FF3D00"
-        d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571c.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
-      />
-    </svg>
-  );
-}

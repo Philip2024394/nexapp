@@ -1,0 +1,10 @@
+
+Running 6 tests using 1 worker
+
+[1/6] [mobile-chromium-pixel7] › tests\e2e\regression-sign-in-public-branches.spec.ts:52:9 › sign-in public surface · no uncaught errors · fallback hidden › sign-in branch · /nex-native/sign-in
+[2/6] [mobile-chromium-pixel7] › tests\e2e\regression-sign-in-public-branches.spec.ts:52:9 › sign-in public surface · no uncaught errors · fallback hidden › sign-in branch · /nex-native/sign-in?mode=signup
+[3/6] [mobile-chromium-pixel7] › tests\e2e\regression-sign-in-public-branches.spec.ts:52:9 › sign-in public surface · no uncaught errors · fallback hidden › sign-in branch · /nex-native/sign-in?e=oauth_unavailable&m=Google%20sign-in%20is%20currently%20unavailable.
+[4/6] [mobile-chromium-pixel7] › tests\e2e\regression-sign-in-public-branches.spec.ts:52:9 › sign-in public surface · no uncaught errors · fallback hidden › sign-in branch · /nex-native/sign-in?e=oauth_cancelled&m=Google%20sign-in%20was%20cancelled.
+[5/6] [mobile-chromium-pixel7] › tests\e2e\regression-sign-in-public-branches.spec.ts:52:9 › sign-in public surface · no uncaught errors · fallback hidden › sign-in branch · /nex-native/sign-in?e=oauth_exchange_failed&m=We%20couldnt%20finish
+[6/6] [mobile-chromium-pixel7] › tests\e2e\regression-sign-in-public-branches.spec.ts:52:9 › sign-in public surface · no uncaught errors · fallback hidden › sign-in branch · /nex-native/sign-in?next=%2Fnex-native%2Fprofile
+  6 passed (41.1s)

@@ -77,7 +77,7 @@ export default defineConfig({
       // flags · satisfies the mobile emulation contract.
       name: "mobile-chromium-pixel7",
       use: { ...devices["Pixel 7"] },
-      testMatch: /mobile-public-surfaces\.spec\.ts/,
+      testMatch: /mobile-public-surfaces\.spec\.ts|regression-sign-in-public-branches\.spec\.ts/,
     },
     {
       // B2 Phase 2 · signed-in journey · Pixel 7 viewport AND the
