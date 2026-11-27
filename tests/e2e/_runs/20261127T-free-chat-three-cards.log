@@ -1,0 +1,9 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:112:6 › authenticate against sandbox via typed credentials · write state.json (8.2s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-free-chat-first-visit-three-category-cards.spec.ts:55:9 › L-011 · Option B · free-chat first-visit three-category cards › renders exactly three category cards in the first-visit row (1.0s)
+  ✓  3 [stage-a-pixel7] › tests\e2e\journey-free-chat-first-visit-three-category-cards.spec.ts:83:9 › L-011 · Option B · free-chat first-visit three-category cards › each category card targets its library sub-route with the first-visit-free-chat marker (752ms)
+  ✓  4 [stage-a-pixel7] › tests\e2e\journey-free-chat-first-visit-three-category-cards.spec.ts:105:9 › L-011 · Option B · free-chat first-visit three-category cards › the deprecated six-tile first-visit grid no longer renders (646ms)
+
+  4 passed (13.3s)

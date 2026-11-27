@@ -33,7 +33,12 @@ Commit 2 pending (L-055 harness refactor + L-043 verification):
 
 **Rule 7 posture:** Commit `5a802f40` pushed to `Philip2024394/nexapp` `release-audit-v1-2026-11-14` under the sealed 2026-11-27 standing source-control policy. Second commit pending for L-055 harness refactor + L-043 real-evidence. Prior HEAD `f868474e` (L-053) advanced to `5a802f40`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
 
-**Next safe action (no approval needed · continue inside Rule 7):** Continue the finish-the-application queue. Candidate items per the delivery ledger remaining-work section: pick the next unblocked P1 regression that requires an authenticated session and was previously blocked on the auth-setup harness; or pivot to Shop / Chat Themes journey work per the three launch pillars.
+**Additional adjacent-regression confirmation (same cycle, post-push):**
+
+- `npx playwright test tests/e2e/journey-free-chat-first-visit-three-category-cards.spec.ts --project=stage-a-pixel7 --reporter=list` → **4 passed (13.3 s)**. Confirms L-053 UI refresh (orange ping · gray-on-cream subtitle · "Make Nex Yours" header · gear icon · gray-infill category cards) did not regress L-011's three-category-card contract. Log: `tests/e2e/_runs/20261127T-free-chat-three-cards.log`.
+- `npx playwright test tests/e2e/branded-shop-install.spec.ts --project=mobile-chromium-pixel7 --reporter=list` → **12 passed · 1 skipped (47.3 s)**. All 13 §G guest-flow tests run; the single skip is G10 (display-mode:standalone · deferred because Playwright cannot emulate real PWA install). Confirms L-054's pure-module split is behaviorally neutral for the branded-shop-install journey. Log: `tests/e2e/_runs/20261127T-branded-shop-install.log`.
+
+**Next safe action (no approval needed · continue inside Rule 7):** Continue the finish-the-application queue. Candidate items per the delivery ledger remaining-work section: Chat send-e2e regression (`tests/e2e/journey-chat-send-e2e.spec.ts`), merchant-order T8 UI loop (`tests/e2e/journey-merchant-order-t8-ui-loop.spec.ts`), or three-category themes hub (`tests/e2e/journey-chat-themes-three-category-hub.spec.ts`) — all previously blocked on auth-setup, all now runnable.
 
 ---
 
