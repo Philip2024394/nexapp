@@ -1,0 +1,47 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:112:6 › authenticate against sandbox via typed credentials · write state.json (9.5s)
+  ✘  2 [stage-a-pixel7] › tests\e2e\regression-copy-shop-link.spec.ts:146:9 › Cycle-7 · Copy Shop Link panel on /nex-native/manage/shop › panel renders with slug + canonical URL + copy confirmation + QR toggle (16.5s)
+  -  3 [stage-a-pixel7] › tests\e2e\regression-copy-shop-link.spec.ts:219:9 › Cycle-7 · Copy Shop Link panel on /nex-native/manage/shop › copied URL opens for an anonymous visitor (no session)
+
+
+  1) [stage-a-pixel7] › tests\e2e\regression-copy-shop-link.spec.ts:146:9 › Cycle-7 · Copy Shop Link panel on /nex-native/manage/shop › panel renders with slug + canonical URL + copy confirmation + QR toggle 
+
+    Error: Rendered URL must equal nexCanonicalUrl(/nex-native/<slug>)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "http://localhost:3009/nex-native/e2e-fixture-copylink-shop-mwz5l2rd-zhka7"
+    Received: "https://ireland.nex.invalid/nex-native/e2e-fixture-copylink-shop-mwz5l2rd-zhka7"
+
+      183 |         renderedUrl,
+      184 |         "Rendered URL must equal nexCanonicalUrl(/nex-native/<slug>)",
+    > 185 |       ).toBe(expectedPublicUrl);
+          |         ^
+      186 |
+      187 |       // --- Contract C · Copy link writes to clipboard --------------
+      188 |       await merchantPage
+        at C:\Users\Victus\nexapp\tests\e2e\regression-copy-shop-link.spec.ts:185:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\regression-copy-shop-link--157ec-copy-confirmation-QR-toggle-stage-a-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\regression-copy-shop-link--157ec-copy-confirmation-QR-toggle-stage-a-pixel7\error-context.md
+
+    Error Context: test-results\regression-copy-shop-link--157ec-copy-confirmation-QR-toggle-stage-a-pixel7\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\regression-copy-shop-link--157ec-copy-confirmation-QR-toggle-stage-a-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\regression-copy-shop-link--157ec-copy-confirmation-QR-toggle-stage-a-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [stage-a-pixel7] › tests\e2e\regression-copy-shop-link.spec.ts:146:9 › Cycle-7 · Copy Shop Link panel on /nex-native/manage/shop › panel renders with slug + canonical URL + copy confirmation + QR toggle 
+  1 did not run
+  1 passed (45.9s)
+EXIT=1

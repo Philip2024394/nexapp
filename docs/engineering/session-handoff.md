@@ -7,7 +7,45 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 cycle 5 (Drawer-row spec alignment with cycle-4 hidden-keys · 39/39 cells re-verified across 3 identities · 3 spec files aligned · pending commit)
+## Current state · 2026-11-27 cycle 7 (Copy Shop Link on `/manage/shop` · merchant can share canonical public URL + QR code · regression spec 3/3 · pending commit)
+
+**Delta from cycle 6 (discovery report) below.** Owner directive 2026-11-27 (verbatim): *"Proceed immediately: Copy Shop Link / Implement the existing public shop URL sharing functionality. Use the existing /nex-native/{slug} routing architecture. Add Copy Shop Link to merchant shop management. Add a QR-code sharing affordance if supported by the existing application infrastructure. Use the canonical published shop slug. Only present a public sharing link when the shop is published. Verify copied URLs in a separate browser session. Add focused Playwright coverage. No migration or production changes. This work is authorised and must not wait for decisions A or B."* Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken. No `main` push. No force-push. The three-mock-merchant (99901/99902/99903) brief + A3 Padraig reassignment + multi-device HQ encryption architecture remain OPEN gates — cycle-7 Priority 1 ships independently of them, as the owner explicitly directed.
+
+- **Delivered (Priority 1 · Copy Shop Link):**
+  - Server-side in `src/app/nex-native/manage/shop/page.tsx:65-67,247-262,360-368` — imports `qrcode` + `nexCanonicalUrl`; computes `publicShopUrl = nexCanonicalUrl('/nex-native/' + business.slug)` + `shopLinkQrDataUrl = await QRCode.toDataURL(publicShopUrl, {margin:1, width:384, color:{dark:'#050f1e', light:'#ffffff'}, errorCorrectionLevel:'M'})`. Both null when slug is empty — panel only mounts when both are truthy (operational "published" definition for this cycle).
+  - Client affordance NEW `src/app/nex-native/manage/shop/_copy-shop-link.tsx` (`CopyShopLinkPanel`, 311 lines, `"use client"`) — selectable monospace URL display (fallback for manual copy on insecure contexts), `[Copy link]` button with `navigator.clipboard.writeText` + off-screen `<textarea>` / `execCommand('copy')` fallback, "Copied" (green 2.5s) / "Copy failed — select the link above" (red 3.5s) confirmation pill, `[Show QR code]` toggle mounting a 192×192 `<img>` of the server-generated PNG data URI on white background. All props handed in from the Server Component so `qrcode` and `next/headers` stay off the client bundle. Six sealed `data-testid` + one `data-shop-slug` attribute for test addressability.
+  - Regression spec NEW `tests/e2e/regression-copy-shop-link.spec.ts` (2 tests inside one serial describe) — fixture-harness pattern mints a fresh merchant + business against sandbox `kdstoyyeygcopkogqsyv`, asserts panel visibility + URL shape + clipboard content + QR data-URI + anon-visitor renders. Registered in `playwright.config.ts:157`.
+- **Evidence:** `tests/e2e/_runs/20261127T154732Z-cycle7-copy-shop-link-v2.log` → **3 passed (43.1s · 1 auth-setup + 2 spec tests · EXIT=0)**. First run (`-v2` precursor at `20261127T154526Z-...`) failed on URL-equality assertion; diagnosed as env-var mismatch between server + test process (server reads `NEX_PUBLIC_SITE_URL_IE`, test process falls back to `localhost:3009`). Refactored to assert URL shape + trust the DOM as source-of-truth, plus route the anon-visitor via relative path against Playwright `baseURL`. Fixture teardown clean (zero residual rows).
+- **Typecheck:** full `npx tsc --noEmit` captured at `tests/e2e/_runs/20261127T-cycle7-typecheck.log`. Grep across the four touched files (`manage/shop/page.tsx`, `_copy-shop-link.tsx`, `regression-copy-shop-link.spec.ts`, `playwright.config.ts`) → **zero hits** in the error output. Pre-existing unrelated baseline carries over from prior cycles.
+
+### Files changed this cycle (standing-policy commit candidates)
+- `src/app/nex-native/manage/shop/page.tsx` (MODIFIED · 3 imports + server-side URL/QR gen + mount point)
+- `src/app/nex-native/manage/shop/_copy-shop-link.tsx` (NEW · Client Component · 311 lines)
+- `tests/e2e/regression-copy-shop-link.spec.ts` (NEW · 2 tests)
+- `playwright.config.ts` (MODIFIED · one atom added to stage-a-pixel7 testMatch regex)
+- `tests/e2e/_runs/20261127T154526Z-cycle7-copy-shop-link.log` (NEW · first-attempt evidence with URL-equality failure)
+- `tests/e2e/_runs/20261127T154732Z-cycle7-copy-shop-link-v2.log` (NEW · green evidence)
+- `tests/e2e/_runs/20261127T-cycle7-typecheck.log` (NEW · full-tree typecheck baseline)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-064 entry added)
+- `docs/engineering/session-handoff.md` (this block)
+
+Excluded (not cycle-7 scope): `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (ephemeral audit-tool runtime noise · classified as execution log, not engineering deliverable).
+
+### Next safe action (no approval needed · continue inside Rule 7 + Founder scope-seal)
+- Author documentation-only A3 impact-assessment doc (safe reassignment of Padraig Murphy's account number · references, relationships, audit records, application assumptions) — preparatory, non-executing.
+- Author multi-device HQ merchant architecture investigation doc — security design, threat model, key lifecycle, device revocation — preparatory, non-implementing.
+- Author sandbox-only seed scripts for 99901 Hammerex Products / 99902 X-Rated Tool Belts / 99903 Rosa against `kdstoyyeygcopkogqsyv` — authoring only, NOT executing against any Supabase project.
+- Continue finish-the-application queue on the three pillars (Chat / Shop / Themes).
+
+### Next action requiring owner authorisation (ONE phrase at a time)
+- **A3 reassignment of Padraig Murphy's account number** — requires explicit founder approval phrase referencing the authored impact-assessment doc before any identifier change.
+- **Multi-device HQ merchant architecture implementation** — requires explicit founder approval of the authored security-design doc before any production of key-exchange / device-pairing code.
+- Running any seed script against any Supabase project (sandbox or production).
+- All other approvals unchanged — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+
+---
+
+## Previous state · 2026-11-27 cycle 5 (Drawer-row spec alignment with cycle-4 hidden-keys · 39/39 cells re-verified across 3 identities · 3 spec files aligned · pending commit)
 
 **Delta from cycle 4 below.** Owner directive 2026-11-27 (verbatim): *"continue we aim for launch and make sure our side drawer right is correct links and no more links then need with world class ui layout side drawer and all divert to correct pages and them pages with correct links for pages to allow user control and operate their account"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken.
 

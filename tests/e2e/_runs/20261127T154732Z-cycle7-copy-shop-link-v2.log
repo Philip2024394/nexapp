@@ -1,0 +1,9 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:112:6 › authenticate against sandbox via typed credentials · write state.json (8.0s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\regression-copy-shop-link.spec.ts:150:9 › Cycle-7 · Copy Shop Link panel on /nex-native/manage/shop › panel renders with slug + canonical URL + copy confirmation + QR toggle (14.1s)
+  ✓  3 [stage-a-pixel7] › tests\e2e\regression-copy-shop-link.spec.ts:240:9 › Cycle-7 · Copy Shop Link panel on /nex-native/manage/shop › copied URL opens for an anonymous visitor (no session) (4.8s)
+
+  3 passed (43.1s)
+EXIT=0

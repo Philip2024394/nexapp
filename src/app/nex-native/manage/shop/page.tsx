@@ -58,6 +58,13 @@ import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
 } from "../../cover/layout-ids";
+// Cycle-7 2026-11-27 · "Copy Shop Link" + QR affordance.
+// `qrcode` is a nodejs-only dep (not browser-safe) so this import
+// stays confined to the Server Component that drives the data URI,
+// and the resulting string is handed to the Client Component.
+import QRCode from "qrcode";
+import { nexCanonicalUrl } from "@/lib/nex-native/seo/site-url-resolver";
+import { CopyShopLinkPanel } from "./_copy-shop-link";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -230,6 +237,37 @@ export default async function ShopSettingsPage({
     ? new Date(business.away_until).toISOString().slice(0, 10)
     : "";
 
+  // Cycle-7 2026-11-27 · Copy Shop Link + QR.
+  // Build the absolute public URL via the sealed site-url resolver so
+  // it carries the correct deploy identity (IE/WW/ID) and never leaks
+  // localhost into production per site-url-resolver.ts §assertProdSafeUrl.
+  // Generate the QR PNG as a data URI server-side so the dependency
+  // never reaches the client bundle. Values flow to the Client
+  // Component below. "Published" here = "has a non-empty slug".
+  const publicShopUrl = business.slug
+    ? nexCanonicalUrl(`/nex-native/${business.slug}`)
+    : null;
+  const shopLinkQrDataUrl = publicShopUrl
+    ? await QRCode.toDataURL(publicShopUrl, {
+        margin: 1,
+        width: 384,
+        color: { dark: "#050f1e", light: "#ffffff" },
+        errorCorrectionLevel: "M",
+      })
+    : null;
+  const copyShopLinkPalette = {
+    panel: NEX.panel,
+    border: NEX.border,
+    borderStrong: NEX.borderStrong,
+    text: NEX.text,
+    textDim: NEX.textDim,
+    textMute: NEX.textMute,
+    cyan: NEX.cyan,
+    cyanSoft: NEX.cyanSoft,
+    green: NEX.green,
+    red: NEX.red,
+  };
+
   return (
     <div
       style={{
@@ -313,6 +351,21 @@ export default async function ShopSettingsPage({
         </h1>
 
         {banner && <Banner code={banner.code} message={banner.message} />}
+
+        {/* Cycle-7 2026-11-27 · "Copy Shop Link" + QR affordance. Only
+            mounted when the business has a published slug (= reachable
+            at /nex-native/{slug}). Keeps the pre-existing "View shop ↗"
+            header link as a one-tap surface and adds explicit sharing
+            controls below the h1. */}
+        {publicShopUrl && shopLinkQrDataUrl && (
+          <CopyShopLinkPanel
+            publicUrl={publicShopUrl}
+            qrDataUrl={shopLinkQrDataUrl}
+            slug={business.slug}
+            palette={copyShopLinkPalette}
+            sans={SANS}
+          />
+        )}
 
         {/* Shop Themes CTA · owner-authorised 2026-11-06 · owner
             lands here to open their shop; this tile takes them to
