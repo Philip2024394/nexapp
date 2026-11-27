@@ -1,0 +1,55 @@
+
+Running 13 tests using 1 worker
+
+  ✓   1 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:85:7 › NEX branded shop install · §G › G07 · manifest route returns 200 + merchant JSON for seeded slug (3.1s)
+  ✓   2 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:113:7 › NEX branded shop install · §G › G08 · manifest route returns 404 for an unknown slug (632ms)
+  ✘   3 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:122:7 › NEX branded shop install · §G › G01 · branded install button renders with merchant name + chat badge (5.4s)
+  -   4 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:134:7 › NEX branded shop install · §G › G02 · slide-in appears on first visit with sealed §B copy
+  -   5 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:150:7 › NEX branded shop install · §G › G03 · first dismiss writes dismissals=1 and hides slide-in
+  -   6 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:174:7 › NEX branded shop install · §G › G04 · second dismiss after cooldown flips suppressed=true
+  -   7 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:208:7 › NEX branded shop install · §G › G05 · permanent suppression survives a reload
+  -   8 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:228:7 › NEX branded shop install · §G › G06 · burger menu has 'Download App' as a final row
+  -   9 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:242:7 › NEX branded shop install · §G › G09 · already-installed flag suppresses every branded surface
+  -  10 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:262:7 › NEX branded shop install · §G › G10 · display-mode:standalone suppression [deferred · no PWA install available in Playwright context]
+  -  11 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:269:7 › NEX branded shop install · §G › G11 · iOS UA triggers toast instead of native prompt
+  -  12 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:298:7 › NEX branded shop install · §G › G12 · button never auto-triggers a native prompt on mount
+  -  13 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:336:7 › NEX branded shop install · §G › G13 · dismissal state is scoped per slug (no cross-merchant leak)
+
+
+  1) [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:122:7 › NEX branded shop install · §G › G01 · branded install button renders with merchant name + chat badge 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      128 |     await expect(button).toHaveAttribute("data-nex-shop-slug", fixtureSlug);
+      129 |     const label = (await button.textContent()) ?? "";
+    > 130 |     expect(label.trim().startsWith("Download ")).toBe(true);
+          |                                                  ^
+      131 |     await expect(button.locator("[data-nex-chat-badge]")).toHaveCount(1);
+      132 |   });
+      133 |
+        at C:\Users\Victus\nexapp\tests\e2e\branded-shop-install.spec.ts:130:50
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\branded-shop-install-NEX-b-d39ed-th-merchant-name-chat-badge-mobile-chromium-pixel7\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\branded-shop-install-NEX-b-d39ed-th-merchant-name-chat-badge-mobile-chromium-pixel7\error-context.md
+
+    Error Context: test-results\branded-shop-install-NEX-b-d39ed-th-merchant-name-chat-badge-mobile-chromium-pixel7\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\branded-shop-install-NEX-b-d39ed-th-merchant-name-chat-badge-mobile-chromium-pixel7\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\branded-shop-install-NEX-b-d39ed-th-merchant-name-chat-badge-mobile-chromium-pixel7\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:122:7 › NEX branded shop install · §G › G01 · branded install button renders with merchant name + chat badge 
+  10 did not run
+  2 passed (18.8s)
+EXIT=1

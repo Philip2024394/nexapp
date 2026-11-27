@@ -7,6 +7,40 @@ What requires the owner before continuing?
 
 ---
 
+## Current state · 2026-11-27 (NEX-024 cycle 2 · branded shop install VERIFIED · HEAD advanced to `<pending commit>`)
+
+**Delta from addendum 8.** Owner directive: *"next concrete engineering action"* against the NEX-024 feature. Standing-policy commit+push authority still in force for `release-audit-v1-2026-11-14` (sealed 2026-11-27). CLAUDE.md Rule 7 clauses on prod / main / migration / live Stripe preserved.
+
+**Deltas:**
+
+- **NEX-024 branded shop install flipped from BUILT · WIRED · NOT VERIFIED → BUILT · WIRED · VERIFIED.** Previous cycle shipped the four components + per-shop manifest route + storefront mount (commit `e0bd3c3e`) but left the Playwright spec `test.fixme`-gated on `BRANDED_INSTALL_FIXTURE_SLUG`. This cycle rewrote `tests/e2e/branded-shop-install.spec.ts` to self-seed a sandbox `nex_business` via `createTestAccount` + `createTestBusiness` in `beforeAll`, tear down in `afterAll`, and assert zero residuals. Spec no longer depends on any env var. Registered in `playwright.config.ts` `mobile-chromium-pixel7` project (public-surface, no auth-setup dep).
+- **Run3 evidence `tests/e2e/_runs/20261127T084620Z-NEX-024-branded-install-run3.log`** · **12 passed · 1 skipped · 47.8 s · EXIT=0.** G10 (`display-mode:standalone`) explicitly `test.skip` with reason — Playwright can't emulate standalone PWA mode without a real installed shortcut; the `isStandalone` branch is unit-level and transitively validated by G09.
+- **One fix-then-pass** preserved as audit trail: run2 surfaced a TEST DEFECT in G01 (`button.textContent()` concatenated the avatar initial glyph, so `startsWith("Download ")` saw e.g. `"EDownload …"`). Corrected by asserting against the sealed `aria-label="Download {name} to your phone"` at `BrandedInstallButton:169` — the component's accessibility contract and the canonical "Download <name>" source of truth. Zero product-code change. Run1 (auth-setup project) failed on missing `NEX_ADMIN_EMAILS` / `NEX_ADMIN_DEV_PASSWORD` env vars — FIXTURE/SETUP DEFECT corrected by relocating the spec from `stage-a-pixel7` (auth-dep) to `mobile-chromium-pixel7` (public-surface, no auth needed).
+- **Sandbox cleanliness confirmed**: `assertNoResidualFixtures(handles)` did not throw in `afterAll`. Ephemeral `e2e-fixture-branded-install-<suffix>` row created and deleted within the single run.
+- **Real iOS Safari NOT verified** — WebKit not installed; G11 Chromium-sniffs the iOS UA. Called out explicitly in the spec docstring.
+
+**Files changed this cycle (standing-policy commit candidates):**
+- `tests/e2e/branded-shop-install.spec.ts` — rewritten to self-seed + register the 13 cases
+- `playwright.config.ts:80` — `mobile-chromium-pixel7` testMatch extended with `branded-shop-install\.spec\.ts`
+- `docs/product/feature-ledger.md` — NEX-024 row + detail section + reconciliation-log entry flipped to VERIFIED
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` — NEX-024 cycle-2 decisions-log entry
+- `docs/engineering/session-handoff.md` — this block
+- `tests/e2e/_runs/20261127T084424Z-NEX-024-branded-install.log` — run1 (routing failure, preserved)
+- `tests/e2e/_runs/20261127T084522Z-NEX-024-branded-install-run2.log` — run2 (test-defect fix-then-pass)
+- `tests/e2e/_runs/20261127T084620Z-NEX-024-branded-install-run3.log` — run3 (12 passed · 1 skipped · EXIT=0)
+
+**Rule 7 posture:** Prior HEAD `e0bd3c3e` (NEX-024 cycle-1 commit). Pending new standing-policy commit for this cycle's artefacts (sandbox-only · dev branch). No push to `main`. No production touched. No migration applied. No credential activated. No sealed invariants broken.
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- Draft the `nex_account_shop_install_prefs` migration file for signed-in dismissal reconciliation (applying to sandbox requires a dedicated named approval phrase).
+- Extend nav inventory for drawer-rows reachable without migration dependency.
+- Author additional perf-regression specs under the §10 DoD.
+
+**Next action requiring owner authorisation (ONE phrase at a time):** unchanged — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+
+---
+
 ## Current state · 2026-11-27 (continuation cycle addendum 8 · sign-in public-surface regression PROMOTED + VERIFIED)
 
 **Delta from addendum 7.** Continuation of 2026-11-27 directive *"continue with next"*. No new owner authorisation. Rule 7 preserved: no commit · no push · no migration applied · no credential activated · no production touched. HEAD remains `9dfa90b4`.

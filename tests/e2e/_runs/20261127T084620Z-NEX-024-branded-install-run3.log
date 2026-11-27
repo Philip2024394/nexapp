@@ -1,0 +1,20 @@
+
+Running 13 tests using 1 worker
+
+  ✓   1 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:85:7 › NEX branded shop install · §G › G07 · manifest route returns 200 + merchant JSON for seeded slug (835ms)
+  ✓   2 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:113:7 › NEX branded shop install · §G › G08 · manifest route returns 404 for an unknown slug (273ms)
+  ✓   3 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:122:7 › NEX branded shop install · §G › G01 · branded install button renders with merchant name + chat badge (5.1s)
+  ✓   4 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:138:7 › NEX branded shop install · §G › G02 · slide-in appears on first visit with sealed §B copy (4.4s)
+  ✓   5 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:154:7 › NEX branded shop install · §G › G03 · first dismiss writes dismissals=1 and hides slide-in (4.8s)
+  ✓   6 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:178:7 › NEX branded shop install · §G › G04 · second dismiss after cooldown flips suppressed=true (4.8s)
+  ✓   7 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:212:7 › NEX branded shop install · §G › G05 · permanent suppression survives a reload (3.8s)
+  ✓   8 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:232:7 › NEX branded shop install · §G › G06 · burger menu has 'Download App' as a final row (2.8s)
+  ✓   9 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:246:7 › NEX branded shop install · §G › G09 · already-installed flag suppresses every branded surface (1.6s)
+  -  10 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:266:7 › NEX branded shop install · §G › G10 · display-mode:standalone suppression [deferred · no PWA install available in Playwright context]
+  ✓  11 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:273:7 › NEX branded shop install · §G › G11 · iOS UA triggers toast instead of native prompt (3.2s)
+  ✓  12 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:302:7 › NEX branded shop install · §G › G12 · button never auto-triggers a native prompt on mount (2.6s)
+  ✓  13 [mobile-chromium-pixel7] › tests\e2e\branded-shop-install.spec.ts:340:7 › NEX branded shop install · §G › G13 · dismissal state is scoped per slug (no cross-merchant leak) (4.3s)
+
+  1 skipped
+  12 passed (47.8s)
+EXIT=0

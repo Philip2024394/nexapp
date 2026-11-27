@@ -1,0 +1,51 @@
+
+Running 14 tests using 1 worker
+
+  ✘   1 [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json (5.9s)
+
+
+  1) [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json 
+
+    Error: Dev Pass form must render · requires NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD in the dev server's env AND NODE_ENV!=='production' · see src/app/nex-native/sign-in/page.tsx:666 and _actions.ts:877
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[data-nex-dev-pass-form]')
+    Expected: 1
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - Dev Pass form must render · requires NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD in the dev server's env AND NODE_ENV!=='production' · see src/app/nex-native/sign-in/page.tsx:666 and _actions.ts:877 locator('[data-nex-dev-pass-form]') with timeout 5000ms
+      - waiting for locator('[data-nex-dev-pass-form]')
+        14 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      102 |       "NODE_ENV!=='production' · see src/app/nex-native/sign-in/" +
+      103 |       "page.tsx:666 and _actions.ts:877",
+    > 104 |   ).toHaveCount(1, { timeout: 5_000 });
+          |     ^
+      105 |   await expect(devPassButton, "Dev Pass button must be visible").toBeVisible();
+      106 |
+      107 |   // Submit the sealed sign-in path. We do NOT log the button's aria-
+        at C:\Users\Victus\nexapp\tests\e2e\auth.setup.ts:104:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\auth.setup.ts-authenticate-34bd8-Dev-Pass-·-write-state-json-auth-setup\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [auth-setup] › tests\e2e\auth.setup.ts:82:6 › authenticate against sandbox via Dev Pass · write state.json 
+  13 did not run
+EXIT=1

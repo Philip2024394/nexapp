@@ -57,7 +57,7 @@ relying on anyone's conversational memory.
 | [NEX-021](#nex-021--full-viewport-rule-no-mobile-browser-chrome) | Full-viewport rule / no mobile browser chrome | **RULE SEALED · NOT VERIFIED** · splash is reference impl; other pages unaudited; no Playwright test yet | Blueprint § 11A (2026-11-24) | — | Write `full-viewport-chrome.spec.ts`; audit every nex-native route |
 | [NEX-022](#nex-022--pwa-install-promotion-engagement-gated) | PWA install promotion (engagement-gated, Option A) | **RULE SEALED · NOT STARTED** · no card/modal, no beforeinstallprompt capture, no side-drawer row, manifest state unaudited | Blueprint § 11B (2026-11-24) | — | Audit manifest + existing install code; design card; wire platform-aware behaviour |
 | [NEX-023](#nex-023--location-permission-timing-feature-gated) | Location permission timing (feature-gated) | **RULE SEALED · NOT VERIFIED** · no explanation card, no SOS-time explicit gate audited, no retry/settings UI | Blueprint § 11B (2026-11-24) | — | Audit current geolocation call-sites in SOS and elsewhere; add explanation card before browser prompt |
-| [NEX-024](#nex-024--branded-shop-installation) | Branded shop installation (per-merchant PWA install) | **BUILT · WIRED · NOT VERIFIED** · per-shop dynamic manifest at `/nex-native/<slug>/manifest.webmanifest` (2026-11-27), components `BrandedInstallButton` / `InstallSlideIn` / `BurgerInstallRow` / `NexChatBadge` under `src/components/nex-native/shop-install/`, 2-strike/5-minute dismissal state machine in `useShopInstallDismissal`. Mounted on storefront page.tsx; burger-menu row wired. Playwright `tests/e2e/branded-shop-install.spec.ts` authored but 10/12 cases are `test.fixme` until `BRANDED_INSTALL_FIXTURE_SLUG` is set to a seeded sandbox slug. Standing-policy commit pending. | Owner directive 2026-11-27 §A-§H | — | Set `BRANDED_INSTALL_FIXTURE_SLUG` to a seeded sandbox slug + run spec; design `nex_account_shop_install_prefs` migration for server-side dismissal reconciliation (currently localStorage-only) |
+| [NEX-024](#nex-024--branded-shop-installation) | Branded shop installation (per-merchant PWA install) | **BUILT · WIRED · VERIFIED** · 2026-11-27 run3 `20261127T084620Z-NEX-024-branded-install-run3.log` **12 passed · 1 skipped · 47.8 s · EXIT=0** · G01-G09 + G11-G13 PASS against a self-seeded sandbox `nex_business` (harness-minted in `beforeAll`, torn down in `afterAll`, `assertNoResidualFixtures` clean). G10 (`display-mode:standalone`) deliberately `test.skip` with reason — Playwright cannot emulate standalone PWA mode without a real installed shortcut; the `isStandalone` branch is covered at the hook level and transitively validated by G09. Real iOS Safari install flow remains unverified (WebKit not installed; G11 Chromium-sniffs iOS UA). | Owner directive 2026-11-27 §A-§H | 2026-11-27 run3 | Draft `nex_account_shop_install_prefs` migration for signed-in dismissal reconciliation (localStorage is guest-only) — BLOCKED-AT-APPROVAL for sandbox-apply |
 
 ---
 
@@ -605,26 +605,35 @@ selection architecture (manifest route is country-agnostic).
 - `src/components/nex-native/shop-install/burger-install-row.tsx`
 - `src/app/nex-native/cover/_burger-menu.tsx` (Download App row wired)
 - `src/app/nex-native/[businessSlug]/page.tsx` (surfaces mounted)
-- `tests/e2e/branded-shop-install.spec.ts` (§G test matrix, 10/12
-  cases `test.fixme` pending sandbox fixture)
+- `tests/e2e/branded-shop-install.spec.ts` (§G test matrix, self-
+  seeding via sandbox harness in `beforeAll`/`afterAll`)
+- `playwright.config.ts` (`mobile-chromium-pixel7` testMatch
+  extended with `branded-shop-install\.spec\.ts`)
 
-**State**: **BUILT · WIRED · NOT VERIFIED**.
+**State**: **BUILT · WIRED · VERIFIED** (2026-11-27 run3).
 - Components compiled (no tsc errors in touched files)
-- Playwright spec authored; needs `BRANDED_INSTALL_FIXTURE_SLUG` env
-  var pointing at a seeded sandbox slug for 10/12 cases
-- G07 + G08 (manifest 200 / 404) are runnable without a fixture
+- Playwright run3 `tests/e2e/_runs/20261127T084620Z-NEX-024-branded-
+  install-run3.log` · 12 passed · 1 skipped · 47.8 s · EXIT=0
+- Fixture teardown clean (`assertNoResidualFixtures` did not throw in
+  `afterAll`)
+- Fix-then-pass audit trail preserved: run2 (test-defect in G01
+  — `textContent()` picked up avatar initial glyph · fixed by
+  asserting against the sealed `aria-label` instead)
+- G10 (`display-mode:standalone`) `test.skip` with reason — Playwright
+  cannot emulate standalone PWA mode without a real installed
+  shortcut; `isStandalone` branch is unit-level, transitively
+  validated by G09
 - Real iOS Safari install flow NOT verified (WebKit not installed;
-  spec emulates with Chromium + iOS UA, called out explicitly)
+  G11 Chromium-sniffs iOS UA, called out explicitly)
 
 **Boundaries**: sandbox only · standing-policy commit+push to
 `Philip2024394/nexapp` `release-audit-v1-2026-11-14` · no prod
 deploy · no production migration · no live Stripe/PayPal · no
 cross-merchant data collection.
 
-**Next action**: provision a sandbox fixture slug (any seeded
-`nex_business` row) and set `BRANDED_INSTALL_FIXTURE_SLUG`; run the
-spec; draft the `nex_account_shop_install_prefs` migration for
-signed-in reconciliation.
+**Next action**: draft the `nex_account_shop_install_prefs` migration
+for signed-in dismissal reconciliation (localStorage is guest-only).
+Applying the migration to sandbox requires a named approval phrase.
 
 ---
 
@@ -677,6 +686,21 @@ signed-in reconciliation.
   `BRANDED_INSTALL_FIXTURE_SLUG` env var pointing at a seeded sandbox
   slug. No tsc errors introduced. Sandbox only · standing-policy
   commit+push authorised to `release-audit-v1-2026-11-14`.
+- **2026-11-27 (cycle 2)**: **NEX-024 flipped to VERIFIED.** Rewrote
+  `tests/e2e/branded-shop-install.spec.ts` to self-seed a sandbox
+  `nex_business` via the service-role harness in `beforeAll` and tear
+  it down in `afterAll` (no more env-var gate; the spec runs on any
+  sandbox-wired env). Registered in `playwright.config.ts`
+  `mobile-chromium-pixel7` project (public-surface, no auth
+  dependency). Run3 evidence `tests/e2e/_runs/20261127T084620Z-NEX-024
+  -branded-install-run3.log` · **12 passed · 1 skipped · 47.8 s ·
+  EXIT=0**. G10 (`display-mode:standalone`) explicitly `test.skip`
+  with reason — Playwright can't emulate standalone PWA mode. One
+  fix-then-pass: run2 surfaced a test-defect in G01 (`textContent()`
+  concatenated the avatar initial glyph) · corrected by asserting
+  against the sealed `aria-label` instead · `BrandedInstallButton`
+  unchanged. `assertNoResidualFixtures` clean. Sandbox only · no
+  production touched · no credentials activated.
 
 ---
 
