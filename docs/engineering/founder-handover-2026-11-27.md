@@ -203,24 +203,20 @@ Fixture teardown clean · `test-results/` back to 1 KB post-run.
 
 The 18×4×3 nav matrix (18 drawer rows × 4 session states × 3 countries) is 216 nominal cells. The 2026-11-26 architecture correction reclassified "country" as a selection axis within a single app (not a deployment axis), which collapses many country combinations to a single contract. The matrix now decomposes as follows.
 
-| Slice | Rows covered this cycle | Status | Reason not yet VERIFIED |
+| Slice | Rows covered | Status | Reason not yet VERIFIED |
 |---|---|---|---|
-| Signed-in shop-owner × IE | 16 / 16 drawer rows | **VERIFIED** (this cycle) | — |
+| Signed-in shop-owner × IE | 16 / 16 drawer rows | **VERIFIED** (L-041 · re-verified 2026-11-27 cycle 1 · 17 passed / 3.7 min) | — |
+| Signed-in non-shop-owner × IE (buyer, no business) | 17 / 17 drawer rows | **VERIFIED** (L-046 · re-verified 2026-11-27 cycle 2 · 17 passed / 3.4 min) | — |
+| Guest (no cookie) × IE | 17 / 17 drawer rows | **VERIFIED** (L-045 · re-verified 2026-11-27 cycle 2 · 17 passed / 27.1 s) | — |
 | Signed-in shop-owner × ID | 0 / 16 | MAPPED | Ireland-specific stylesheet differences are decorative only (edge-light); no row-content divergence per the account-type × country matrix (navigation-inventory.md §234-237). Reproducing the slice under `?country=ID` is feasible but low-value until drawer content diverges. Deferrable. |
 | Signed-in shop-owner × WW | 0 / 16 | MAPPED | Same as ID — no row divergence in current code path. Deferrable. |
-| Signed-in non-shop-owner × any | 0 / 16 | MAPPED | Needs a signed-in authenticated account with no business row. Shop Settings / FAQ / Payment Providers / My Orders / Wholesale destinations gate ownership at the destination (should redirect to `/manage/shop/setup`). New fixture required: minted-authed-no-business. |
-| Guest (no cookie) × IE | 0 / 16 | MAPPED | 8 of 16 rows render lock-icon → `/sign-in?next=…` per sealed account-type matrix. Gate contract is unit-level correct; browser evidence needs a fresh-cookie Playwright context. Authoring is feasible this cycle budget permitting. |
+| Signed-in non-shop-owner × ID / WW | 0 / 16 | MAPPED | Same row-content non-divergence rationale as merchant × ID/WW. Deferrable. |
+| Guest × ID / WW | 0 / 16 | MAPPED | Same row-content non-divergence rationale. Deferrable. |
 | Provisional visitor × IE | 0 / 16 | MAPPED | Requires `nex_session` provisional cookie — same seed gap as L-010 BLOCKER-NAV-002 (guest-chat journey). Fixture harness not yet authored. |
 | HQ Axis A (admin desktop) | 17 / 18 MAPPED + 1 PARTIAL (F3) | PARTIAL | HQ admin fixture + desktop viewport not exercised; F3 Journey Map gate drift confirmed; patch BUILT · BLOCKED on `APPROVE F3 PATCH APPLY`. |
 | Popup / contextual CTAs | 2 / 2 href shape | VERIFIED (href-shape) | — |
 
-**Cells NOT exercised by a real browser this cycle: ~80** (16 × 5 remaining slices, minus overlaps and nullable countries where the content contract is identical). Full browser proof across every remaining slice requires:
-- A shop-less authed fixture (new work · same harness pattern as L-041).
-- A guest-cookie-free context sweep (one small new spec · feasible without owner input).
-- A provisional-visitor seed helper (named-fixture authoring work · similar to L-059's `seedPeerSentMessage`).
-- An HQ admin desktop viewport project in `playwright.config.ts` (new project · desktop viewport + HQ-admin credentials).
-
-None of the remaining slices are blocked by **secrets, owner decisions, or production approvals**. Each is a separate engineering task. The highest-value next slice is "signed-in non-shop-owner × IE" because it exercises the destination-side ownership gates on the Shop Settings / FAQ / Payment Providers / My Orders / Wholesale rows (currently asserted by inspection, not browser).
+**Cells exercised by a real browser (IE country axis, 2026-11-27):** 50 (16 merchant + 17 buyer + 17 guest). The three remaining untested buckets are (a) the ID / WW country axis — which the single-app country-model reconciliation treats as decorative-only divergence from IE, i.e. high-confidence non-defect by code path review but not browser-asserted; (b) provisional visitor × IE — needs a new `seedProvisionalSession()` harness primitive; (c) HQ admin desktop — needs a new desktop-viewport Playwright project + HQ-admin credentials. None of the three are blocked by **secrets, owner decisions, or production approvals**.
 
 ### 3.4 · Nav inventory update protocol executed
 
@@ -233,9 +229,10 @@ None of the remaining slices are blocked by **secrets, owner decisions, or produ
 Per owner directive quote: *"Do not classify engineering work as owner-blocked merely because it appears in the ledger."*
 
 Items that COULD be built further without founder word:
-1. **Guest × IE drawer-row slice** — lock-icon contract, `href` shape, sign-in redirect flow. New spec, feasible same pattern as L-041. ~60 min.
-2. **Signed-in non-shop-owner × IE drawer-row slice** — exercises destination-side ownership gates. New fixture (mint authed-no-business) · same harness pattern. ~90 min.
-3. **Provisional-visitor seed helper + spec** — `seedProvisionalSession()` harness primitive · unblocks L-010 BLOCKER-NAV-002 and the guest-chat first-message CTA. New harness work. ~2 hours.
+1. ~~**Guest × IE drawer-row slice**~~ — already VERIFIED as L-045 (re-run 2026-11-27 cycle 2 · 17 passed / 27.1 s). Removed from this list.
+2. ~~**Signed-in non-shop-owner × IE drawer-row slice**~~ — already VERIFIED as L-046 (re-run 2026-11-27 cycle 2 · 17 passed / 3.4 min). Removed from this list.
+3. **Provisional-visitor seed helper + spec** — `seedProvisionalSession()` harness primitive · unblocks L-010 BLOCKER-NAV-002 and the guest-chat first-message CTA. New harness work.
+4. **ID / WW country-axis drawer sweep** — one additional pass with the resolver forced to `cf-ipcountry=ID` and `cf-ipcountry=WW` equivalents. Current code-path review says row content is identical to IE (decorative-only divergence), but browser confirmation would convert MAPPED→VERIFIED on 32 additional cells.
 
 Items that are NOT further engineerable without founder word (and have no in-session workaround):
 - Migration applies (sandbox-apply boundary is owner-gated per CLAUDE.md Rule 7).

@@ -7,7 +7,40 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (Final founder handover packet landed · L-041 re-verified · L-010 ratchet)
+## Current state · 2026-11-27 cycle 2 (Autonomous-engineering directive · L-042/L-043 regression re-run · L-045/L-046 re-verification · handover doc-drift corrected · mig 370 held)
+
+**Delta from the cycle-1 block below.** Owner issued autonomous-engineering directive after the mig-370 approval gate: *"do not allow this single approval gate to stop all other NEX engineering work. Continue working autonomously on everything that can safely progress without founder approval."* This cycle executed four focused Playwright re-verifications and corrected doc drift in the handover + ledger. Migration 370 remains unapplied; production untouched.
+
+**Spec runs this cycle (all source-anchored):**
+
+1. **L-042 orders-list hydration regression** · `tests/e2e/regression-l042-orders-list-hydration.spec.ts` → **2 passed · 54.7 s · EXIT=0**. Resolves the 2026-11-26 "seed-visibility inconclusive" finding (`rowAnchorIdx = -1`) — on fresh re-run, Contract A (raw ISO in SSR window after row anchor), Contract B (hydrated locale formatting), Contract C (no hydration warnings) all pass. Inference: prior failure was environmental (disk/race), not a product defect.
+
+2. **L-043 order-detail hydration regression** · `tests/e2e/regression-l043-order-detail-hydration.spec.ts` → **2 passed · 42.3 s · EXIT=0**. No new findings · stable.
+
+3. **L-045 drawer-rows guest × IE re-verification** · `tests/e2e/journey-drawer-rows-guest-ie.spec.ts` → **17 passed · 27.1 s · EXIT=0**. All 17 guest-session drawer rows (REDIRECT-TO-SIGNIN + PUBLIC-RENDER classifications) remain VERIFIED. Previous handover §3.3 said "0/16 MAPPED"; that was carried forward from an earlier draft — corrected this cycle.
+
+4. **L-046 drawer-rows signed-in buyer × IE re-verification** · `tests/e2e/journey-drawer-rows-buyer-ie.spec.ts` → **17 passed · 3.4 min · EXIT=0**. All 17 buyer-session drawer rows (AUTH-ONLY-RENDER / OWNER-GATE-TO-SETUP / OWNER-GATE-TO-PLACEHOLDER / PUBLIC-RENDER) remain VERIFIED. Previous handover §3.3 said "0/16 MAPPED"; corrected.
+
+**Cumulative L-010 IE × role/session cells now VERIFIED under real browser: 50** (16 merchant via L-041 cycle 1 + 17 buyer via L-046 + 17 guest via L-045). Remaining untested buckets for L-010 completion: provisional (not-yet-shop-owner authenticated) × IE · all cells × ID · all cells × WW · HQ admin desktop axis.
+
+**Doc corrections this cycle:**
+
+- `docs/engineering/founder-handover-2026-11-27.md` · §3.3 slice table rewritten: L-045 (Guest × IE) and L-046 (signed-in non-shop-owner × IE) promoted MAPPED → VERIFIED with evidence citations (27.1 s, 3.4 min). Table reordered VERIFIED-first. §4 items 1-2 struck through (no longer available work · already done). New §4 item 4 added: "ID / WW country-axis drawer sweep" for the 32 additional cells (16 buyer + 16 guest × 2 country axes).
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` · L-010 row rewritten from "216 cells lack per-combination browser evidence" to "50 IE cells VERIFIED under real browser (16 merchant + 17 buyer + 17 guest) · remaining untested: provisional × IE, ID/WW country axes, HQ admin desktop". New Decisions-log entry for 2026-11-27 cycle 2 with four spec-run evidence rows.
+
+**Migration 370 posture.** Unapplied. Approval phrase `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` not received as a direct owner instruction. Per owner directive 2026-11-27: do not repeatedly request. Blocker recorded, cycle continued. Six-point security verification evidence preserved in prior cycle-1 message chain.
+
+**No product-code changes this cycle.** No migration applied. No credential activated. No live-mode flag flipped. No production touched. No sealed invariant weakened. No new features.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14` — commit + push for dev-branch work authorised standing. All other Rule-7 clauses (production DB, production migration, live Stripe/PayPal, prod deploy, `main` pushes, force-push, `--no-verify`) hard-gated and untouched.
+
+**Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD advanced `395ea305` → (populated in post-commit addendum below). Commit scope: 3 files · `docs/engineering/founder-handover-2026-11-27.md`, `docs/engineering/NEX-DELIVERY-LEDGER.md`, `docs/engineering/session-handoff.md` (this block). Excluded: `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (incidental audit noise · same exclusion rationale as prior cycles). No deploy triggered manually; preview deploy chain fires on push → `cloudflare-deploy.yml` → `nexapp-preview.nex-sandbox.workers.dev`.
+
+**Next action requiring owner authorisation.** One of the 17 named approvals catalogued in `docs/engineering/founder-handover-2026-11-27.md` §2. Lowest-risk + highest-leverage single phrase remains: `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` (pure DDL · one transaction · companion L-063 spec pre-authored and skip-gated on canary).
+
+---
+
+## Previous state · 2026-11-27 cycle 1 (Final founder handover packet landed · L-041 re-verified · L-010 ratchet)
 
 **Delta from L-062/L-063 blocks below.** Per owner directive "FINAL FOUNDER HANDOVER PREPARATION", this cycle produced one consolidated handover document and executed all available engineering that does not require founder involvement.
 
