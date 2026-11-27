@@ -21,7 +21,9 @@ What requires the owner before continuing?
 
 4. **L-046 drawer-rows signed-in buyer × IE re-verification** · `tests/e2e/journey-drawer-rows-buyer-ie.spec.ts` → **17 passed · 3.4 min · EXIT=0**. All 17 buyer-session drawer rows (AUTH-ONLY-RENDER / OWNER-GATE-TO-SETUP / OWNER-GATE-TO-PLACEHOLDER / PUBLIC-RENDER) remain VERIFIED. Previous handover §3.3 said "0/16 MAPPED"; corrected.
 
-**Cumulative L-010 IE × role/session cells now VERIFIED under real browser: 50** (16 merchant via L-041 cycle 1 + 17 buyer via L-046 + 17 guest via L-045). Remaining untested buckets for L-010 completion: provisional (not-yet-shop-owner authenticated) × IE · all cells × ID · all cells × WW · HQ admin desktop axis.
+**Cumulative L-010 Axis A (role × session × drawer) VERIFIED: 3 of 4 roles** (Guest L-045 · Buyer L-046 · Merchant L-041), all in IE dev-env country context. Remaining Axis A role: HQ admin desktop — BLOCKED on `APPROVE MIG 206 SANDBOX APPLY` (approval-queue row 9).
+
+**Correction to cycle-2 proposal.** This block previously proposed authoring `journey-drawer-rows-buyer-id.spec.ts` + `journey-drawer-rows-guest-id.spec.ts` as the next unblocked action. That proposal relied on the **obsolete** "18 × 4 × 3 country-deployments = 216 cells" matrix. Per the owner-sealed 2026-11-26 single-app country-model reconciliation (`docs/engineering/single-app-country-model-reconciliation-2026-11-26.md` §6), the "× ID" / "× WW" drawer slices are **retired**: country is a selection axis inside one app, not a deployment axis, and running the same drawer assertions under an `id` env flag would repeat behaviour, not test new behaviour. The remaining residual is Axis B (country selection, change, IP-pickup, RLS isolation), of which NAV-SINGLE-APP-02/03/06/07 are already VERIFIED (L-049/L-050/L-051/L-047) and 01/04/05 are BLOCKED on migration-apply approvals (queue rows 7 + 8). This correction aligns the handoff with the authoritative final-launch-readiness report §13-14.
 
 **Doc corrections this cycle:**
 
@@ -36,7 +38,18 @@ What requires the owner before continuing?
 
 **Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD advanced `395ea305` → `9b4a9d16`. Commit `9b4a9d16` · `docs(cycle-2): L-042/L-043 regression re-run + L-045/L-046 re-verification + handover doc-drift fix` · 3 files · +47 / −16. Scope: `docs/engineering/founder-handover-2026-11-27.md`, `docs/engineering/NEX-DELIVERY-LEDGER.md`, `docs/engineering/session-handoff.md`. Excluded: `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (incidental audit noise · same exclusion rationale as prior cycles). Push `395ea305..9b4a9d16 release-audit-v1-2026-11-14 -> release-audit-v1-2026-11-14` · pre-commit + commit-msg + pre-push hooks all PASS. Remote verification: `git ls-remote origin refs/heads/release-audit-v1-2026-11-14 → 9b4a9d1601ba6e89cae4d64c8c50896da556d235` matches local HEAD. Test evidence inside the commit: four focused Playwright runs documented above, all EXIT=0. No deploy triggered manually; preview deploy chain fires on push → `cloudflare-deploy.yml` → `nexapp-preview.nex-sandbox.workers.dev`. No production verification applicable.
 
-**Next action requiring owner authorisation.** One of the 17 named approvals catalogued in `docs/engineering/founder-handover-2026-11-27.md` §2. Lowest-risk + highest-leverage single phrase remains: `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` (pure DDL · one transaction · companion L-063 spec pre-authored and skip-gated on canary).
+**Next action requiring owner authorisation.** All remaining engineering work now sits behind a named approval phrase — see consolidated queue in `docs/engineering/consolidated-approval-queue-2026-11-27.md` (15 rows · 10 approval classes). Highest-leverage single phrases, in priority order:
+
+1. `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` — sandbox pure-DDL · unlocks L-063 integration tests.
+2. `APPROVE MIG 286 SANDBOX APPLY` — unlocks NAV-SINGLE-APP-01 country selection on business-details.
+3. `APPROVE NEX_ACCOUNT REGION_PREF MIGRATION SANDBOX` — unlocks NAV-SINGLE-APP-04/05 (identity preservation + RLS isolation).
+4. `APPROVE F3 PATCH APPLY` — closes the HQ journey-map admin-gate security finding.
+5. `APPROVE L-006 OPTION A/B/C` — closes the mobile-public-surfaces `/create-account` 404 batch.
+6. `APPROVE T10 SANDBOX CREDENTIALS` — unlocks Stripe + PayPal positive-path T10 specs.
+7. `APPROVE MIG 206 SANDBOX APPLY` — unlocks HQ-role Axis A desktop drawer slice.
+8. `APPROVE MIG 354-365 SANDBOX APPLY` — unlocks T2.5 buyer-checkout schema downstream.
+
+**End of autonomously-progressable work this cycle.** Per Rule 3 ("no endless task loops") + Rule 6 ("don't re-run verified journeys without a regression reason") + the authoritative final-launch-readiness report §14.1 ("none currently progressable without crossing an approval gate or re-running already-verified journeys"), the next engineering progress requires one of the eight approval phrases above as a direct owner instruction.
 
 ---
 
