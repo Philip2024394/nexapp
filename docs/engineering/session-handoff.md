@@ -7,7 +7,32 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-062 Chat-pillar peer-side retract READER spec authored + VERIFIED · completes the retract contract across both ends · also carries an uncommitted UI tweak to the Chat Themes "How it works" sheet)
+## Current state · 2026-11-27 (Final founder handover packet landed · L-041 re-verified · L-010 ratchet)
+
+**Delta from L-062/L-063 blocks below.** Per owner directive "FINAL FOUNDER HANDOVER PREPARATION", this cycle produced one consolidated handover document and executed all available engineering that does not require founder involvement.
+
+**Deliverables this cycle (all source-anchored):**
+
+1. **New handover document** · `docs/engineering/founder-handover-2026-11-27.md` (~250 lines) carrying:
+   - §1 · Review of the three draft migrations (286 · 369 · 370) — exact effects, risks, rollback consequences for each, as required by the owner directive before any apply approval is issued.
+   - §2 · Six-category classification of all 17 outstanding items (Mandatory-launch · Sandbox-verification · Founder-credentials · Product-decisions · Phase-2-defer · Production-only), each row carrying the exact named approval phrase or decision shape.
+   - §3 · L-010 navigation coverage ratchet with precise record of remaining untested cells and the reasons each remains MAPPED rather than VERIFIED.
+   - §4 · Engineering work still available without founder involvement (identified · not necessarily in scope this cycle).
+   - §5 · Operation receipt placeholder populated by this commit.
+
+2. **L-041 drawer-rows merchant × IE re-verification** · disk reclaim via natural dev-server cycle restored 3.9 GB free (34× the 117 MB threshold that blocked the 2026-11-26 attempt). Fresh run `npx playwright test tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts --project=stage-a-pixel7 --reporter=list` → **17 passed · 0 failed · 3.7 min · EXIT=0**. Log preserved at `tests/e2e/_runs/20261127T-L041-drawer-rows-merchant-ie-attempt.log`. All 16 drawer-row cells × IE identity re-VERIFIED.
+
+3. **Navigation inventory update** · `docs/engineering/navigation-inventory.md` carries a new 2026-11-27 ratchet entry + a supplementary summary table enumerating which slices VERIFIED / MAPPED / remaining.
+
+4. **L-010 ledger row update** · reflects current ground truth (merchant/guest/buyer × IE all VERIFIED · NAV-SINGLE-APP-02/03/06 VERIFIED · HQ Axis A PARTIAL on F3) rather than the previous stale "216 cells lack per-combination browser evidence" phrasing.
+
+5. **No new feature scope introduced.** No migration applied. No credential activated. No live-mode flag flipped. No production touched. No sealed invariant weakened.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses (production DB, production migration, live Stripe/PayPal, prod deploy, main pushes, force-push, `--no-verify`) hard-gated and untouched.
+
+---
+
+## Previous state · 2026-11-27 (L-062 Chat-pillar peer-side retract READER spec authored + VERIFIED · completes the retract contract across both ends · also carries an uncommitted UI tweak to the Chat Themes "How it works" sheet)
 
 **Delta from the L-061 block below.** L-061 locked the SENDER surface ("You deleted this message" after server-action retract). This cycle authored the PEER-side complement — once `nex_peer_message.deleted_for_everyone = true`, the recipient account sees "This message was deleted" (and NOT the sender copy, and NOT the plaintext body).
 

@@ -1,0 +1,22 @@
+
+Running 17 tests using 1 worker
+
+  ✓   1 [auth-setup] › tests\e2e\auth.setup.ts:112:6 › authenticate against sandbox via typed credentials · write state.json (8.7s)
+  ✓   2 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › create · List a product → /nex-native/create/product/category (12.2s)
+  ✓   3 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Chats and contacts → /nex-native/contacts (13.1s)
+  ✓   4 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · My profile → /nex-native/profile/me (12.7s)
+  ✓   5 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Edit Profile → /nex-native/settings/profile/edit (12.3s)
+  ✓   6 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Shop Settings → /nex-native/manage (12.2s)
+  ✓   7 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · FAQ → /nex-native/manage/shop/faq (13.2s)
+  ✓   8 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Chat Settings → /nex-native/settings/chat-settings (13.7s)
+  ✓   9 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Payment Providers → /nex-native/settings/payments (13.4s)
+  ✓  10 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · My Orders → /nex-native/manage/orders (13.5s)
+  ✓  11 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Wholesale → /nex-native/manage/wholesale (12.4s)
+  ✓  12 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · NEX Store → /nex-native/store (12.4s)
+  ✓  13 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › your-nex · Install NEX → /nex-native/install (12.0s)
+  ✓  14 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › preferences · Settings → /nex-native/settings (12.2s)
+  ✓  15 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › preferences · Buying Guides → /nex-generated/buying-guides (4.5s)
+  ✓  16 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › preferences · NEX 1 → /nex-native/nex-1 (11.9s)
+  ✓  17 [stage-a-pixel7] › tests\e2e\journey-drawer-rows-signed-in-merchant-ie.spec.ts:222:11 › L-010/NAV · drawer rows under signed-in shop-owner × IE identity › cta · Chat themes library → /nex-native/chat-themes-library (11.4s)
+
+  17 passed (3.7m)

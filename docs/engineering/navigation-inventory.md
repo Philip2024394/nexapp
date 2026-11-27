@@ -322,6 +322,18 @@ service) happens at the destination page, not at the drawer row.
 promotions in this cycle** — all would require fixture seeding or
 provider creds, both out of this cycle's authority.
 
+### 2026-11-27 ratchet · L-041 unblocked
+
+| Slice | Drawer rows | Status |
+|---|---|---|
+| Signed-in shop-owner × IE | 16 / 16 | **VERIFIED** (this cycle · 17 passed · 3.7 min · EXIT=0) |
+| Signed-in non-shop-owner × IE | 0 / 16 | MAPPED (needs shop-less authed fixture · engineerable without owner input) |
+| Guest × IE | 0 / 16 | MAPPED (lock-icon contract · engineerable without owner input) |
+| Provisional visitor × IE | 0 / 16 | MAPPED (needs `seedProvisionalSession` helper · engineerable without owner input · BLOCKER-NAV-002) |
+| Any slice × ID | 0 / 16 | MAPPED (row inventory identical to IE per content matrix · deferrable) |
+| Any slice × WW | 0 / 16 | MAPPED (row inventory identical to IE per content matrix · deferrable) |
+| HQ Axis A (admin desktop) | 17 MAPPED + 1 PARTIAL (F3) | PARTIAL · F3 gate patch BUILT · BLOCKED on `APPROVE F3 PATCH APPLY` |
+
 ## HQ Axis A · desktop-only control centre · inventory 2026-11-27
 
 The main consumer `ControlDrawer` is NOT mounted on `/nex-native/hq/*`.
@@ -466,3 +478,20 @@ Current MAPPED state is route-file-exists + gate-grep evidence only.
   MAPPED · 1 PARTIAL). No drawer rows added or removed. No consumer
   Axis A row target changed. No commits, pushes, migrations, or
   production touches this cycle.
+- 2026-11-27 · L-041 unblocked · drawer rows (signed-in shop-owner ×
+  IE) promoted MAPPED → **VERIFIED** for all 16 authenticated-shop-
+  owner drawer-row cells. Disk reclaim via natural dev-server cycle
+  restored 34× previous headroom (117 MB → 3.9 GB free) and
+  `journey-drawer-rows-signed-in-merchant-ie.spec.ts` ran clean:
+  **17 passed · 0 failed · 3.7 min · EXIT=0** on `stage-a-pixel7`.
+  Evidence log `tests/e2e/_runs/20261127T-L041-drawer-rows-merchant-
+  ie-attempt.log`. Rows promoted: List a product · Chats and contacts
+  · My profile · Edit Profile · Shop Settings · FAQ · Chat Settings ·
+  Payment Providers · My Orders · Wholesale · NEX Store · Install NEX
+  · Settings · Buying Guides · NEX 1 · Chat themes library. Summary-
+  of-nav-verification-state table updated below. Remaining untested
+  slices (signed-in non-shop-owner × IE · guest × IE · provisional ×
+  IE · all slices × ID · all slices × WW · HQ admin desktop) catalogued
+  with reasons in `docs/engineering/founder-handover-2026-11-27.md`
+  §3.3. No drawer rows added or removed. No row target changed. No
+  migration applied. No production touched.
