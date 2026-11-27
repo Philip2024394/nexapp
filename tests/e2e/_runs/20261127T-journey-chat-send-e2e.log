@@ -1,0 +1,12 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 [auth-setup] › tests\e2e\auth.setup.ts:112:6 › authenticate against sandbox via typed credentials · write state.json (9.0s)
+  ✓  2 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:53:7 › T-1.1 · chat send end-to-end › sanity · /chat redirects to /contacts (retired hub) (6.4s)
+  ✓  3 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:67:7 › T-1.1 · chat send end-to-end › composer renders on a peer conversation route (15.6s)
+  -  4 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:125:7 › T-1.1 · chat send end-to-end › offline outbox · send under forced-offline reflects pending state
+  -  5 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:139:7 › T-1.1 · chat send end-to-end › retract · sender-side retract affordance renders in the message menu
+  -  6 [stage-a-pixel7] › tests\e2e\journey-chat-send-e2e.spec.ts:147:7 › T-1.1 · chat send end-to-end › delete-for-me · distinct label from retract
+
+  3 skipped
+  3 passed (35.1s)

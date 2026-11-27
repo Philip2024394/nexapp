@@ -7,7 +7,38 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-054 build-breaker fix + L-055 Dev-Pass-harness blocker · HEAD advanced to `5a802f40`)
+## Current state · 2026-11-27 (L-056 three-category-hub test fix + cyan harmonisation + L-057 RLS adjacent-defect finding)
+
+**Delta from the L-054/L-055 block below.** Owner priorities issued 2026-11-27 (branded-install failure, RLS review, continued launch work). Three outcomes this cycle:
+
+1. **Priority #1 clarified honestly — branded-install "failure" is not a failure.** G10 at `tests/e2e/branded-shop-install.spec.ts:266-270` is a deliberate `test.skip(true, "reason")` because Playwright cannot emulate `display-mode: standalone` without an installed PWA. Coverage preserved transitively via G09 (localStorage-flag suppression) + hook-level unit test on `isStandalone`. Classification per Rule 8 = SKIPPED-WITH-REASON (platform limitation), not FAILED. No defect.
+
+2. **L-056 · Chat Themes three-category hub promoted to VERIFIED end-to-end + free-chat cards cyan-harmonised.** Running the themes-three-category-hub journey surfaced ONE real failure: the Plain sub-route no longer emits `[data-nex-library-full-grid]` because the 2026-11-27 owner directive reshaped Plain into a palette-only picker emitting `[data-nex-plain-swatch-grid]`. Classification per Rule 6 = **test defect** (spec out of sync with sealed Plain reshape). Fixed with a kind-conditional grid locator in `tests/e2e/journey-chat-themes-three-category-hub.spec.ts`. Post-fix: **6/6 pass (22.9s)**. Separately, the free-chat first-visit three category cards swapped from gray infill to cyan matching the composer tiles (owner direction: "same infill as Call Centre / Gallery / Contact"). Adjacent regression re-run: **4/4 pass (13.4s)** — spec correctly does not assert on infill color.
+
+3. **L-057 · RLS audit against priority #2 finding (migration 369 verified correct + 3 adjacent defects discovered).** Ground truth: `nex_account.id` is `gen_random_uuid()` surrogate, NOT equal to `auth.uid()`. Bridge = `nex_account.supabase_user_id`. Sealed helper `nex_current_account_ids()` (migration 010:48-55) is the canonical pattern. Migration 369 is CORRECT by code inspection. Three adjacent defects (not just the migration 366 one previously flagged): `nex_notification` (366:140,147-148), `nex_affiliate_marketplace` (124:86), `nex_discovery_signal` (208:106,124) — all compare `auth.uid()` directly against columns that FK to `nex_account(id)`. Active data-exposure bug on nex_notification reads = NONE (reader at `nex-notification-reader.ts:66-73` uses service-role + explicit `.eq()` scoping). Defence-in-depth posture = BROKEN on all three tables. Corrective action = migration 370 drafting (authoring permitted next cycle; applying gated behind approval phrase per Rule 7).
+
+**Files changed this cycle (standing-policy commit candidates):**
+
+- `tests/e2e/journey-chat-themes-three-category-hub.spec.ts` (MODIFIED · kind-conditional grid locator)
+- `src/app/nex-native/free-chat/_canvas-client.tsx` (MODIFIED · cyan infill+border on 3 category cards · Full Image hint cleared)
+- `tests/e2e/_runs/20261127T-journey-chat-send-e2e.log` (NEW · 3 passed 3 fixture-seed-skipped · T1.1 pillar)
+- `tests/e2e/_runs/20261127T-journey-chat-themes-three-category-hub.log` (NEW · baseline FAIL)
+- `tests/e2e/_runs/20261127T-journey-chat-themes-three-category-hub-retry.log` (NEW · 6/6 pass)
+- `tests/e2e/_runs/20261127T-free-chat-three-cards-post-cyan.log` (NEW · 4/4 pass adjacent regression)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-056 + L-057 rows)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Standing 2026-11-27 source-control policy in force for `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push. Migration 370 NOT authored (deferred to next cycle for proper review scope).
+
+**Next safe action (no approval needed):** (a) author migration 370 under its own review cycle targeting the 3 RLS defects, (b) unblock fixture-seed skip gaps on `journey-chat-send-e2e` (offline outbox + retract + delete-for-me require second test account + seeded conversation — same pattern as L-043 `seedChatPeer`), (c) run `journey-merchant-order-t8-ui-loop` and `journey-merchant-order-t8` Shop-pillar specs that were also auth-blocked pre-L-055.
+
+**Next action requiring owner authorisation (ONE phrase at a time):**
+- `APPROVE NEX_ACCOUNT SHOP_INSTALL_PREFS MIGRATION SANDBOX (REVISED 2026-11-27)` → sandbox-apply migration 369 → unblocks L-053 RLS integration spec.
+- `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` → authorises authoring + sandbox-apply of migration 370.
+
+---
+
+## Prior state · 2026-11-27 (L-054 build-breaker fix + L-055 Dev-Pass-harness blocker · HEAD advanced to `5a802f40`)
 
 **Delta from the L-053 block below.** Attempting to verify L-043 (Chat portrait-bloom hydration regression) surfaced a build-breaking defect introduced by L-053 itself: `sync-shop-install-prefs.ts` was a `"use server"` module exporting a sync pure function (`mergeShopInstallRecords`), which Next.js 16 rejects with *"Server Actions must be async functions"*. Every route touching the compiled chunk 500'd — including `/nex-native/sign-in`. Two new ledger rows:
 

@@ -82,10 +82,22 @@ test.describe.serial("L-011 · chat themes three-category hub", () => {
       // The library header title matches the category label.
       await expect(page.getByRole("heading", { level: 1, name: label })).toBeVisible();
 
-      // Either a library grid rendered, or the shell rendered with
-      // zero items. We do NOT fabricate assets; empty is honest.
-      const grid = page.locator("[data-nex-library-full-grid]");
-      await expect(grid, "library grid shell is present").toBeVisible();
+      // Each category emits its own grid root. Small + Full-Image go
+      // through the shared `renderCategoryLibrary()` shell and emit
+      // `[data-nex-library-full-grid]`. Plain was reshaped 2026-11-27
+      // into a palette-only picker (not DB-driven) and emits
+      // `[data-nex-plain-swatch-grid]` instead · see
+      // src/app/nex-native/chat-themes-library/plain/page.tsx header.
+      // We do NOT fabricate assets; empty is honest.
+      const gridSelector =
+        kind === "plain"
+          ? "[data-nex-plain-swatch-grid]"
+          : "[data-nex-library-full-grid]";
+      const grid = page.locator(gridSelector);
+      await expect(
+        grid,
+        `library grid shell is present for ${kind}`,
+      ).toBeVisible();
     });
   }
 });

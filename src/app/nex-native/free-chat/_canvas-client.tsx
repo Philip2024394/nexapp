@@ -2250,7 +2250,7 @@ const FIRST_VISIT_CATEGORIES = [
     kind: "full-image" as const,
     href: "/nex-native/chat-themes-library/full-image",
     title: "Full Image Backgrounds",
-    hint: "Immersive scenes · maximum atmosphere.",
+    hint: "",
   },
 ] as const;
 
@@ -2365,8 +2365,8 @@ function FirstVisitCategoryCards({
               padding: "12px 14px",
               borderRadius: 10,
               textDecoration: "none",
-              background: "#F3F4F6",
-              border: "1px solid #E5E7EB",
+              background: "rgba(0,159,239,0.08)",
+              border: "1px solid rgba(0,159,239,0.3)",
               color: "#1A1512",
               boxShadow:
                 "0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
