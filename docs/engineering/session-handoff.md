@@ -7,7 +7,37 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-060 T8 Shop merchant-order UI loop VERIFIED + buyer-notification durability fix + systemic `writeNotification` partial-unique-index defect repaired)
+## Current state · 2026-11-27 (L-061 Chat-pillar retract READER spec authored + VERIFIED · promotes retract journey from AFFORDANCE-only to full server-state + sender-DOM)
+
+**Delta from the L-060 block below.** Continuing launch-readiness per owner directive. L-060 landed the T8 UI loop + buyer-notification durability + the systemic `writeNotification` partial-unique-index repair, and committed+pushed as `2596579a`. This cycle authored the reader-side complement to L-059's affordance-only retract test.
+
+**L-061 deliverables (all source-anchored):**
+
+1. **New spec** · `tests/e2e/journey-chat-retract-reader.spec.ts` · one test, `L-061 · retract reader · server state + sender DOM`. Flow: seed viewer-authored message (via existing `seedPeerSentMessage` harness helper from L-059) → pre-assert row NOT already deleted → navigate to peer chat → long-press to open sealed delete modal → `form.requestSubmit()` the delete form (chosen over `button.click()` after empirical click-through flake against the modal's full-viewport backdrop `onClick={onClose}` hit-test race) → wait for modal unmount (reliable server-action-completed signal) → server-state assertion with bounded retry (20× 250ms): `nex_peer_message.deleted_for_everyone === true` AND `deleted_at IS NOT NULL` → `page.reload()` to force fresh RSC render → DOM-state assertion: same bubble by `[data-nex-msg-id]` still mounted with `data-nex-bloom-msg-deleted="true"` and sender-side placeholder "You deleted this message" (per `_portrait-bloom-shell.tsx:1615`).
+
+2. **Playwright config extension** · one regex entry for `journey-chat-retract-reader\.spec\.ts` added to the `stage-a-pixel7` `testMatch` allow-list.
+
+3. **No product-code change** · this is a test-coverage promotion only. The retract flow was already shipped; L-059 covered the affordance, L-061 now locks the server-state + sender-DOM contract.
+
+**Sealed-invariant preservation:** device-only E2E chat storage intact — spec reads ONLY the two deletion columns (`deleted_for_everyone`, `deleted_at`), never the plaintext `body`. Encryption path unchanged (seeded row uses the legacy `encrypted=false` mode the shell renders when no device keys are present).
+
+**Run evidence:**
+- `npx playwright test tests/e2e/journey-chat-retract-reader.spec.ts --reporter=line` → **2 passed (42.8s)** [first run] and again **2 passed (41.3s)** [second run · stable, no flake].
+- Regression: `npx playwright test tests/e2e/journey-chat-send-e2e.spec.ts --reporter=line` → **4 passed, 2 skipped (45.1s)** — L-059 affordance companion still green.
+
+**Files changed this cycle (standing-policy commit candidates):**
+- `tests/e2e/journey-chat-retract-reader.spec.ts` (NEW)
+- `playwright.config.ts` (testMatch extension)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (new L-061 row)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push. No `--no-verify`.
+
+**Next safe action (no approval needed):** (a) author the PEER-side retract reader spec (second account sees "This message was deleted") — complements L-061 which covers the sender surface; (b) continue buyer-side Shop journey coverage that is auth-unblocked under L-055; (c) Chat Themes three-category journey regression after the Plain reshape; (d) begin drafting migration 370 (RLS corrections per L-057) — authoring permitted, apply gated on owner phrase.
+
+---
+
+## Previous state · 2026-11-27 (L-060 T8 Shop merchant-order UI loop VERIFIED + buyer-notification durability fix + systemic `writeNotification` partial-unique-index defect repaired)
 
 **Delta from the L-059 block below.** Continuing launch-readiness per owner directive to verify the complete Shop merchant-to-customer order journey and fix genuine defects under standing authority.
 
@@ -35,6 +65,8 @@ What requires the owner before continuing?
 - `docs/engineering/session-handoff.md` (this block)
 
 **Rule 7 posture:** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push. No `--no-verify`.
+
+**Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD advanced `0ffd6a32` → `2596579a`. Commit `2596579a0f78c7f1f0a71202ae1cf844472530be` — `fix(order-notif): buyer durable row + writeNotification partial-index rewrite (L-060)`. Push `0ffd6a32..2596579a release-audit-v1-2026-11-14 -> release-audit-v1-2026-11-14`. Remote verification: `git ls-remote origin refs/heads/release-audit-v1-2026-11-14 → 2596579a0f78c7f1f0a71202ae1cf844472530be` matches local HEAD. Pre-commit + commit-msg + pre-push hooks all PASS. 5 files · +346 / -75. Excluded (not L-060 scope): `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (incidental audit noise). No deploy triggered manually; preview deploy chain fires on push → `cloudflare-deploy.yml` → `nexapp-preview.nex-sandbox.workers.dev`. No production verification applicable.
 
 **Next safe action (no approval needed):** (a) continue remaining Shop-pillar journey coverage (buyer-side checkout UI end-to-end, payment-routing specs under Stripe/PayPal sandbox where credentials configured); (b) author sender-side retract reader spec asserting server-side state transition; (c) Chat Themes three-category journey regression after the Plain reshape; (d) consider drafting migration 370 (RLS corrections per L-057) under its own review cycle — authoring permitted, apply gated.
 
