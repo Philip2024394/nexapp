@@ -60,8 +60,13 @@ for (const vp of VIEWPORTS) {
       await expect(pagerNav).toBeVisible();
       await expect(pagerNav).toContainText(/1\s*\/\s*3/);
 
-      // Every landscape card on this template must carry a brand strip.
-      await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(8);
+      // Owner-sealed 2026-11-28 (second pass) · Template 15 cards
+      // are now text-only: no brand strip, no product image.
+      await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(0);
+      // All 8 landscape cards must carry the text-only marker.
+      await expect(
+        page.locator('[data-nex-cover-product-card][data-text-only="true"]'),
+      ).toHaveCount(8);
 
       // Card is wider than tall.
       const firstCard = page.locator("[data-nex-cover-product-card]").first();
@@ -71,14 +76,24 @@ for (const vp of VIEWPORTS) {
         expect(firstBox.width).toBeGreaterThan(firstBox.height);
       }
 
-      // Brand strip sits on the LEFT of the card (x coord is close to the
-      // card's left edge).
-      const firstStrip = page.locator("[data-nex-cover-brand-strip]").first();
-      const stripBox = await firstStrip.boundingBox();
-      expect(stripBox).not.toBeNull();
-      if (stripBox && firstBox) {
-        expect(stripBox.x).toBeLessThanOrEqual(firstBox.x + 2);
-      }
+      // Light-gray background (#E5E7EB → rgb(229, 231, 235)) behind the
+      // product text column.
+      const firstBg = await firstCard.evaluate(
+        (el) => getComputedStyle(el).backgroundColor,
+      );
+      expect(firstBg).toBe("rgb(229, 231, 235)");
+
+      // Shop identity badge renders the uploaded header logo in place
+      // of the typed shop name · the <img data-nex-cover-header-logo>
+      // is present inside the badge AND the typed "X-Rated Tool Belts"
+      // text node is NOT rendered inside the badge (alt text on the
+      // <img> still carries the name for screen readers).
+      const badge = page.locator("[data-nex-cover-rise]").first();
+      await expect(
+        badge.locator("[data-nex-cover-header-logo]"),
+      ).toBeVisible();
+      const badgeText = (await badge.textContent()) ?? "";
+      expect(badgeText).not.toContain("X-Rated Tool Belts");
 
       // Ping around the shop portrait exists and inherits the accent
       // color (no hardcoded #22C55E green should be computed here).
@@ -99,7 +114,7 @@ for (const vp of VIEWPORTS) {
       await page.getByRole("button", { name: "Next page" }).click();
       await expect(pagerNav).toContainText(/2\s*\/\s*3/);
       await expect(page.locator("[data-nex-cover-product-card]")).toHaveCount(8);
-      await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(8);
+      await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(0);
 
       await testInfo.attach(`${vp.label}-page-2.png`, {
         body: await page.screenshot({ fullPage: true }),
@@ -110,7 +125,7 @@ for (const vp of VIEWPORTS) {
       await page.getByRole("button", { name: "Next page" }).click();
       await expect(pagerNav).toContainText(/3\s*\/\s*3/);
       await expect(page.locator("[data-nex-cover-product-card]")).toHaveCount(1);
-      await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(1);
+      await expect(page.locator("[data-nex-cover-brand-strip]")).toHaveCount(0);
 
       await testInfo.attach(`${vp.label}-page-3.png`, {
         body: await page.screenshot({ fullPage: true }),

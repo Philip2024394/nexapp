@@ -38,6 +38,7 @@ export function CoverCatalog({
   pageSize,
   variant = "grid",
   brandStripUrl = null,
+  textOnly = false,
 }: {
   sections: CoverSection[];
   products: CoverProduct[];
@@ -58,6 +59,11 @@ export function CoverCatalog({
    *  to each landscape card. Used by Template 15
    *  (product_hero_landscape). Null = no strip. */
   brandStripUrl?: string | null;
+  /** Owner directive 2026-11-28 (second pass) · when true AND variant
+   *  === "landscape", each card hides its brand strip + product image
+   *  and paints a light-gray surface behind the text column. Template 15
+   *  uses this to become a pure name/description/price row. */
+  textOnly?: boolean;
 }): React.JSX.Element {
   const effectivePageSize =
     pageSize ??
@@ -149,6 +155,7 @@ export function CoverCatalog({
         activeSectionId={ALL_TAB_ID}
         variant={variant}
         brandStripUrl={brandStripUrl}
+        textOnly={textOnly}
       />
       {totalPages > 1 && (
         <Pagination

@@ -408,9 +408,24 @@ export default async function PublicShopPage({
     // future migration will add `nex_business.brand_strip_url`) so
     // this is slug-gated until that lands. Non-matching shops get null
     // and the landscape cards fall back to Template 11 (no strip).
+    //
+    // 2026-11-28 (second pass) · Template 15 has since moved to a
+    // text-only card variant that drops the brand strip entirely. The
+    // value is still forwarded so sibling templates (11) that wire the
+    // same field keep working, but Template 15 itself ignores it.
     brandStripUrl:
       business.slug === "x-rated-tool-belts"
         ? "/nex-native/brand/x-rated-tool-belts-vertical-logo.png"
+        : null,
+    // Owner directive 2026-11-28 (second pass) · shop-settings option:
+    // display an uploaded logo image IN PLACE OF the typed shop name.
+    // No DB column exists yet (a future migration will add
+    // `nex_business.header_logo_url` + a boolean toggle). Slug-gated
+    // until that lands so only the X-Rated Tool Belts shop renders
+    // the header logo; every other shop still shows its typed name.
+    headerLogoUrl:
+      business.slug === "x-rated-tool-belts"
+        ? "/nex-native/brand/x-rated-tool-belts-header-logo.png"
         : null,
     themeEmojis: themeEmojis.map((row) => ({
       slug: row.slug,

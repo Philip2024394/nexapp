@@ -178,6 +178,15 @@ export interface CoverIdentityBadgeProps {
    *  single compact line directly under the business name with a
    *  small pin glyph. Optional · when null the row is skipped. */
   location?: string | null;
+  /** Owner directive 2026-11-28 (second pass) · shop-settings option
+   *  to display an uploaded logo IN PLACE OF the typed shop name.
+   *  When non-null the badge renders an <img> inside strict max bounds
+   *  (max-width 180 · max-height 52 · object-fit contain) and the
+   *  typed name is suppressed. Subtitle · location · online status
+   *  continue to render below the logo. Future migration will add
+   *  nex_business.header_logo_url + a boolean toggle; until it lands
+   *  this flows from the per-slug content gate in page.tsx. */
+  headerLogoUrl?: string | null;
 }
 
 /**
@@ -323,31 +332,54 @@ export function CoverIdentityBadge(
           })()}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              fontFamily: "var(--nex-font-display)",
-              fontSize: 15,
-              fontWeight: 700,
-              letterSpacing: "-0.015em",
-              lineHeight: 1.15,
-              // Owner directive 2026-11-27 · business name wears the
-              // shop's accent tint so brand identity reads through the
-              // name as well as the rim and chrome.
-              color: "var(--nex-accent)",
-              textShadow: "0 2px 8px rgba(0,0,0,0.55)",
-              // Founder direction 2026-09-30 (revised) · fit the whole
-              // business name. One line ideally · wraps to a SECOND
-              // line for extra-long names · never a third (clamped
-              // with an ellipsis after two lines).
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              wordBreak: "break-word",
-            }}
-          >
-            {props.name}
-          </div>
+          {props.headerLogoUrl ? (
+            // Owner directive 2026-11-28 (second pass) · when shop
+            // settings have an uploaded header logo, render it in
+            // place of the typed shop name. Strict bounds (max 180x52
+            // + object-fit:contain) prevent an oversized upload from
+            // blowing out the identity badge. Alt text still carries
+            // the typed name for screen readers.
+            <img
+              src={props.headerLogoUrl}
+              alt={props.name}
+              data-nex-cover-header-logo
+              style={{
+                display: "block",
+                maxWidth: 180,
+                maxHeight: 52,
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
+                objectPosition: "left center",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                fontFamily: "var(--nex-font-display)",
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: "-0.015em",
+                lineHeight: 1.15,
+                // Owner directive 2026-11-27 · business name wears the
+                // shop's accent tint so brand identity reads through the
+                // name as well as the rim and chrome.
+                color: "var(--nex-accent)",
+                textShadow: "0 2px 8px rgba(0,0,0,0.55)",
+                // Founder direction 2026-09-30 (revised) · fit the whole
+                // business name. One line ideally · wraps to a SECOND
+                // line for extra-long names · never a third (clamped
+                // with an ellipsis after two lines).
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                wordBreak: "break-word",
+              }}
+            >
+              {props.name}
+            </div>
+          )}
           {/* Owner directive 2026-11-06 · location single-row under
               business name · pin glyph + city/country · same shape
               as the About Us overlay header so the two surfaces
@@ -732,6 +764,7 @@ export function CoverProductCard({
   eyebrow,
   variant = "grid",
   brandStripUrl = null,
+  textOnly = false,
 }: {
   product: CoverProduct;
   peerAccountId: string;
@@ -745,11 +778,16 @@ export function CoverProductCard({
    *  Template 14 (Personal Brand · Round Products). */
   variant?: "grid" | "landscape" | "round";
   /** Owner directive 2026-11-28 · when present AND variant === "landscape"
-   *  render a vertical brand-strip image on the LEFT edge of the card
-   *  (before the square product image). Template 15
-   *  (product_hero_landscape) passes the shop's vertical logo so each
-   *  row carries the shop identity. Null = no strip. */
+   *  AND NOT textOnly, render a vertical brand-strip image on the LEFT
+   *  edge of the card (before the square product image). Null = no strip. */
   brandStripUrl?: string | null;
+  /** Owner directive 2026-11-28 (second pass) · when true AND variant
+   *  === "landscape", suppress the vertical brand strip AND the product
+   *  image column so the card is a pure text row (name · description ·
+   *  price) over a light-gray background. Template 15
+   *  (product_hero_landscape) uses this · other landscape layouts stay
+   *  unchanged. */
+  textOnly?: boolean;
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
   const priceLabel = formatMoney(product.currency, product.price_pence);
@@ -1003,6 +1041,7 @@ export function CoverProductCard({
         href={chatHref}
         data-nex-cover-product-card
         data-product-id={product.id}
+        data-text-only={textOnly ? "true" : undefined}
         style={{
           display: isLandscape ? "flex" : "block",
           flexDirection: isLandscape ? "row" : undefined,
@@ -1010,17 +1049,20 @@ export function CoverProductCard({
           position: "relative",
           borderRadius: "var(--nex-card-radius)",
           border: "var(--nex-card-border)",
-          background: "var(--nex-card-bg)",
-          backdropFilter: "blur(14px) saturate(1.1)",
-          WebkitBackdropFilter: "blur(14px) saturate(1.1)",
+          // Owner directive 2026-11-28 (second pass) · text-only landscape
+          // cards paint a light-gray surface behind the product text.
+          // Everything else keeps the themed glassy card background.
+          background: isLandscape && textOnly ? "#E5E7EB" : "var(--nex-card-bg)",
+          color: isLandscape && textOnly ? "#111827" : "var(--nex-text)",
+          backdropFilter: isLandscape && textOnly ? undefined : "blur(14px) saturate(1.1)",
+          WebkitBackdropFilter: isLandscape && textOnly ? undefined : "blur(14px) saturate(1.1)",
           overflow: "hidden",
           textDecoration: "none",
-          color: "var(--nex-text)",
           boxShadow: "0 8px 22px rgba(0,0,0,0.4)",
           opacity: soldOut ? 0.7 : 1,
         }}
       >
-        {isLandscape && brandStripUrl ? (
+        {isLandscape && brandStripUrl && !textOnly ? (
           <div
             aria-hidden
             data-nex-cover-brand-strip
@@ -1038,6 +1080,7 @@ export function CoverProductCard({
             }}
           />
         ) : null}
+        {isLandscape && textOnly ? null : (
         <div
           aria-hidden={!!product.image_url}
           role={product.image_url ? undefined : "img"}
@@ -1201,6 +1244,7 @@ export function CoverProductCard({
             </svg>
           </span>
         </div>
+        )}
         {/* Founder direction 2026-09-30 (revised) · card meta stack ·
               name → 2-line description → price + round magnifier.
             The magnifier signals tap-to-open without a text pill
@@ -1238,7 +1282,7 @@ export function CoverProductCard({
               style={{
                 fontSize: 11,
                 lineHeight: 1.35,
-                color: "var(--nex-text-dim)",
+                color: isLandscape && textOnly ? "#374151" : "var(--nex-text-dim)",
                 minWidth: 0,
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -1281,6 +1325,7 @@ export function CoverProductGrid({
   activeSectionId = ALL_TAB_ID,
   variant = "grid",
   brandStripUrl = null,
+  textOnly = false,
 }: {
   products: CoverProduct[];
   peerAccountId: string;
@@ -1300,6 +1345,10 @@ export function CoverProductGrid({
    *  vertical brand-strip. Forwarded verbatim to each CoverProductCard.
    *  Only rendered when variant === "landscape". */
   brandStripUrl?: string | null;
+  /** Owner directive 2026-11-28 (second pass) · when true + landscape
+   *  variant, each card hides its brand strip + product image and paints
+   *  a light-gray surface behind the text column. Used by Template 15. */
+  textOnly?: boolean;
 }): React.JSX.Element {
   const visible =
     activeSectionId === ALL_TAB_ID
@@ -1322,6 +1371,7 @@ export function CoverProductGrid({
           peerAccountId={peerAccountId}
           variant={variant}
           brandStripUrl={brandStripUrl}
+          textOnly={textOnly}
         />
       ))}
     </div>

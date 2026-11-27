@@ -744,6 +744,7 @@ export function LayoutProductHeroLandscape({
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
           location={content.location}
+          headerLogoUrl={content.headerLogoUrl ?? null}
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -835,7 +836,7 @@ export function LayoutProductHeroLandscape({
             products={content.products}
             peerAccountId={content.ownerAccountId}
             variant="landscape"
-            brandStripUrl={content.brandStripUrl ?? null}
+            textOnly
           />
         </div>
         {content.infoPages?.delivery_details && (

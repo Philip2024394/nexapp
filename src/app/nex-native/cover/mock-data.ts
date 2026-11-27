@@ -152,6 +152,14 @@ export interface MockCoverContent {
    *  "product_hero_landscape" template. Null = no strip (card falls
    *  back to the standard 2-column landscape layout). */
   brandStripUrl?: string | null;
+  /** Owner directive 2026-11-28 (second pass) · shop-settings option to
+   *  display an uploaded logo image IN PLACE OF the typed shop name in
+   *  the identity badge. Must render within strict bounds (handled in
+   *  CoverIdentityBadge: max 180x52, object-fit contain). Null = use
+   *  the typed `businessName` as before. A future migration will add
+   *  `nex_business.header_logo_url` + a boolean toggle; until it lands
+   *  this flows from a per-slug gate in [businessSlug]/page.tsx. */
+  headerLogoUrl?: string | null;
 }
 
 export const MARIA_MOCK: MockCoverContent = {
