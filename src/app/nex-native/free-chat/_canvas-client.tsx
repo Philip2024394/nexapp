@@ -2287,25 +2287,24 @@ function FirstVisitCategoryCards({
             data-nex-free-chat-first-visit-title
             style={{
               margin: 0,
-              fontSize: 11,
+              fontSize: 20,
               fontWeight: 800,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-              color: NEX.cyan,
-              lineHeight: 1,
+              letterSpacing: -0.2,
+              color: "#F97316",
+              lineHeight: 1.1,
             }}
           >
-            First Theme On Us · Free
+            Make <span style={{ color: "#000000" }}>Ne</span>x Yours
           </h3>
           <p
             style={{
               margin: 0,
-              fontSize: 10,
+              fontSize: 11,
               color: NEX.textDim,
               letterSpacing: 0.2,
             }}
           >
-            Pick a style · open the library · choose your free theme.
+            First Theme Free
           </p>
         </div>
         <button
@@ -2314,26 +2313,31 @@ function FirstVisitCategoryCards({
           aria-label="How theme picking works"
           data-nex-free-chat-first-visit-info
           style={{
-            width: 22,
-            height: 22,
+            width: 34,
+            height: 34,
             borderRadius: "50%",
-            background: "#FFD600",
-            border: "1px solid #E6B800",
-            color: "#1A1512",
-            cursor: "pointer",
-            fontSize: 12,
-            fontWeight: 800,
-            lineHeight: 1,
+            background: "transparent",
+            border: "none",
             padding: 0,
+            cursor: "pointer",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            fontStyle: "italic",
-            fontFamily: "'Times New Roman', Georgia, serif",
             flexShrink: 0,
           }}
         >
-          i
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/nex-brand/glossy-gear-question-mark.png"
+            alt=""
+            aria-hidden="true"
+            style={{
+              width: 34,
+              height: 34,
+              display: "block",
+              pointerEvents: "none",
+            }}
+          />
         </button>
       </div>
       <div
@@ -2361,12 +2365,11 @@ function FirstVisitCategoryCards({
               padding: "12px 14px",
               borderRadius: 10,
               textDecoration: "none",
-              background:
-                "linear-gradient(135deg, #D4A24F 0%, #C6A15B 55%, #A88443 100%)",
-              border: "1px solid #A88443",
+              background: "#F3F4F6",
+              border: "1px solid #E5E7EB",
               color: "#1A1512",
               boxShadow:
-                "0 3px 10px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28)",
+                "0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
               minHeight: 60,
             }}
           >
@@ -2375,7 +2378,7 @@ function FirstVisitCategoryCards({
                 fontSize: 9,
                 letterSpacing: 1.6,
                 textTransform: "uppercase",
-                color: "#1A1512",
+                color: "#6B7280",
                 fontWeight: 800,
               }}
             >
@@ -2383,9 +2386,9 @@ function FirstVisitCategoryCards({
             </span>
             <span
               style={{
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 800,
-                color: "#1A1512",
+                color: "#F97316",
                 lineHeight: 1.15,
               }}
             >
@@ -2394,7 +2397,7 @@ function FirstVisitCategoryCards({
             <span
               style={{
                 fontSize: 11,
-                color: "#3B2E12",
+                color: "#4B5563",
                 lineHeight: 1.3,
               }}
             >

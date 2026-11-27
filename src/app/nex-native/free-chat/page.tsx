@@ -650,15 +650,13 @@ export default async function FreeChatPage({
           subtitle={headerSubtitle}
           avatarUrl={headerAvatarUrl}
           drawerSession={drawerSession}
-          pingBadgeAccent="#16D66B"
+          pingBadgeAccent="#F97316"
           textColor={NEX.text}
-          // Owner directive 2026-11-27 · guest viewers see the smaller
-          // "Guest Account" sub-line in the canonical NEX cream
-          // (#FBF5E9 · same cream as the side-drawer background surface
-          // in cream-themed deployments) so the sub-line reads as one
-          // family with the drawer identity. Signed-in viewers keep
-          // the sealed NEX.textDim for their nex-handle sub-line.
-          subtitleColor={drawerSession ? NEX.textDim : "#FBF5E9"}
+          // Owner directive 2026-11-27 (revised 3) · guest viewers see
+          // the smaller "Guest Account" sub-line rendered in gray on
+          // the NEX cream chat background. Signed-in viewers keep the
+          // sealed NEX.textDim for their nex-handle sub-line.
+          subtitleColor={drawerSession ? NEX.textDim : "#6B7280"}
           hideMagnifier={true}
           currentSurface="chat"
           drawerVisitor={drawerVisitor}

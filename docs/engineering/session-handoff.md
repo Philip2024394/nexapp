@@ -7,6 +7,48 @@ What requires the owner before continuing?
 
 ---
 
+## Current state · 2026-11-27 (L-053 · migration 369 corrections + app-side sync + free-chat themes UI refresh · HEAD advanced to `<pending commit>`)
+
+**Delta from the NEX-024 cycle 2 block below.** Owner directives:
+(a) comprehensive migration 369 review — 6 numbered sections flagged (RLS identity model, rollback data-loss disclosure, sync monotonicity, shop identity canonicality, migration conventions, continuation to implementation);
+(b) UI change spec on `/nex-native/free-chat?show-themes=1` (orange ping rim, Ne-black-x-orange "Make Nex Yours" header, gear-icon button, gray-on-cream guest subtitle, gray-infill category cards). Standing-policy commit+push authority in force for `release-audit-v1-2026-11-14` (sealed 2026-11-27). CLAUDE.md Rule 7 clauses on prod, `main`, migration-apply, live Stripe/PayPal preserved.
+
+**Deltas:**
+
+- **Migration 369 rewritten (cycle 2).** `nex-supabase/migrations/369_nex_account_shop_install_prefs.sql` RLS switched from the wrong `auth.uid() = account_id` pattern to the sealed `account_id IN (SELECT nex_current_account_ids())` helper (migration 010:48-55) — same pattern as `nex_business` / `nex_order`. `shop_slug` CHECK is now the byte-for-byte same regex as `nex_business.slug` (`'^[a-z0-9]([-a-z0-9]{0,62}[a-z0-9])?)`, 1..64 bytes). **Adjacent finding (NOT touched)**: migration 366 (`nex_notification`, line 140) carries the same `auth.uid() = account_id` bug — flagged in the forward header for a separate owner-approved review. Rollback `369_..._rollback.sql` rewritten with a `DATA-DESTRUCTIVE ROLLBACK · READ BEFORE RUNNING` banner, the three user-visible consequences enumerated, `pg_dump --data-only` pre-rollback backup procedure, and `psql --single-transaction` recovery procedure. Migration file DRAFTED; **NOT APPLIED** — sandbox-apply requires the dedicated phrase `APPROVE NEX_ACCOUNT SHOP_INSTALL_PREFS MIGRATION SANDBOX (REVISED 2026-11-27)`.
+- **App-side sync BUILT + WIRED.** `src/lib/nex-native/shop-install/sync-shop-install-prefs.ts` (NEW) is a `"use server"` module exposing the pure `mergeShopInstallRecords` merge rule (MAX dismissals · earliest first_dismiss_at · OR suppressed · OR installed · invariant repair when dismissals≥1 and both sides null) plus `syncShopInstallPrefs` / `syncShopInstallPrefsBatch` server actions. The sync action detects `42P01` / `PGRST205` and returns `{ok:true, merged:client, applied:false}` so the code ships before the migration lands without errors. `src/components/nex-native/shop-install/use-shop-install-flow.ts` was appended with `useSignedInShopInstallSync` hook + `readLocalRecordForSlug` + `writeMergedToLocal` (additive — guest path through `useShopInstallFlow` / `useShopInstallDismissal` untouched).
+- **Unit tests VERIFIED.** `src/lib/nex-native/__tests__/sync-shop-install-prefs.test.ts` (NEW · 11 vitest cases · all PASS) exhaustively exercises the merge rule: no server row · higher dismissals both directions · first_dismiss_at earliest-wins · null-side uses non-null · OR semantics for suppressed/installed · monotonicity/idempotence · invariant repair · dismissals=0 forces null.
+- **RLS integration spec NOT EXECUTED.** `tests/e2e/nex-account-shop-install-prefs-rls.spec.ts` (NEW) covers positive own-read + negative cross-account read/insert/update/delete + preserved server rows + teardown. Skip-gated via `hasInstallPrefsTable()` querying `information_schema.tables`. Promotes to VERIFIED only when migration lands under the dedicated approval phrase.
+- **UI refresh VERIFIED (visually).** `src/app/nex-native/free-chat/page.tsx` + `_canvas-client.tsx` + `public/nex-brand/glossy-gear-question-mark.png` landed per owner spec — orange ping (`#F97316`) + gray-on-cream guest subtitle (`#6B7280`) + "Make <span color:#000>Ne</span>x Yours" (20px, Ne black + x orange) + "First Theme Free" sub-line + 34×34 gear-icon button + gray-infill category cards (`#F3F4F6` infill, `#E5E7EB` border, `#F97316` 16px bold title).
+
+**Files changed this cycle (standing-policy commit candidates):**
+
+- `nex-supabase/migrations/369_nex_account_shop_install_prefs.sql` (NEW)
+- `nex-supabase/migrations/369_nex_account_shop_install_prefs_rollback.sql` (NEW)
+- `src/lib/nex-native/shop-install/sync-shop-install-prefs.ts` (NEW)
+- `src/lib/nex-native/__tests__/sync-shop-install-prefs.test.ts` (NEW)
+- `tests/e2e/nex-account-shop-install-prefs-rls.spec.ts` (NEW · skip-gated · NOT EXECUTED)
+- `src/components/nex-native/shop-install/use-shop-install-flow.ts` (MODIFIED · additive hook)
+- `src/app/nex-native/free-chat/page.tsx` (MODIFIED · orange ping + gray subtitle)
+- `src/app/nex-native/free-chat/_canvas-client.tsx` (MODIFIED · header/cards/gear)
+- `public/nex-brand/glossy-gear-question-mark.png` (NEW · brand asset)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-053 row)
+- `docs/engineering/session-handoff.md` (this block)
+
+**Rule 7 posture:** No commit yet. No push yet. No migration applied. No production touched. No credential activated. No sealed invariant broken. Prior HEAD from the NEX-024 cycle-2 block remains `e0bd3c3e`; this block will be committed under the sealed 2026-11-27 standing source-control policy on `release-audit-v1-2026-11-14`.
+
+**Next safe action (no approval needed · continue inside Rule 7):**
+
+- Commit L-053 artefacts and push to `Philip2024394/nexapp` on `release-audit-v1-2026-11-14`.
+- Continue the finish-the-application queue (Chat/Shop/Themes integration · merchant onboarding → orders → notifications · chat privacy / emergency / device-storage · nav+country identity with browser evidence).
+
+**Next action requiring owner authorisation (ONE phrase at a time):**
+
+- `APPROVE NEX_ACCOUNT SHOP_INSTALL_PREFS MIGRATION SANDBOX (REVISED 2026-11-27)` — lets the integration RLS spec actually execute end-to-end against sandbox `kdstoyyeygcopkogqsyv`. Blocks the NOT-EXECUTED → VERIFIED transition for the RLS isolation contract.
+- All other named phrases unchanged — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+
+---
+
 ## Current state · 2026-11-27 (NEX-024 cycle 2 · branded shop install VERIFIED · HEAD advanced to `<pending commit>`)
 
 **Delta from addendum 8.** Owner directive: *"next concrete engineering action"* against the NEX-024 feature. Standing-policy commit+push authority still in force for `release-audit-v1-2026-11-14` (sealed 2026-11-27). CLAUDE.md Rule 7 clauses on prod / main / migration / live Stripe preserved.

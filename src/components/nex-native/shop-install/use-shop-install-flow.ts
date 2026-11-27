@@ -39,6 +39,10 @@
 //   · Nothing here persists PII · only a shop slug → counts map.
 
 import * as React from "react";
+import {
+  syncShopInstallPrefs,
+  type ShopInstallClientRecord,
+} from "@/lib/nex-native/shop-install/sync-shop-install-prefs";
 
 // ────────────────────────────────────────────────────────────────────────
 // Shared types
@@ -444,4 +448,172 @@ export function useShopInstallDismissal({
     recordDismiss,
     recordInstall,
   };
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// useSignedInShopInstallSync · migration 369 reconciliation layer
+// ────────────────────────────────────────────────────────────────────────
+//
+// Owner-authorised 2026-11-27 (cycle 2) · signed-in reconciliation
+// layer. Preserves guest behaviour unchanged: callers that never pass
+// `isSignedIn=true` get exactly the pre-369 localStorage-only path.
+//
+// What this does:
+//   1. On mount (and whenever `shopSlug` changes), if `isSignedIn` is
+//      true AND the dismissal + installed localStorage are hydrated,
+//      pack the current client record and call the
+//      `syncShopInstallPrefs` server action.
+//   2. If the server returns a merged record that differs from the
+//      current localStorage, write the merged record BACK to both
+//      localStorage keys so a subsequent reload rehydrates with the
+//      most-advanced state. A `storage` event is dispatched for the
+//      current window so the sibling `useShopInstallFlow` +
+//      `useShopInstallDismissal` state can re-read without a reload.
+//   3. If the server returns `{ applied: false }` (migration 369 not
+//      yet applied OR table absent during degradation), the merged
+//      value equals the echo of the client state, so no write is
+//      performed and the UI continues on the guest-only path.
+//
+// What this does NOT do:
+//   · It does NOT change the state machine in useShopInstallDismissal
+//     or useShopInstallFlow. Those hooks remain the canonical client
+//     source of truth; this is a reconciliation side-effect only.
+//   · It does NOT retry on error. One sync per mount is enough; the
+//     next navigation will re-sync. A persistent DB outage degrades
+//     the signed-in viewer to guest-only behaviour for the session.
+//   · It does NOT run for guest viewers. Pass `isSignedIn=false` (the
+//     caller already knows this from the server-rendered session).
+
+function readLocalRecordForSlug(shopSlug: string): ShopInstallClientRecord | null {
+  if (typeof window === "undefined") return null;
+  const dismissalMap = readDismissalMap();
+  const dismissal = dismissalMap[shopSlug];
+  const installed = readInstalledFlag(shopSlug);
+  // Build a valid ShopInstallClientRecord. If no dismissal record
+  // exists AND the shop is not installed, we still return a zero
+  // record so the server has a chance to echo back a more-progressed
+  // state (e.g. the user dismissed on a sibling device).
+  const dismissals: 0 | 1 | 2 = dismissal?.dismissals ?? 0;
+  const firstDismissAt: number | null =
+    dismissals === 0 ? null : (dismissal?.firstDismissAt ?? Date.now());
+  return {
+    shopSlug,
+    dismissals,
+    firstDismissAt,
+    suppressed: dismissal?.suppressed ?? false,
+    installed,
+  };
+}
+
+function writeMergedToLocal(merged: ShopInstallClientRecord): boolean {
+  if (typeof window === "undefined") return false;
+  let changed = false;
+  // Dismissal map.
+  const map = readDismissalMap();
+  const existing = map[merged.shopSlug];
+  const nextDismissal: ShopDismissalRecord = {
+    dismissals: merged.dismissals,
+    firstDismissAt: merged.firstDismissAt,
+    suppressed: merged.suppressed,
+  };
+  const sameDismissal =
+    existing &&
+    existing.dismissals === nextDismissal.dismissals &&
+    (existing.firstDismissAt ?? null) === (nextDismissal.firstDismissAt ?? null) &&
+    (existing.suppressed ?? false) === nextDismissal.suppressed;
+  if (!sameDismissal) {
+    map[merged.shopSlug] = nextDismissal;
+    writeDismissalMap(map);
+    changed = true;
+  }
+  // Installed flag · one-way true. The merge rule is monotonic so
+  // `merged.installed=false` means neither local nor server observed
+  // an install · we do not clear the flag.
+  if (merged.installed && !readInstalledFlag(merged.shopSlug)) {
+    writeInstalledFlag(merged.shopSlug);
+    changed = true;
+  }
+  return changed;
+}
+
+export interface UseSignedInShopInstallSyncOptions {
+  readonly shopSlug: string;
+  /** Pass true only when the server-rendered session confirmed the
+   *  viewer is signed-in. False for guests and visitors. */
+  readonly isSignedIn: boolean;
+  /** Optional callback fired AFTER a successful merge write · lets
+   *  the parent hook force a re-hydration of its in-memory state so
+   *  the slide-in visibility rule re-evaluates immediately (not on
+   *  next reload). */
+  readonly onMerged?: (merged: ShopInstallClientRecord) => void;
+}
+
+export interface UseSignedInShopInstallSyncResult {
+  /** True while the first server round-trip is in flight. The caller
+   *  may choose to hold back the install surfaces briefly to avoid
+   *  flashing a slide-in that would then be suppressed by the server's
+   *  record of a prior dismissal. */
+  readonly syncing: boolean;
+  /** True when the sync completed and actually wrote to the DB
+   *  (migration 369 applied). False when the sync completed in
+   *  graceful-degradation mode (migration not yet applied). Null
+   *  while syncing OR for guest callers. */
+  readonly applied: boolean | null;
+}
+
+export function useSignedInShopInstallSync({
+  shopSlug,
+  isSignedIn,
+  onMerged,
+}: UseSignedInShopInstallSyncOptions): UseSignedInShopInstallSyncResult {
+  const [syncing, setSyncing] = React.useState<boolean>(isSignedIn);
+  const [applied, setApplied] = React.useState<boolean | null>(
+    isSignedIn ? null : null,
+  );
+
+  React.useEffect(() => {
+    if (!isSignedIn) {
+      setSyncing(false);
+      setApplied(null);
+      return;
+    }
+    let cancelled = false;
+    setSyncing(true);
+    setApplied(null);
+
+    const localRecord = readLocalRecordForSlug(shopSlug);
+    if (!localRecord) {
+      setSyncing(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void (async () => {
+      try {
+        const result = await syncShopInstallPrefs(localRecord);
+        if (cancelled) return;
+        if (result.ok) {
+          const changed = writeMergedToLocal(result.merged);
+          if (changed) onMerged?.(result.merged);
+          setApplied(result.applied);
+        } else {
+          // guest / invalid_input / db_unavailable · degrade silently
+          // to the local-only state machine. No UI error · this is a
+          // best-effort reconciliation, not a user-facing operation.
+          setApplied(false);
+        }
+      } catch {
+        if (!cancelled) setApplied(false);
+      } finally {
+        if (!cancelled) setSyncing(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shopSlug, isSignedIn, onMerged]);
+
+  return { syncing, applied };
 }
