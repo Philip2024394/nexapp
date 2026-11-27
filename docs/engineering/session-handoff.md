@@ -7,7 +7,7 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 (L-053 · migration 369 corrections + app-side sync + free-chat themes UI refresh · HEAD advanced to `<pending commit>`)
+## Current state · 2026-11-27 (L-053 · migration 369 corrections + app-side sync + free-chat themes UI refresh · HEAD advanced to `f868474e`)
 
 **Delta from the NEX-024 cycle 2 block below.** Owner directives:
 (a) comprehensive migration 369 review — 6 numbered sections flagged (RLS identity model, rollback data-loss disclosure, sync monotonicity, shop identity canonicality, migration conventions, continuation to implementation);
@@ -35,7 +35,7 @@ What requires the owner before continuing?
 - `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-053 row)
 - `docs/engineering/session-handoff.md` (this block)
 
-**Rule 7 posture:** No commit yet. No push yet. No migration applied. No production touched. No credential activated. No sealed invariant broken. Prior HEAD from the NEX-024 cycle-2 block remains `e0bd3c3e`; this block will be committed under the sealed 2026-11-27 standing source-control policy on `release-audit-v1-2026-11-14`.
+**Rule 7 posture:** Commit `f868474e` pushed to `Philip2024394/nexapp` `release-audit-v1-2026-11-14` under the sealed 2026-11-27 standing source-control policy. Prior HEAD `03de0a13` (NEX-024 cycle-2 test commit) advanced to `f868474e`. No migration applied. No production touched. No credential activated. No sealed invariant broken. No push to `main`. No force-push.
 
 **Next safe action (no approval needed · continue inside Rule 7):**
 
