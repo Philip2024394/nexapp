@@ -1,0 +1,14 @@
+
+Running 10 tests using 1 worker
+
+[1/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/pricing
+[2/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/why-nex
+[3/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/terms
+[4/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/privacy
+[5/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/about
+[6/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/support
+[7/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/help
+[8/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/for-creators
+[9/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/for-sellers
+[10/10] [mobile-chromium-pixel7] › tests\e2e\regression-public-surfaces-no-crash.spec.ts:67:9 › public surfaces · no uncaught errors · no segment fallback visible › public surface · /nex-native/switch
+  10 passed (59.6s)
