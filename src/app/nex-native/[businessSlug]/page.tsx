@@ -62,6 +62,13 @@ import { CoverThemeSkin } from "../cover/theme-skin";
 import { CoverLayoutSwitch } from "../cover/layout-switch";
 import { BurgerMenu } from "../cover/_burger-menu";
 import { ShopChatFab } from "../cover/_shop-chat-fab";
+// Owner directive 2026-11-27 · branded shop installation feature.
+// §A standard install button + §B auto-appearing slide-in both live in
+// `src/components/nex-native/shop-install/`. The burger-menu "Download
+// App" row (§D) is wired inside `_burger-menu.tsx`; this import pair
+// adds the remaining two surfaces to the public shop page.
+import { BrandedInstallButton } from "@/components/nex-native/shop-install/branded-install-button";
+import { InstallSlideIn } from "@/components/nex-native/shop-install/install-slide-in";
 // Owner directive 2026-11-07 · ShopSideChatDrawer (top-left chat icon
 // on the shop cover) retired · the bottom-right ShopChatFab already
 // routes to the owner's chat page, so the duplicate top-left tap
@@ -147,6 +154,13 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
+    // Owner directive 2026-11-27 (Phase 1 branded install) · wire the
+    // dynamic per-shop PWA manifest so Android Chromium's install
+    // prompt binds to THIS merchant's identity (name + icon +
+    // start_url). Scope stays `/nex-native/` so the single shared NEX
+    // service worker continues to control every storefront — one app,
+    // many branded shortcuts.
+    manifest: `/nex-native/${business.slug}/manifest.webmanifest`,
     openGraph: {
       type: "website",
       title,
@@ -571,6 +585,42 @@ export default async function PublicShopPage({
             cart writes NEX_CART_STORAGE_KEY using the sealed
             NexCartItem shape so the HeaderCartIcon badge bumps
             immediately. */}
+        {/* Owner directive 2026-11-27 §A · standard branded install
+            button · fixed design (tint background, auto-contrast text,
+            shop icon with NEX Chat overlay, "Download [Shop Name]"
+            label). Hidden when this shop is already installed or the
+            visitor is running the PWA in standalone mode. Positioned
+            top-left of the phone frame so it doesn't clash with the
+            top-right burger or the bottom-right ShopChatFab. */}
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            zIndex: 45,
+          }}
+        >
+          <BrandedInstallButton
+            shop={{
+              slug: business.slug,
+              displayName: business.display_name,
+              logoUrl: business.logo_url ?? null,
+              tintHex: business.shop_cover_tint_hex ?? null,
+            }}
+            inline
+          />
+        </div>
+        {/* Owner directive 2026-11-27 §B · auto-appearing right-edge
+            slide-in. Spec §C 2-strike / 5-minute cooldown / permanent-
+            suppression state machine lives inside the component. */}
+        <InstallSlideIn
+          shop={{
+            slug: business.slug,
+            displayName: business.display_name,
+            logoUrl: business.logo_url ?? null,
+            tintHex: business.shop_cover_tint_hex ?? null,
+          }}
+        />
         <ProductDetailSheet
           products={coverProducts.map((p) => ({
             id: p.id,

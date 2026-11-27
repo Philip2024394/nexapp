@@ -38,6 +38,11 @@ import {
   isFaqItemEnabled,
   type NexInfoFaqItem,
 } from "@/lib/nex-native/info-pages";
+// Owner directive 2026-11-27 §D · "Download App" row appended as the
+// FINAL burger entry on each storefront. The row manages its own
+// install-flow state via useShopInstallFlow; we only pass the shop
+// slug + display name + sealed row styles.
+import { BurgerInstallRow } from "@/components/nex-native/shop-install/burger-install-row";
 
 interface BurgerMenuProps {
   /** Owner's NEX handle so the "Chat with us" row can deep-link
@@ -303,7 +308,7 @@ export function BurgerMenu({
               <button
                 type="button"
                 onClick={onShare}
-                style={{ ...menuRowStyle(true), borderBottom: "none" }}
+                style={menuRowStyle(false)}
               >
                 <span style={iconStyle} aria-hidden>
                   🔗
@@ -313,6 +318,22 @@ export function BurgerMenu({
                   <span style={sublabelStyle}>Copy link / share</span>
                 </span>
               </button>
+            ) : null}
+            {/* Owner directive 2026-11-27 §D · "Download App" as the
+                FINAL burger-menu item on each storefront. Hidden when
+                the shop is already installed on this device so
+                repeat-visit burgers stay tidy. */}
+            {content?.slug ? (
+              <BurgerInstallRow
+                shopSlug={content.slug}
+                shopDisplayName={content.displayName ?? "this shop"}
+                rowStyle={menuRowStyle(true)}
+                labelStyle={labelStyle}
+                sublabelStyle={sublabelStyle}
+                iconStyle={iconStyle}
+                caretColor={INK_DIM}
+                onAfterAction={() => setOpen(false)}
+              />
             ) : null}
           </nav>
         </>

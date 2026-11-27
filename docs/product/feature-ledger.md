@@ -57,6 +57,7 @@ relying on anyone's conversational memory.
 | [NEX-021](#nex-021--full-viewport-rule-no-mobile-browser-chrome) | Full-viewport rule / no mobile browser chrome | **RULE SEALED · NOT VERIFIED** · splash is reference impl; other pages unaudited; no Playwright test yet | Blueprint § 11A (2026-11-24) | — | Write `full-viewport-chrome.spec.ts`; audit every nex-native route |
 | [NEX-022](#nex-022--pwa-install-promotion-engagement-gated) | PWA install promotion (engagement-gated, Option A) | **RULE SEALED · NOT STARTED** · no card/modal, no beforeinstallprompt capture, no side-drawer row, manifest state unaudited | Blueprint § 11B (2026-11-24) | — | Audit manifest + existing install code; design card; wire platform-aware behaviour |
 | [NEX-023](#nex-023--location-permission-timing-feature-gated) | Location permission timing (feature-gated) | **RULE SEALED · NOT VERIFIED** · no explanation card, no SOS-time explicit gate audited, no retry/settings UI | Blueprint § 11B (2026-11-24) | — | Audit current geolocation call-sites in SOS and elsewhere; add explanation card before browser prompt |
+| [NEX-024](#nex-024--branded-shop-installation) | Branded shop installation (per-merchant PWA install) | **BUILT · WIRED · NOT VERIFIED** · per-shop dynamic manifest at `/nex-native/<slug>/manifest.webmanifest` (2026-11-27), components `BrandedInstallButton` / `InstallSlideIn` / `BurgerInstallRow` / `NexChatBadge` under `src/components/nex-native/shop-install/`, 2-strike/5-minute dismissal state machine in `useShopInstallDismissal`. Mounted on storefront page.tsx; burger-menu row wired. Playwright `tests/e2e/branded-shop-install.spec.ts` authored but 10/12 cases are `test.fixme` until `BRANDED_INSTALL_FIXTURE_SLUG` is set to a seeded sandbox slug. Standing-policy commit pending. | Owner directive 2026-11-27 §A-§H | — | Set `BRANDED_INSTALL_FIXTURE_SLUG` to a seeded sandbox slug + run spec; design `nex_account_shop_install_prefs` migration for server-side dismissal reconciliation (currently localStorage-only) |
 
 ---
 
@@ -549,6 +550,82 @@ no live Emergency Help activation · no commit/push.
 every reference to lat/lng columns; design the explanation card;
 integrate at SOS setup entry.
 
+### NEX-024 · Branded shop installation
+
+**User problem**: Repeat shoppers lose track of individual merchants in
+their browser history. Chat + Shop is a visit-again product, so every
+storefront must offer a one-tap "save to phone" shortcut that opens
+back to THAT merchant's storefront — not the generic NEX splash —
+while still running on the single shared NEX PWA so there's one app,
+one service worker, one update path.
+
+**Owner decision (2026-11-27)**: Add three branded-install surfaces to
+every storefront:
+- **§A standard install button** — fixed design, tint background,
+  auto-contrast text, shop icon with NEX Chat glyph overlay, label
+  "Download [Shop Name]". Merchants cannot restyle.
+- **§B sliding notification** — right-edge auto-appear on first
+  visit, sealed copy *"Enjoy visiting this shop? Save [Shop Name] to
+  your phone for easy access whenever you want to visit again."*
+- **§D "Download App" burger row** — final entry in the storefront
+  burger-menu dropdown.
+
+**Dismissal state machine (§C)**: First visit → show; 1st X → hide,
+anchor 5-minute wall-clock cooldown; after cooldown re-show; 2nd X →
+permanent suppression; install → permanent suppression. State is
+per-customer × per-shop; guest state lives in localStorage keys
+`nex_shop_install_prefs_v1` + `nex_shop_installed_flags_v1`. Signed-in
+reconciliation is a future migration (`nex_account_shop_install_prefs`)
+and is BLOCKED-AT-APPROVAL for sandbox-apply.
+
+**Architecture (§E)**: The shared NEX PWA keeps a single service worker
+scope (`/nex-native/`). Per-shop identity comes from a dynamic Web App
+Manifest at `/nex-native/<slug>/manifest.webmanifest` with
+`start_url=/nex-native/<slug>`, `theme_color=<merchant tint or sealed
+#020914>`, and `icons=[<merchant logo>, …shared NEX fallback]`. The
+main NEX install identity (via `/public/nex.webmanifest`) stays
+distinct from each merchant shortcut — no separate native app, no
+parallel backend per merchant.
+
+**Security / privacy (§F)**: No merchant data is sent anywhere by these
+components. localStorage keys are per-slug so dismissing shop A does
+not suppress shop B. Nothing in the manifest body is PII — only the
+display name, slug, and logo that already render on the
+unauthenticated storefront. Compatible with the single-app country-
+selection architecture (manifest route is country-agnostic).
+
+**Delivered files**:
+- `src/app/nex-native/[businessSlug]/manifest.webmanifest/route.ts`
+  (per-shop manifest, tint wiring)
+- `src/components/nex-native/shop-install/nex-chat-badge.tsx`
+- `src/components/nex-native/shop-install/use-shop-install-flow.ts`
+  (`useShopInstallFlow` + `useShopInstallDismissal` hooks)
+- `src/components/nex-native/shop-install/branded-install-button.tsx`
+- `src/components/nex-native/shop-install/install-slide-in.tsx`
+- `src/components/nex-native/shop-install/burger-install-row.tsx`
+- `src/app/nex-native/cover/_burger-menu.tsx` (Download App row wired)
+- `src/app/nex-native/[businessSlug]/page.tsx` (surfaces mounted)
+- `tests/e2e/branded-shop-install.spec.ts` (§G test matrix, 10/12
+  cases `test.fixme` pending sandbox fixture)
+
+**State**: **BUILT · WIRED · NOT VERIFIED**.
+- Components compiled (no tsc errors in touched files)
+- Playwright spec authored; needs `BRANDED_INSTALL_FIXTURE_SLUG` env
+  var pointing at a seeded sandbox slug for 10/12 cases
+- G07 + G08 (manifest 200 / 404) are runnable without a fixture
+- Real iOS Safari install flow NOT verified (WebKit not installed;
+  spec emulates with Chromium + iOS UA, called out explicitly)
+
+**Boundaries**: sandbox only · standing-policy commit+push to
+`Philip2024394/nexapp` `release-audit-v1-2026-11-14` · no prod
+deploy · no production migration · no live Stripe/PayPal · no
+cross-merchant data collection.
+
+**Next action**: provision a sandbox fixture slug (any seeded
+`nex_business` row) and set `BRANDED_INSTALL_FIXTURE_SLUG`; run the
+spec; draft the `nex_account_shop_install_prefs` migration for
+signed-in reconciliation.
+
 ---
 
 ## ADR index
@@ -585,6 +662,21 @@ integrate at SOS setup entry.
   2026-11-09 Emergency Help seal (personal-contacts-only, device-local,
   no server coords). Sandbox-only. Inspect first; implementation NOT
   yet started this cycle.
+- **2026-11-27**: Added **NEX-024 · Branded shop installation** per
+  owner directive 2026-11-27 §A-§H. Three surfaces delivered on the
+  storefront route (`/nex-native/<slug>`): standard install button,
+  right-edge auto-sliding notification with 2-strike/5-minute
+  dismissal state machine (§C), and a "Download App" burger-menu row.
+  Per-shop dynamic Web App Manifest already existed from an earlier
+  Phase 1 pass; this cycle wired its `theme_color` to the merchant's
+  `shop_cover_tint_hex` with strict `#RRGGBB` validation. Shared
+  service worker scope (`/nex-native/`) preserved — one NEX PWA, many
+  branded shortcuts. Playwright `tests/e2e/branded-shop-install.spec
+  .ts` authored with the §G 13-case matrix; G07 + G08 (manifest 200
+  / 404) runnable; G01-G06 + G09 + G13 gated on
+  `BRANDED_INSTALL_FIXTURE_SLUG` env var pointing at a seeded sandbox
+  slug. No tsc errors introduced. Sandbox only · standing-policy
+  commit+push authorised to `release-audit-v1-2026-11-14`.
 
 ---
 
