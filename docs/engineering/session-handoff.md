@@ -7,7 +7,49 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 cycle 7 (Copy Shop Link on `/manage/shop` · merchant can share canonical public URL + QR code · regression spec 3/3 · pending commit)
+## Current state · 2026-11-27 cycle 8 (Three-mock-merchant shop-link flow 99901/99902/99903 confirmed end-to-end · new regression spec 3/3 · idempotent sandbox seed · pending commit)
+
+**Delta from cycle 7 (same day) below.** Owner directive 2026-11-27 (verbatim): *"continue to fix the remaining blockers and confirm each shop link for 99901 - 99902 - 99903 fully flow accounts"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken. No `main` push. No force-push.
+
+- **Schema discovery correction (cycle-8 prior inspection error):** `scripts/_tmp/cycle8-inspect-99901-99903-sandbox.mjs` had queried `nex_account.handle` which does not exist. Schema-corrected probe `scripts/_tmp/cycle8-inspect-v2-99901-99903-sandbox.mjs` uses actual column `nex_handle` (also `chosen_handle`). Finding: all three handles exist in sandbox as mock personas (`is_mock_persona=true`) with deterministic UUIDs `11111111-1111-4111-8111-11111111111[1|2|3]`.
+- **Sandbox state before seed (per owner-spec vs actual):**
+  - 99901 → account display_name "Hammerex Products" ✓ matches owner spec; business OWNED but with slug `irish-pride-shop` (display "Irish Pride Shop") — NOT the owner-spec slug.
+  - 99902 → account display_name "Aoife Byrne" (owner spec was "X-Rated Tool Belts"); NO business.
+  - 99903 → account display_name "Rosa" ✓ matches owner spec; business OWNED with slug `handbags-direct` (display "Handbags direct") — NOT the owner-spec slug.
+- **Seed executed** (`scripts/_tmp/cycle8-seed-99901-99903-businesses-sandbox.mjs` · idempotent · sandbox-ref hard-stop · mock-persona gate): inserted `nex_business` for 99902 (`slug=x-rated-tool-belts`, `display_name=X-Rated Tool Belts`, deterministic UUID `22222222-2222-4222-8222-222222299902`). Refused duplicates for 99901/99903 ("owner already owns N business(es) · aborting").
+- **End-to-end shop-link flow confirmed** — NEW `tests/e2e/regression-mock-merchants-shop-urls.spec.ts` (3 tests inside one serial describe). For each (handle → slug) pair in `[(99901 → irish-pride-shop), (99902 → x-rated-tool-belts), (99903 → handbags-direct)]`, a GUEST browser context (`storageState: undefined`) navigates `/nex-native/<slug>` and asserts: HTTP <500 · `[data-nex-native-not-found]` count 0 in final DOM (streaming swap complete) · body text >20 chars · shop-chrome marker present (`[data-nex-shop-chat-fab]` or `[data-nex-shop-burger]`). Registered in `playwright.config.ts:157`.
+- **Evidence:** `npx playwright test --project=stage-a-pixel7 --grep "Cycle-8 · shop-link flow for 99901" --reporter=line` → **4 passed (35.6s · 1 auth-setup + 3 shop-link tests · EXIT=0)**. Post-seed DB verification via `scripts/_tmp/cycle8-probe-slug-reads.mjs` → 3 rows, one per slug, `archived_at=null`, owner UUIDs match mock personas byte-for-byte. Full evidence log: `tests/e2e/_runs/20261127T-cycle8-inspect-sandbox.log`.
+- **Discrepancy flagged to owner (not silently reconciled):** the cycle-7 reference list ("99901 Hammerex Products / 99902 X-Rated Tool Belts / 99903 Rosa") does not align with the SANDBOX state for 99901 and 99903 (their shops carry display_name "Irish Pride Shop" and "Handbags direct" from earlier sandbox seeding). Directive "fully flow accounts" is satisfied — each shop URL works end-to-end regardless of display name. **Renaming the two legacy sandbox shops to the owner-spec names is a judgement call escalated to the owner.** No destructive change applied.
+
+### Files changed this cycle (standing-policy commit candidates)
+- `scripts/_tmp/cycle8-inspect-v2-99901-99903-sandbox.mjs` (NEW · schema-corrected read-only probe)
+- `scripts/_tmp/cycle8-inspect-existing-business.mjs` (NEW · one-shot `nex_business` shape probe)
+- `scripts/_tmp/cycle8-seed-99901-99903-businesses-sandbox.mjs` (NEW · idempotent seed · mock-persona gate)
+- `scripts/_tmp/cycle8-probe-slug-reads.mjs` (NEW · post-seed verification probe)
+- `tests/e2e/regression-mock-merchants-shop-urls.spec.ts` (NEW · 3 anon-visitor shop-link tests)
+- `playwright.config.ts` (MODIFIED · one atom added to stage-a-pixel7 testMatch regex)
+- `tests/e2e/_runs/20261127T-cycle8-inspect-sandbox.log` (NEW · evidence log for all probes + seed + curl + spec)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (L-065 entry added)
+- `docs/engineering/session-handoff.md` (this block)
+
+Excluded (not cycle-8 scope): `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (ephemeral audit-tool runtime noise · classified as execution log, not engineering deliverable).
+
+### Next safe action (no approval needed · continue inside Rule 7 + Founder scope-seal)
+- Author documentation-only A3 impact-assessment doc for Padraig Murphy production account reassignment — the sandbox has `11111111-...-1` as "Hammerex Products" (mock persona), production carries the real A3 relationship; sandbox seeding is unaffected by A3 and this doc is a preparatory artefact only.
+- Author multi-device HQ merchant architecture investigation doc — security design, threat model, key lifecycle, device revocation — preparatory, non-implementing.
+- Continue finish-the-application queue on the three pillars (Chat / Shop / Themes).
+
+### Next action requiring owner authorisation (ONE phrase at a time)
+- **Renaming 99901's / 99903's sandbox shops** to match the cycle-7 reference list ("Hammerex Products" / "Rosa") — requires explicit instruction naming the old and new display_name + slug.
+- **A3 reassignment of Padraig Murphy's account number in PRODUCTION** — requires explicit founder approval phrase referencing the impact-assessment doc before any identifier change.
+- **Multi-device HQ merchant architecture implementation** — requires explicit founder approval of the authored security-design doc before any key-exchange / device-pairing code.
+- `APPROVE MIGRATION 370 NEX_NOTIFICATION + NEX_AFFILIATE_MARKETPLACE + NEX_DISCOVERY_SIGNAL RLS CORRECTION SANDBOX (kdstoyyeygcopkogqsyv)` — unblocks L-063 integration spec promotion.
+- `APPROVE MIG 286 SANDBOX APPLY (REVISED 2026-11-27)` — unblocks the operating_country_code column.
+- All other approvals unchanged — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+
+---
+
+## Previous state · 2026-11-27 cycle 7 (Copy Shop Link on `/manage/shop` · merchant can share canonical public URL + QR code · regression spec 3/3 · pending commit)
 
 **Delta from cycle 6 (discovery report) below.** Owner directive 2026-11-27 (verbatim): *"Proceed immediately: Copy Shop Link / Implement the existing public shop URL sharing functionality. Use the existing /nex-native/{slug} routing architecture. Add Copy Shop Link to merchant shop management. Add a QR-code sharing affordance if supported by the existing application infrastructure. Use the canonical published shop slug. Only present a public sharing link when the shop is published. Verify copied URLs in a separate browser session. Add focused Playwright coverage. No migration or production changes. This work is authorised and must not wait for decisions A or B."* Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken. No `main` push. No force-push. The three-mock-merchant (99901/99902/99903) brief + A3 Padraig reassignment + multi-device HQ encryption architecture remain OPEN gates — cycle-7 Priority 1 ships independently of them, as the owner explicitly directed.
 

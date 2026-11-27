@@ -1,0 +1,141 @@
+sandbox ref: kdstoyyeygcopkogqsyv
+checking handles: nex-99901, nex-99902, nex-99903
+nex-99901: ERROR column nex_account.handle does not exist
+nex-99902: ERROR column nex_account.handle does not exist
+nex-99903: ERROR column nex_account.handle does not exist
+slug 'hammerexproducts': EMPTY
+slug 'x-rated-tool-belts': EMPTY
+slug 'rosa': EMPTY
+columns: id, supabase_user_id, display_name, created_at, nex_handle, chat_theme, phone_country_code, phone_national_number, tier, bisnis_expires_at, safe_trade_consent_at, safe_trade_consent_version, locale, themes_trial_used_at, themes_trial_package_id, subscription_plan, zero_knowledge_ack_at, claimed_at, sessions_invalidated_at, world_intro_enabled, social_intents, last_known_lat, last_known_lng, last_known_city_label, last_known_country_iso, last_known_source, last_known_set_at, read_receipts_enabled, typing_indicator_enabled, last_seen_visibility, online_status_visibility, profile_visibility, who_can_message, auto_download_images, auto_download_videos, auto_download_audio, upload_quality, chosen_handle, hq_role, onboarding_step, shop_theme_id, vault_trial_used_at, intro_enabled, intro_video_url, intro_video_duration_ms, intro_title_text, intro_title_position, intro_title_font, intro_title_size, intro_title_color, intro_title_align, intro_title_highlight, intro_wallpaper_url, intro_title_segments, business_trial_status, business_trial_start_at, business_trial_end_at, business_trial_conversion_opt_out, is_mock_persona, followers_count, following_count, followers_list_visibility, following_list_visibility, follower_count_hidden, deleted_at, deletion_reason, shop_tier, themes_plus_until, theme_sharing_globally_enabled, bubble_self_hex, bubble_peer_hex, bubble_self_appearance, bubble_peer_appearance, screenshot_copy_protection_enabled, chat_font_family, chat_font_size, chat_bg_from_shop_cover, shop_cover_from_chat_theme, active_single_session_id
+existing mock personas (sample): [
+  {
+    "id": "11111111-1111-4111-8111-111111111112",
+    "display_name": "Aoife Byrne",
+    "is_mock_persona": true
+  },
+  {
+    "id": "57fa2ccf-5d35-4697-8ef5-50507c05f1c9",
+    "display_name": "HQ Admin",
+    "is_mock_persona": true
+  },
+  {
+    "id": "11111111-1111-4111-8111-111111111114",
+    "display_name": "Niamh Walsh",
+    "is_mock_persona": true
+  },
+  {
+    "id": "11111111-1111-4111-8111-111111111115",
+    "display_name": "Fionn Kelly",
+    "is_mock_persona": true
+  },
+  {
+    "id": "11111111-1111-4111-8111-111111111116",
+    "display_name": "Tri",
+    "is_mock_persona": true
+  }
+]
+sandbox ref: kdstoyyeygcopkogqsyv
+
+--- nex_handle lookup ---
+nex-99901: EXISTS [{"id":"11111111-1111-4111-8111-111111111111","nex_handle":"nex-99901","chosen_handle":null,"display_name":"Hammerex Products","is_mock_persona":true}]
+nex-99902: EXISTS [{"id":"11111111-1111-4111-8111-111111111112","nex_handle":"nex-99902","chosen_handle":null,"display_name":"Aoife Byrne","is_mock_persona":true}]
+nex-99903: EXISTS [{"id":"11111111-1111-4111-8111-111111111113","nex_handle":"nex-99903","chosen_handle":null,"display_name":"Rosa","is_mock_persona":true}]
+
+--- chosen_handle lookup ---
+nex-99901: EMPTY (available)
+nex-99902: EMPTY (available)
+nex-99903: EMPTY (available)
+
+--- nex_business.slug lookup ---
+slug 'hammerexproducts': EMPTY (available)
+slug 'x-rated-tool-belts': EMPTY (available)
+slug 'rosa': EMPTY (available)
+
+--- nex_business columns probe (one row) ---
+nex_business columns: id, owner_account_id, display_name, slug, created_at, updated_at, description, logo_url, hours, address, public_phone, public_email, website_url, payment_instructions, accepts_cod, accepts_pickup, status_message, status_message_expires_at, instagram_handle, facebook_handle, tiktok_handle, linkedin_handle, x_handle, market_reach, year_established, staff_count, samples_available, accepts_oem, min_order_quantity, local_postage_included, seller_kind, languages, additional_details, last_seller_activity_at, is_away, away_until, away_message, archived_at, business_category, search_keywords, accepted_payment_methods, city, hours_display, safe_trade_activated, return_policy, events_profile, venue_gallery, location_lat, location_lng, verified_at, verified_note, compare_markup_pct, cover_layout_id, social_links, shipping_scope, info_pages, qr_code_image_url, profession_id, reseller_enabled, reseller_enabled_at, profile, capability_overrides, content_overrides, terminology_overrides, documentary_evidence, cta_preference, community_discovery_opt_in, community_discovery_zone_id, community_discovery_toggled_at, offers_eat_in, exports_to_countries, cuisine_type, dietary_flags, delivery_platforms, shop_cover_image_url, shop_cover_tint_hex, stripe_connect_account_id, stripe_connect_charges_enabled, stripe_connect_payouts_enabled, stripe_connect_requirements_currently_due, stripe_connect_country, stripe_connect_onboarded_at, stripe_connect_last_webhook_at, shop_intro_message
+
+--- nex_account columns probe (one row) ---
+nex_account columns: id, supabase_user_id, display_name, created_at, nex_handle, chat_theme, phone_country_code, phone_national_number, tier, bisnis_expires_at, safe_trade_consent_at, safe_trade_consent_version, locale, themes_trial_used_at, themes_trial_package_id, subscription_plan, zero_knowledge_ack_at, claimed_at, sessions_invalidated_at, world_intro_enabled, social_intents, last_known_lat, last_known_lng, last_known_city_label, last_known_country_iso, last_known_source, last_known_set_at, read_receipts_enabled, typing_indicator_enabled, last_seen_visibility, online_status_visibility, profile_visibility, who_can_message, auto_download_images, auto_download_videos, auto_download_audio, upload_quality, chosen_handle, hq_role, onboarding_step, shop_theme_id, vault_trial_used_at, intro_enabled, intro_video_url, intro_video_duration_ms, intro_title_text, intro_title_position, intro_title_font, intro_title_size, intro_title_color, intro_title_align, intro_title_highlight, intro_wallpaper_url, intro_title_segments, business_trial_status, business_trial_start_at, business_trial_end_at, business_trial_conversion_opt_out, is_mock_persona, followers_count, following_count, followers_list_visibility, following_list_visibility, follower_count_hidden, deleted_at, deletion_reason, shop_tier, themes_plus_until, theme_sharing_globally_enabled, bubble_self_hex, bubble_peer_hex, bubble_self_appearance, bubble_peer_appearance, screenshot_copy_protection_enabled, chat_font_family, chat_font_size, chat_bg_from_shop_cover, shop_cover_from_chat_theme, active_single_session_id
+mock-persona-owned businesses: null
+total nex_business rows: 34
+sample non-null fields: {
+  "id": "86898912-1188-4643-8c1e-b41d69c0537a",
+  "owner_account_id": "095071e7-4bd9-42ad-99a3-c6ab238bfb36",
+  "display_name": "Biz Two",
+  "slug": "biz-two-89359",
+  "created_at": "2026-11-21T11:26:12.809294+00:00",
+  "updated_at": "2026-11-21T11:26:15.656287+00:00",
+  "accepts_cod": false,
+  "accepts_pickup": false,
+  "market_reach": "local_only",
+  "samples_available": false,
+  "accepts_oem": false,
+  "local_postage_included": false,
+  "seller_kind": "private",
+  "languages": [
+    "id"
+  ],
+  "last_seller_activity_at": "2026-11-21T11:26:12.809294+00:00",
+  "is_away": false,
+  "accepted_payment_methods": [
+    "cod"
+  ],
+  "safe_trade_activated": false,
+  "return_policy": {
+    "notes": null,
+    "refund_days": 3,
+    "window_days": 7,
+    "non_returnable": [],
+    "accepts_reasons": [
+      "defective",
+      "wrong_item",
+      "not_as_described",
+      "damaged_in_transit"
+    ],
+    "accepts_returns": true,
+    "shipping_paid_by": "buyer_unless_defective",
+    "restocking_fee_percent": 0
+  },
+  "events_profile": {},
+  "venue_gallery": [],
+  "compare_markup_pct": 22,
+  "reseller_enabled": false,
+  "community_discovery_opt_in": false,
+  "offers_eat_in": false,
+  "exports_to_countries": [],
+  "dietary_flags": [],
+  "delivery_platforms": [],
+  "shop_cover_image_url": "/nex-brand/shop-themes/electronics-showcase.png",
+  "shop_cover_tint_hex": "#1E4A8C",
+  "stripe_connect_charges_enabled": false,
+  "stripe_connect_payouts_enabled": false,
+  "stripe_connect_requirements_currently_due": []
+}
+sandbox ref: kdstoyyeygcopkogqsyv
+nex-99901: owner already owns 1 business(es) · [{"id":"edab3dcd-5ea2-4b28-9bcb-2e405661697f","slug":"irish-pride-shop","display_name":"Irish Pride Shop"}] · aborting to avoid duplicate
+nex-99902: INSERTED · {"id":"22222222-2222-4222-8222-222222299902","slug":"x-rated-tool-belts","display_name":"X-Rated Tool Belts","owner_account_id":"11111111-1111-4111-8111-111111111112"}
+nex-99903: owner already owns 1 business(es) · [{"id":"e375712a-58cf-43ee-b51e-46b07de9ffcd","slug":"handbags-direct","display_name":"Handbags direct"}] · aborting to avoid duplicate
+
+--- post-seed verification ---
+nex-99901 · slug='hammerexproducts' · MISSING
+nex-99902 · slug='x-rated-tool-belts' · {"id":"22222222-2222-4222-8222-222222299902","slug":"x-rated-tool-belts","display_name":"X-Rated Tool Belts","owner_account_id":"11111111-1111-4111-8111-111111111112"}
+nex-99903 · slug='rosa' · MISSING
+slug=irish-pride-shop http=200
+slug=x-rated-tool-belts http=200
+slug=handbags-direct http=200
+slug=hammerexproducts http=200
+slug=rosa http=200
+slug=irish-pride-shop · NOT-FOUND · title='Irish Pride Shop · NEX · NEX'
+slug=x-rated-tool-belts · NOT-FOUND · title='X-Rated Tool Belts · NEX · NEX'
+slug=handbags-direct · NOT-FOUND · title='Handbags direct · NEX · NEX'
+slug=hammerexproducts · NOT-FOUND · title='Shop · NEX · NEX'
+slug=rosa · NOT-FOUND · title='Shop · NEX · NEX'
+slug='irish-pride-shop' rows=1 err=none
+  · id=edab3dcd-5ea2-4b28-9bcb-2e405661697f display='Irish Pride Shop' owner=11111111-1111-4111-8111-111111111111 archived=null
+slug='x-rated-tool-belts' rows=1 err=none
+  · id=22222222-2222-4222-8222-222222299902 display='X-Rated Tool Belts' owner=11111111-1111-4111-8111-111111111112 archived=null
+slug='handbags-direct' rows=1 err=none
+  · id=e375712a-58cf-43ee-b51e-46b07de9ffcd display='Handbags direct' owner=11111111-1111-4111-8111-111111111113 archived=null
+iter=1 marker=NOT-FOUND bytes=87766
+iter=2 marker=NOT-FOUND bytes=87766
+iter=3 marker=NOT-FOUND bytes=87763
