@@ -210,6 +210,22 @@ function countryCodeToFlagEmoji(code: string | null | undefined): string | null 
   );
 }
 
+/**
+ * Owner directive 2026-11-28 (fourth pass) · the id circle now renders
+ * the country as a real flag image filling the badge instead of the
+ * Unicode emoji. Windows/desktop Chromium does not ship regional-
+ * indicator glyphs so the Indonesia emoji rendered as "ID" text ·
+ * flagcdn PNG at w80 gives a crisp retina paint on the 29×29 badge.
+ */
+function countryCodeToFlagImageUrl(
+  code: string | null | undefined,
+): string | null {
+  if (!code) return null;
+  const trimmed = code.trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(trimmed)) return null;
+  return `https://flagcdn.com/w80/${trimmed}.png`;
+}
+
 export function CoverIdentityBadge(
   props: CoverIdentityBadgeProps,
 ): React.JSX.Element {
@@ -310,17 +326,23 @@ export function CoverIdentityBadge(
               rows). Kept the same bottom-right anchor and shadow so the
               silhouette of the portrait unit is preserved. */}
           {(() => {
-            const flag = countryCodeToFlagEmoji(props.countryCode);
-            if (!flag) return null;
+            const flagImg = countryCodeToFlagImageUrl(props.countryCode);
+            const flagEmoji = countryCodeToFlagEmoji(props.countryCode);
+            if (!flagImg && !flagEmoji) return null;
             // Founder direction 2026-09-30 (revised) · flag circle
             // reduced 20% (36 -> 29) so it sits as a subtler accent
             // rather than a competing badge. Unified across every
             // template via the shared CoverIdentityBadge.
+            // Owner directive 2026-11-28 (fourth pass) · the badge body
+            // now paints a real flag image (flagcdn PNG) so Windows
+            // Chromium, which doesn't ship country-flag emojis, no
+            // longer shows "ID" text in place of the Indonesia flag.
             const badgeSize = 29;
             return (
               <div
                 aria-label={`Country ${props.countryCode}`}
                 title={props.countryCode ?? undefined}
+                data-nex-cover-flag-badge
                 style={{
                   position: "absolute",
                   bottom: -4,
@@ -338,7 +360,21 @@ export function CoverIdentityBadge(
                   lineHeight: 1,
                 }}
               >
-                {flag}
+                {flagImg ? (
+                  <img
+                    src={flagImg}
+                    alt={`${props.countryCode} flag`}
+                    data-nex-cover-flag-image
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  flagEmoji
+                )}
               </div>
             );
           })()}

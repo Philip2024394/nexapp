@@ -113,6 +113,32 @@ for (const vp of VIEWPORTS) {
       // this template · the portrait reads calmer behind the logo.
       await expect(page.locator("[data-nex-cover-ping]")).toHaveCount(0);
 
+      // Owner-sealed 2026-11-28 (fourth pass) · cart icon sits beside
+      // the burger in the shop header, and the country badge paints a
+      // real flag image (flagcdn PNG) instead of the Unicode emoji so
+      // Windows Chromium no longer shows "ID" text in its place.
+      const cartLink = page.locator("[data-nex-shop-cart]").first();
+      await expect(cartLink).toBeVisible();
+      await expect(cartLink).toHaveAttribute("href", "/nex-native/cart");
+
+      const burger = page.locator("[data-nex-shop-burger]").first();
+      const cartBox = await cartLink.boundingBox();
+      const burgerBox = await burger.boundingBox();
+      expect(cartBox).not.toBeNull();
+      expect(burgerBox).not.toBeNull();
+      if (cartBox && burgerBox) {
+        // Cart must sit to the LEFT of the burger on the same row.
+        expect(cartBox.x + cartBox.width).toBeLessThanOrEqual(burgerBox.x);
+        expect(Math.abs(cartBox.y - burgerBox.y)).toBeLessThan(6);
+      }
+
+      const flagImg = page.locator("[data-nex-cover-flag-image]").first();
+      await expect(flagImg).toBeVisible();
+      await expect(flagImg).toHaveAttribute(
+        "src",
+        /flagcdn\.com\/w80\/id\.png$/,
+      );
+
       await testInfo.attach(`${vp.label}-page-1.png`, {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",

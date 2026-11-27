@@ -31,8 +31,13 @@
 // ancestor · PhoneFrame has one).
 
 import * as React from "react";
-// Owner directive 2026-11-12 · HeaderCartIcon import retired · the
-// mount was removed from the burger-menu header.
+import Link from "next/link";
+// Owner directive 2026-11-28 (fourth pass) · the cart icon returns
+// beside the burger in the shop header. Supersedes the 2026-11-12
+// "HeaderCartIcon removed from the shop template header" rule. The
+// new icon reads the sealed NEX_CART_STORAGE_KEY directly so the
+// count badge bumps the moment any AddToCartButton fires.
+import { NEX_CART_STORAGE_KEY, type NexCartItem } from "@/lib/nex-native/cart-types";
 import type { ShopCoverContent } from "@/lib/nex-native/shop-cover-service";
 import {
   isFaqItemEnabled,
@@ -178,11 +183,14 @@ export function BurgerMenu({
 
   return (
     <>
-      {/* Owner directive 2026-11-12 · HeaderCartIcon removed from the
-          shop template header. Supersedes the 2026-11-06 "cart icon
-          enlarged alongside the burger" rule. Only the burger menu
-          remains top-right · buyers reach the cart via the global
-          drawer "My Orders" row or the direct /nex-native/cart URL. */}
+      {/* Owner directive 2026-11-28 (fourth pass) · cart icon sits to
+          the LEFT of the burger menu, matching the burger's black-
+          stroke / drop-shadow treatment so the two controls read as a
+          single header cluster. Badge count reads the sealed
+          NEX_CART_STORAGE_KEY and listens for `nex-cart-changed` +
+          `storage` events so the number bumps the moment any
+          AddToCartButton fires. Tapping routes to /nex-native/cart. */}
+      <ShopHeaderCartIcon />
       <button
         type="button"
         aria-label="Shop menu"
@@ -1647,3 +1655,128 @@ const ctaSecondaryStyle: React.CSSProperties = {
   textDecoration: "none",
   border: `1px solid ${BORDER_HI}`,
 };
+
+// ─── Shop header cart icon · sits to the left of the burger ─────────
+//
+// Owner directive 2026-11-28 (fourth pass) · header cluster cart. Reads
+// the sealed NEX_CART_STORAGE_KEY on mount + re-reads on
+// `nex-cart-changed` (same-tab) and `storage` (cross-tab) so the badge
+// count stays in sync with every AddToCartButton fire. Styled to match
+// the burger button: 32×32 transparent, black stroke, pale drop-shadow.
+
+function readCartCount(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.localStorage.getItem(NEX_CART_STORAGE_KEY);
+    if (!raw) return 0;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return 0;
+    return arr.reduce<number>(
+      (n, x) =>
+        n +
+        (x && typeof x === "object" && typeof (x as NexCartItem).quantity === "number"
+          ? Math.max(0, Math.floor((x as NexCartItem).quantity))
+          : 0),
+      0,
+    );
+  } catch {
+    return 0;
+  }
+}
+
+function ShopHeaderCartIcon(): React.JSX.Element {
+  const [count, setCount] = React.useState(0);
+  const [hydrated, setHydrated] = React.useState(false);
+
+  React.useEffect(() => {
+    setCount(readCartCount());
+    setHydrated(true);
+    const onChange = () => setCount(readCartCount());
+    window.addEventListener("nex-cart-changed", onChange);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === NEX_CART_STORAGE_KEY) setCount(readCartCount());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("nex-cart-changed", onChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  return (
+    <Link
+      href="/nex-native/cart"
+      aria-label={
+        count > 0
+          ? `Open cart · ${count} item${count === 1 ? "" : "s"}`
+          : "Open cart"
+      }
+      data-nex-shop-cart
+      style={{
+        position: "absolute",
+        top: 12,
+        // Burger sits at right:12 with width:32 · leave an 8px gap.
+        right: 52,
+        width: 32,
+        height: 32,
+        borderRadius: 0,
+        background: "transparent",
+        border: "none",
+        color: "#000000",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+        zIndex: 50,
+        WebkitTapHighlightColor: "transparent",
+        padding: 0,
+        textDecoration: "none",
+        filter: "drop-shadow(0 1px 4px rgba(255,255,255,0.85))",
+      }}
+    >
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <circle cx="9" cy="21" r="1.5" />
+        <circle cx="18" cy="21" r="1.5" />
+        <path d="M3 3h2l2.7 12.3a2 2 0 0 0 2 1.7h7.6a2 2 0 0 0 2-1.6L21 8H6" />
+      </svg>
+      {hydrated && count > 0 && (
+        <span
+          aria-hidden
+          data-nex-shop-cart-badge
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -6,
+            minWidth: 18,
+            height: 18,
+            padding: "0 5px",
+            borderRadius: 999,
+            background: "linear-gradient(180deg, #CC1818, #7A0000)",
+            color: "#FFFFFF",
+            fontSize: 10,
+            fontWeight: 800,
+            lineHeight: 1,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1.5px solid #FFFFFF",
+            boxShadow: "0 4px 10px rgba(122,0,0,0.65)",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+          }}
+        >
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </Link>
+  );
+}
