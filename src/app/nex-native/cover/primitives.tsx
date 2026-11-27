@@ -218,7 +218,12 @@ export function CoverIdentityBadge(
           position: absolute;
           inset: -4px;
           border-radius: 50%;
-          border: 2px solid #22C55E;
+          /* Owner directive 2026-11-28 · ping follows the shop's accent
+             tint (shop_cover_tint_hex → --nex-accent) so X-Rated Tool
+             Belts reads orange, pink themes read pink, etc. Supersedes
+             the 2026-11-12 "ping locked to NEX presence green" rule ·
+             presence is still signalled by the two-ring stagger. */
+          border: 2px solid var(--nex-accent, #22C55E);
           animation: nex-cover-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
           pointer-events: none;
         }
@@ -258,9 +263,13 @@ export function CoverIdentityBadge(
                 : `linear-gradient(135deg, var(--nex-accent-soft) 0%, var(--nex-panel) 100%)`,
               backgroundSize: "cover",
               backgroundPosition: "center 30%",
-              // Owner directive 2026-11-12 · rim locked to NEX presence
-              // green (#16D66B) across all themes · was theme accent.
-              border: "2px solid #16D66B",
+              // Owner directive 2026-11-27 · rim follows the shop's
+              // accent tint (shop_cover_tint_hex → --nex-accent) so
+              // X-Rated Tool Belts reads orange, pink themes read
+              // pink, etc. Supersedes the 2026-11-12 "rim locked to
+              // NEX presence green" rule · green ping lives on the
+              // outer ring above so presence is still signalled.
+              border: "2px solid var(--nex-accent, #16D66B)",
               boxShadow:
                 "0 6px 22px rgba(0,0,0,0.45), 0 0 18px rgba(22, 214, 107, 0.45)",
               display: "grid",
@@ -321,6 +330,10 @@ export function CoverIdentityBadge(
               fontWeight: 700,
               letterSpacing: "-0.015em",
               lineHeight: 1.15,
+              // Owner directive 2026-11-27 · business name wears the
+              // shop's accent tint so brand identity reads through the
+              // name as well as the rim and chrome.
+              color: "var(--nex-accent)",
               textShadow: "0 2px 8px rgba(0,0,0,0.55)",
               // Founder direction 2026-09-30 (revised) · fit the whole
               // business name. One line ideally · wraps to a SECOND
@@ -718,6 +731,7 @@ export function CoverProductCard({
   peerAccountId,
   eyebrow,
   variant = "grid",
+  brandStripUrl = null,
 }: {
   product: CoverProduct;
   peerAccountId: string;
@@ -730,6 +744,12 @@ export function CoverProductCard({
    *  button on the rim and the product name centred below · used by
    *  Template 14 (Personal Brand · Round Products). */
   variant?: "grid" | "landscape" | "round";
+  /** Owner directive 2026-11-28 · when present AND variant === "landscape"
+   *  render a vertical brand-strip image on the LEFT edge of the card
+   *  (before the square product image). Template 15
+   *  (product_hero_landscape) passes the shop's vertical logo so each
+   *  row carries the shop identity. Null = no strip. */
+  brandStripUrl?: string | null;
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
   const priceLabel = formatMoney(product.currency, product.price_pence);
@@ -999,6 +1019,24 @@ export function CoverProductCard({
           opacity: soldOut ? 0.7 : 1,
         }}
       >
+        {isLandscape && brandStripUrl ? (
+          <div
+            aria-hidden
+            data-nex-cover-brand-strip
+            style={{
+              flex: "0 0 36px",
+              width: 36,
+              alignSelf: "stretch",
+              backgroundImage: `url(${brandStripUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              backgroundColor: "var(--nex-accent, #0a1120)",
+              borderTopLeftRadius: 12,
+              borderBottomLeftRadius: 12,
+            }}
+          />
+        ) : null}
         <div
           aria-hidden={!!product.image_url}
           role={product.image_url ? undefined : "img"}
@@ -1241,6 +1279,7 @@ export function CoverProductGrid({
   columns = 2,
   activeSectionId = ALL_TAB_ID,
   variant = "grid",
+  brandStripUrl = null,
 }: {
   products: CoverProduct[];
   peerAccountId: string;
@@ -1256,6 +1295,10 @@ export function CoverProductGrid({
    *  and asks each card to render as a circle · used by Template 14
    *  Personal Brand · Round Products. */
   variant?: "grid" | "landscape" | "round";
+  /** Owner directive 2026-11-28 · Template 15 (product_hero_landscape)
+   *  vertical brand-strip. Forwarded verbatim to each CoverProductCard.
+   *  Only rendered when variant === "landscape". */
+  brandStripUrl?: string | null;
 }): React.JSX.Element {
   const visible =
     activeSectionId === ALL_TAB_ID
@@ -1277,6 +1320,7 @@ export function CoverProductGrid({
           product={p}
           peerAccountId={peerAccountId}
           variant={variant}
+          brandStripUrl={brandStripUrl}
         />
       ))}
     </div>

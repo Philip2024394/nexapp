@@ -14,6 +14,7 @@ import {
   LayoutCafeRound,
   LayoutProduct,
   LayoutProductLandscape,
+  LayoutProductHeroLandscape,
   LayoutProductRound,
   LayoutProductLandscapeRound,
   LayoutPersonalBrand,
@@ -60,6 +61,10 @@ export function CoverLayoutSwitch({
       return <LayoutPersonalBrandRound content={content} themeId={themeId} />;
     case "accommodation":
       return <LayoutAccommodation content={content} themeId={themeId} />;
+    case "product_hero_landscape":
+      return (
+        <LayoutProductHeroLandscape content={content} themeId={themeId} />
+      );
     default:
       return null;
   }

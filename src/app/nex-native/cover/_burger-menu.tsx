@@ -198,14 +198,21 @@ export function BurgerMenu({
           borderRadius: 0,
           background: "transparent",
           border: "none",
-          color: CREAM,
+          // Owner directive 2026-11-27 · burger icon colour locked to
+          // black on the shop surface (supersedes the prior CREAM /
+          // off-white stroke) so the control reads as a solid tap-
+          // target against any cover image including the Scaffolding
+          // in the Mist greyscale backdrop.
+          color: "#000000",
           display: "grid",
           placeItems: "center",
           cursor: "pointer",
           zIndex: 50,
           WebkitTapHighlightColor: "transparent",
           padding: 0,
-          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.75))",
+          // Pale drop-shadow halo so the black strokes stay visible
+          // against dark cover photos without fighting the cover tint.
+          filter: "drop-shadow(0 1px 4px rgba(255,255,255,0.85))",
         }}
       >
         <svg

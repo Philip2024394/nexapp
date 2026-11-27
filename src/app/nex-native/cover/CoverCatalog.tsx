@@ -37,13 +37,16 @@ export function CoverCatalog({
   columns = 2,
   pageSize,
   variant = "grid",
+  brandStripUrl = null,
 }: {
   sections: CoverSection[];
   products: CoverProduct[];
   peerAccountId: string;
   columns?: 1 | 2 | 3;
   /** Cards per page in the paginated grid. Default 4 for grid variant
-   *  · 6 for landscape variant · 6 for round variant (founder
+   *  · 8 for landscape variant (owner directive 2026-11-28 · bumped
+   *  from the original 6 so Template 11 / 15 landscape templates fit
+   *  exactly 8 product cards per page) · 6 for round variant (founder
    *  direction 2026-09-30 · 3x2 · reads calmer than a 3x3 wall on a
    *  phone screen). */
   pageSize?: number;
@@ -51,10 +54,14 @@ export function CoverCatalog({
    *  horizontal cards (Template 11) · "round" forces 3-column circle
    *  cards (Template 14). */
   variant?: "grid" | "landscape" | "round";
+  /** Owner directive 2026-11-28 · vertical brand-strip image forwarded
+   *  to each landscape card. Used by Template 15
+   *  (product_hero_landscape). Null = no strip. */
+  brandStripUrl?: string | null;
 }): React.JSX.Element {
   const effectivePageSize =
     pageSize ??
-    (variant === "landscape" ? 6 : variant === "round" ? 6 : 4);
+    (variant === "landscape" ? 8 : variant === "round" ? 6 : 4);
   // Founder direction 2026-09-30 · FIRST tab active on arrival · not
   // empty. Buyer lands filtered to the seller's first category, sees
   // its underline, taps it again (toggle) if they want to see all.
@@ -141,6 +148,7 @@ export function CoverCatalog({
         columns={columns}
         activeSectionId={ALL_TAB_ID}
         variant={variant}
+        brandStripUrl={brandStripUrl}
       />
       {totalPages > 1 && (
         <Pagination

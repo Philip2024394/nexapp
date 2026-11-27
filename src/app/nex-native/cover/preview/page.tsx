@@ -62,6 +62,8 @@ const COVER_LAYOUT_BLURB: Record<CoverLayoutId, string> = {
     "Same identity as Personal Brand · round product cards · name below · magnifier on rim",
   accommodation:
     "Hero image · suite grid · amenities row · check-in/out · Visit Us",
+  product_hero_landscape:
+    "Same identity as Product Seller · landscape product cards · 8 per page · vertical brand strip on left edge of every row",
 };
 
 /** Every shipping layout is Done by definition (unfinished layouts

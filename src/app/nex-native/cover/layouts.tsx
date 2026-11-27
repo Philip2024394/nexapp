@@ -707,6 +707,123 @@ export function LayoutProductLandscape({ content, themeId }: LayoutProps): React
   );
 }
 
+// ─── 15 · Product Seller · Hero Landscape ────────────────────────────
+// Owner directive 2026-11-28 · new template built fresh at owner's
+// explicit request ("create new page design for shops as i am asking
+// template new"). Structurally identical to Template 11 (Product
+// Seller · Landscape) with three deliberate differences:
+//   1. Every landscape product card carries a vertical shop-brand
+//      strip rendered on the LEFT edge (brandStripUrl forwarded from
+//      MockCoverContent → CoverCatalog → CoverProductGrid →
+//      CoverProductCard). Null = no strip, falls back to Template 11.
+//   2. Pagination defaults to 8 cards per page (vs Template 11's 6)
+//      so sellers with larger catalogs see a denser first page
+//      without losing the landscape row density.
+//   3. The ONLY layout that is wired to the shop's brand strip asset
+//      today · other landscape layouts keep their original 6-per-page
+//      tempo so nothing regresses.
+// Every other block (identity badge, Who-We-Are, All-products header,
+// pagination, Dispatch Times, identity rail) reads verbatim from
+// Template 11 so a seller can switch between the two without losing
+// configured data.
+
+export function LayoutProductHeroLandscape({
+  content,
+  themeId,
+}: LayoutProps): React.JSX.Element {
+  const t = terminologyForContent(content);
+  return (
+    <>
+      <CoverPage>
+        <CoverIdentityBadge
+          portraitUrl={content.portraitUrl}
+          name={content.businessName}
+          subtitle={content.tagline}
+          themeId={themeId}
+          size="compact"
+          presenceOnline={content.presenceOnline}
+          countryCode={content.countryCode ?? null}
+          location={content.location}
+        />
+        <div style={{ marginTop: 20 }}>
+          <WhoWeAreCollapsible
+            title={t.section_about_label}
+            body={content.aboutUs ?? content.tagline ?? ""}
+            hoursLabel={formatTodayHoursLabel(
+              content.hoursByDay,
+              content.hours,
+            )}
+          />
+        </div>
+        <div style={{ marginTop: 20 }}>
+          <CoverSectionHeading
+            eyebrow="Shop"
+            title={t.catalog_heading}
+            rightSlot={
+              <div
+                aria-label={`${content.products.length} products live`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--nex-accent)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                <span aria-hidden style={{ fontSize: 16, lineHeight: 1 }}>
+                  📦
+                </span>
+                <span>{content.products.length} products live</span>
+              </div>
+            }
+          />
+          <CoverCatalog
+            sections={content.sections}
+            products={content.products}
+            peerAccountId={content.ownerAccountId}
+            variant="landscape"
+            brandStripUrl={content.brandStripUrl ?? null}
+          />
+        </div>
+        {content.infoPages?.delivery_details && (
+          <section style={{ marginTop: 20 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: "var(--nex-accent)",
+                fontWeight: 700,
+                marginBottom: 4,
+              }}
+            >
+              Dispatch Times
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: "var(--nex-text, #F2F5F8)",
+                whiteSpace: "normal",
+              }}
+            >
+              {content.infoPages.delivery_details}
+            </div>
+          </section>
+        )}
+        <CoverIdentityRail
+          handle={content.handle}
+          location={content.location}
+          social={content.social}
+          themeId={themeId}
+        />
+      </CoverPage>
+    </>
+  );
+}
+
 // ─── 10 · Personal Brand ────────────────────────────────────────────
 
 export function LayoutPersonalBrand({ content, themeId }: LayoutProps): React.JSX.Element {

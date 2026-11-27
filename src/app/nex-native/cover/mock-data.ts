@@ -147,6 +147,11 @@ export interface MockCoverContent {
    *  SellerLocationEditor on /manage/shop. */
   locationLat?: number | null;
   locationLng?: number | null;
+  /** Owner directive 2026-11-28 · vertical brand-strip image rendered
+   *  on the left edge of each landscape product card in the
+   *  "product_hero_landscape" template. Null = no strip (card falls
+   *  back to the standard 2-column landscape layout). */
+  brandStripUrl?: string | null;
 }
 
 export const MARIA_MOCK: MockCoverContent = {

@@ -32,6 +32,13 @@ export const COVER_LAYOUT_IDS = [
   // homestay / villa / hotel market. Landscape + round variants
   // follow in a subsequent build.
   "accommodation",
+  // Owner directive 2026-11-28 · Template 15 · landscape product cards
+  // with a vertical shop-brand strip rendered on the left edge of each
+  // row. Same data contract as `product_landscape` + new brandStripUrl
+  // content field. Cards bump to 8 per page (vs 6) and the strip paints
+  // shop identity on every card so the shop reads as a single branded
+  // surface even when the buyer scrolls past the identity badge.
+  "product_hero_landscape",
 ] as const;
 
 export type CoverLayoutId = (typeof COVER_LAYOUT_IDS)[number];
@@ -48,6 +55,7 @@ export const COVER_LAYOUT_LABELS: Record<CoverLayoutId, string> = {
   personal_brand_landscape: "Personal Brand · Landscape",
   personal_brand_round: "Personal Brand · Round Products",
   accommodation: "Accommodation",
+  product_hero_landscape: "Product Seller · Hero Landscape",
 };
 
 export function isValidCoverLayoutId(id: string | undefined): id is CoverLayoutId {

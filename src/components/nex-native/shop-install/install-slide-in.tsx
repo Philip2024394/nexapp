@@ -110,7 +110,15 @@ export function InstallSlideIn({
   }, [shouldShowSlideIn, flow.state.kind]);
 
   const tint = resolveTint(shop.tintHex);
-  const fg = iconColorOn(tint, ON_DARK, ON_LIGHT);
+  // Owner directive 2026-11-28 · install slide-in now renders as a
+  // WHITE container with dark text so the Save-this-shop prompt reads
+  // as a system notification rather than as the shop's branded chrome.
+  // The accent tint still paints the shop icon ring and the primary
+  // button so the shop identity is still cued. Supersedes the earlier
+  // tint-as-background treatment.
+  const bg = "#FFFFFF";
+  const fg = ON_LIGHT;
+  const accentFg = iconColorOn(tint, ON_DARK, ON_LIGHT);
 
   if (!mounted) return null;
 
@@ -158,24 +166,30 @@ export function InstallSlideIn({
       data-nex-shop-slug={shop.slug}
       style={{
         position: "fixed",
-        right: 12,
-        bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
-        // Mobile-first width · caps at 360 px so the card never
-        // dominates the screen on a phablet.
-        width: "min(360px, calc(100vw - 24px))",
-        backgroundColor: tint,
+        right: 8,
+        left: "auto",
+        bottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
+        // Owner directive 2026-11-27 (third pass) · card compressed
+        // further so it reads as a compact badge rather than a
+        // notification panel · cap 240 px · min 16 px inset from the
+        // opposite edge · never wider than viewport.
+        width: "min(240px, calc(100vw - 32px))",
+        maxWidth: "calc(100vw - 32px)",
+        backgroundColor: bg,
         color: fg,
-        borderRadius: 16,
-        padding: "14px 14px 14px 12px",
+        borderRadius: 12,
+        padding: "8px 8px 8px 8px",
         boxShadow:
-          "0 10px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.14)",
+          "0 6px 16px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.14)",
+        border: "1px solid rgba(0,0,0,0.08)",
         display: "flex",
-        gap: 12,
+        gap: 8,
         alignItems: "flex-start",
         transform: entered ? "translateX(0)" : "translateX(calc(100% + 24px))",
         transition: "transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1)",
         zIndex: 1200,
         willChange: "transform",
+        boxSizing: "border-box",
       }}
     >
       {/* Shop icon + chat badge overlay · same visual language as the
@@ -184,16 +198,16 @@ export function InstallSlideIn({
         aria-hidden
         style={{
           position: "relative",
-          width: 40,
-          height: 40,
+          width: 26,
+          height: 26,
           flex: "0 0 auto",
           borderRadius: 999,
-          backgroundColor: "rgba(255,255,255,0.14)",
+          backgroundColor: tint,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          color: fg,
-          marginTop: 2,
+          color: accentFg,
+          marginTop: 1,
         }}
       >
         {shop.logoUrl ? (
@@ -201,11 +215,11 @@ export function InstallSlideIn({
           <img
             src={shop.logoUrl}
             alt=""
-            width={40}
-            height={40}
+            width={26}
+            height={26}
             style={{
-              width: 40,
-              height: 40,
+              width: 26,
+              height: 26,
               borderRadius: 999,
               objectFit: "cover",
               display: "block",
@@ -214,7 +228,7 @@ export function InstallSlideIn({
         ) : (
           <span
             style={{
-              font: "700 17px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+              font: "700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
             }}
           >
             {initial}
@@ -223,61 +237,65 @@ export function InstallSlideIn({
         <span
           style={{
             position: "absolute",
-            right: -4,
-            bottom: -4,
-            width: 18,
-            height: 18,
+            right: -2,
+            bottom: -2,
+            width: 12,
+            height: 12,
             borderRadius: 999,
             backgroundColor: tint,
-            color: fg,
+            color: accentFg,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: `0 0 0 1.5px ${fg}`,
+            boxShadow: `0 0 0 1px ${bg}`,
           }}
         >
-          <NexChatBadge size={12} tone="solid" />
+          <NexChatBadge size={8} tone="solid" />
         </span>
       </span>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            font: "600 14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+            font: "600 11px/1.25 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
             letterSpacing: 0.1,
           }}
         >
-          Enjoy visiting this shop?
+          Save this shop
         </div>
         <div
           style={{
-            marginTop: 4,
-            font: "400 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+            marginTop: 2,
+            font: "400 10px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
             opacity: 0.92,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
+          title={shop.displayName}
         >
-          Save {shop.displayName} to your phone for easy access whenever you
-          want to visit again.
+          {shop.displayName}
         </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
           <button
             type="button"
             onClick={handleInstall}
             data-nex-shop-install-slidein-accept
             style={{
               appearance: "none",
-              border: `1px solid ${fg}`,
-              background: fg,
-              color: tint,
+              border: `1px solid ${tint}`,
+              background: tint,
+              color: accentFg,
               borderRadius: 999,
-              paddingInline: 14,
-              height: 34,
-              font: "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+              paddingInline: 8,
+              height: 24,
+              font: "600 10px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
               cursor: "pointer",
               WebkitTapHighlightColor: "transparent",
+              whiteSpace: "nowrap",
             }}
           >
-            Save to phone
+            Save
           </button>
           <button
             type="button"
@@ -285,15 +303,16 @@ export function InstallSlideIn({
             data-nex-shop-install-slidein-dismiss
             style={{
               appearance: "none",
-              border: `1px solid ${fg}`,
+              border: `1px solid rgba(0,0,0,0.2)`,
               background: "transparent",
               color: fg,
               borderRadius: 999,
-              paddingInline: 12,
-              height: 34,
-              font: "500 13px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+              paddingInline: 8,
+              height: 24,
+              font: "500 10px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
               cursor: "pointer",
               WebkitTapHighlightColor: "transparent",
+              whiteSpace: "nowrap",
             }}
           >
             Not now
@@ -314,20 +333,22 @@ export function InstallSlideIn({
           border: "none",
           background: "transparent",
           color: fg,
-          width: 28,
-          height: 28,
+          width: 18,
+          height: 18,
           borderRadius: 999,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          marginLeft: 2,
+          marginLeft: 0,
           WebkitTapHighlightColor: "transparent",
+          flex: "0 0 auto",
+          padding: 0,
         }}
       >
         <svg
-          width={16}
-          height={16}
+          width={12}
+          height={12}
           viewBox="0 0 24 24"
           aria-hidden
           focusable="false"

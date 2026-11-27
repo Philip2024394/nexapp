@@ -67,7 +67,6 @@ import { ShopChatFab } from "../cover/_shop-chat-fab";
 // `src/components/nex-native/shop-install/`. The burger-menu "Download
 // App" row (§D) is wired inside `_burger-menu.tsx`; this import pair
 // adds the remaining two surfaces to the public shop page.
-import { BrandedInstallButton } from "@/components/nex-native/shop-install/branded-install-button";
 import { InstallSlideIn } from "@/components/nex-native/shop-install/install-slide-in";
 // Owner directive 2026-11-07 · ShopSideChatDrawer (top-left chat icon
 // on the shop cover) retired · the bottom-right ShopChatFab already
@@ -404,6 +403,15 @@ export default async function PublicShopPage({
     address: business.address ?? "",
     atmosphereLine: "",
     countryCode: ownerCountryIso,
+    // Owner directive 2026-11-28 · vertical brand-strip asset for the
+    // "product_hero_landscape" template. No DB column exists yet (a
+    // future migration will add `nex_business.brand_strip_url`) so
+    // this is slug-gated until that lands. Non-matching shops get null
+    // and the landscape cards fall back to Template 11 (no strip).
+    brandStripUrl:
+      business.slug === "x-rated-tool-belts"
+        ? "/nex-native/brand/x-rated-tool-belts-vertical-logo.png"
+        : null,
     themeEmojis: themeEmojis.map((row) => ({
       slug: row.slug,
       imageUrl: row.image_url,
@@ -585,31 +593,10 @@ export default async function PublicShopPage({
             cart writes NEX_CART_STORAGE_KEY using the sealed
             NexCartItem shape so the HeaderCartIcon badge bumps
             immediately. */}
-        {/* Owner directive 2026-11-27 §A · standard branded install
-            button · fixed design (tint background, auto-contrast text,
-            shop icon with NEX Chat overlay, "Download [Shop Name]"
-            label). Hidden when this shop is already installed or the
-            visitor is running the PWA in standalone mode. Positioned
-            top-left of the phone frame so it doesn't clash with the
-            top-right burger or the bottom-right ShopChatFab. */}
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            zIndex: 45,
-          }}
-        >
-          <BrandedInstallButton
-            shop={{
-              slug: business.slug,
-              displayName: business.display_name,
-              logoUrl: business.logo_url ?? null,
-              tintHex: business.shop_cover_tint_hex ?? null,
-            }}
-            inline
-          />
-        </div>
+        {/* Owner directive 2026-11-27 · header install banner removed
+            at owner request · the InstallSlideIn footer card below
+            remains the sole install affordance to avoid duplicate
+            Download prompts on the shop page. */}
         {/* Owner directive 2026-11-27 §B · auto-appearing right-edge
             slide-in. Spec §C 2-strike / 5-minute cooldown / permanent-
             suppression state machine lives inside the component. */}
