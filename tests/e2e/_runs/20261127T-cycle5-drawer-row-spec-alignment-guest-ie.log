@@ -1,0 +1,53 @@
+cycle-5 · drawer-row spec alignment with cycle-4 SCOPE_SIMPLIFICATION_HIDDEN_KEYS · GUEST × IE slice
+2026-11-27
+
+Context
+-------
+Cycle-4 (2026-11-27) hid three rows from the right-side control drawer
+via SCOPE_SIMPLIFICATION_HIDDEN_KEYS in
+src/components/nex-native/control-drawer/control-drawer-client.tsx:
+  · wholesale        → /nex-native/manage/wholesale
+  · nex-store        → /nex-native/store
+  · buying-guides    → /nex-generated/buying-guides
+
+The sibling spec files
+tests/e2e/journey-drawer-rows-{guest,buyer,signed-in-merchant}-ie.spec.ts
+still enumerated those three as drawer rows, claiming drawer coverage
+for routes the drawer no longer surfaces. This was a Rule-8
+false-completion risk (VERIFIED claim for a surface that doesn't exist).
+
+Cycle-5 fix
+-----------
+Removed the three hidden rows from the DRAWER_ROWS_* arrays in all
+three spec files, updated file-header scope notes to call out the
+exclusion with a cycle-4 cross-reference, and re-ran all three slices.
+
+Command
+-------
+npx playwright test tests/e2e/journey-drawer-rows-guest-ie.spec.ts --reporter=list
+
+Result · guest-IE slice · 13 drawer rows + 1 auth-setup = 14 tests · 32.2s
+---------------------------------------------------------------------------
+  ✓   1 [auth-setup] authenticate against sandbox via typed credentials (10.5s)
+  ✓   2 create     · List a product → /nex-native/create/product/category [REDIRECT-TO-SIGNIN]
+  ✓   3 your-nex   · Chats and contacts → /nex-native/contacts [REDIRECT-TO-SIGNIN]
+  ✓   4 your-nex   · My profile → /nex-native/profile/me [REDIRECT-TO-SIGNIN]
+  ✓   5 your-nex   · Edit Profile → /nex-native/settings/profile/edit [REDIRECT-TO-SIGNIN]
+  ✓   6 your-nex   · Shop Settings → /nex-native/manage [REDIRECT-TO-SIGNIN]
+  ✓   7 your-nex   · FAQ → /nex-native/manage/shop/faq [REDIRECT-TO-SIGNIN]
+  ✓   8 your-nex   · Chat Settings → /nex-native/settings/chat-settings [REDIRECT-TO-SIGNIN]
+  ✓   9 your-nex   · Payment Providers → /nex-native/settings/payments [PUBLIC-RENDER]
+  ✓  10 your-nex   · My Orders → /nex-native/manage/orders [REDIRECT-TO-SIGNIN]
+  ✓  11 your-nex   · Install NEX → /nex-native/install [PUBLIC-RENDER]
+  ✓  12 preferences· Settings → /nex-native/settings [REDIRECT-TO-SIGNIN]
+  ✓  13 preferences· NEX 1 → /nex-native/nex-1 [PUBLIC-RENDER]
+  ✓  14 cta        · Chat themes library → /nex-native/chat-themes-library [PUBLIC-RENDER]
+
+  14 passed (32.2s)
+
+Verifies
+--------
+· Every surfaced drawer row renders under guest session · status < 500,
+  not 404, no branded not-found UI, body text > 20 chars.
+· Spec enumeration now matches the shipped drawer surface — no false
+  VERIFIED claim for the three cycle-4-hidden rows.

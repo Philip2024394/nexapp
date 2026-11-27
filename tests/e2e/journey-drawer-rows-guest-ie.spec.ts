@@ -42,7 +42,8 @@
 //
 // Scope
 // -----
-// Rows exercised (16 targets — same 16 the merchant slice covers):
+// Rows exercised (13 targets — matches the merchant slice after
+// cycle-4 2026-11-27 founder scope-simplification seal):
 //   Create section:
 //     1 · /nex-native/create/product/category   · "List a product"
 //   Your NEX section:
@@ -54,19 +55,25 @@
 //     7 · /nex-native/settings/chat-settings     · "Chat Settings"
 //     8 · /nex-native/settings/payments          · "Payment Providers"
 //     9 · /nex-native/manage/orders              · "My Orders"
-//    10 · /nex-native/manage/wholesale           · "Wholesale"
-//    11 · /nex-native/store                      · "NEX Store"
-//    12 · /nex-native/install                    · "Install NEX"
+//    10 · /nex-native/install                    · "Install NEX"
 //   Preferences section:
-//    13 · /nex-native/settings                   · "Settings"
-//    14 · /nex-generated/buying-guides           · "Buying Guides"
-//    15 · /nex-native/nex-1                      · "NEX 1"
+//    11 · /nex-native/settings                   · "Settings"
+//    12 · /nex-native/nex-1                      · "NEX 1"
 //   Direct CTA:
-//    16 · /nex-native/chat-themes-library        · "Chat themes library"
+//    13 · /nex-native/chat-themes-library        · "Chat themes library"
 //
 // Explicitly excluded (and why):
 //   · /nex-native/directory (Discovery) — sealed hidden-until-launch
 //     per 2026-11-24 launch programme. Separate contract.
+//   · /nex-native/manage/wholesale (Wholesale),
+//     /nex-native/store (NEX Store),
+//     /nex-generated/buying-guides (Buying Guides) — removed from
+//     the drawer in cycle-4 2026-11-27 via
+//     SCOPE_SIMPLIFICATION_HIDDEN_KEYS in
+//     `control-drawer-client.tsx`. Backing routes remain reachable
+//     via direct URL but are no longer drawer surfaces, so they
+//     fall outside this spec's scope. Restore here only if the
+//     founder re-exposes the drawer rows.
 //
 // Contract per row (what VERIFIED means for this cycle)
 // ------------------------------------------------------
@@ -116,10 +123,12 @@ type DrawerRow = Readonly<{
     | "AUTH-GATE";
 }>;
 
-// Mirrors control-drawer-client.tsx 272-490 (same enumeration the
-// merchant slice uses). `expectedGuestBehaviour` is derived from
-// grep of `resolveSessionWithDevOverride` + `redirect(` in each
-// row's page.tsx on 2026-11-26 at HEAD 9dfa90b4:
+// Mirrors the SURFACED drawer rows in control-drawer-client.tsx
+// (after SCOPE_SIMPLIFICATION_HIDDEN_KEYS filter applied in cycle-4
+// 2026-11-27). Same enumeration the merchant slice uses.
+// `expectedGuestBehaviour` is derived from grep of
+// `resolveSessionWithDevOverride` + `redirect(` in each row's
+// page.tsx on 2026-11-26 at HEAD 9dfa90b4:
 //
 //   REDIRECT-TO-SIGNIN rows (session guard → /sign-in?next=…):
 //     /nex-native/create/product/category
@@ -130,19 +139,16 @@ type DrawerRow = Readonly<{
 //     /nex-native/manage/shop/faq
 //     /nex-native/settings/chat-settings
 //     /nex-native/manage/orders
-//     /nex-native/manage/wholesale
 //     /nex-native/settings
 //
 //   PUBLIC-RENDER rows (no session guard; render for anyone):
 //     /nex-native/settings/payments   (tolerates null session)
-//     /nex-native/store
 //     /nex-native/install
-//     /nex-generated/buying-guides
 //     /nex-native/nex-1
 //     /nex-native/chat-themes-library
 //
 //   AUTH-GATE rows (sealed NexAuthGate banner):
-//     [none currently in the 16-row drawer set — reserved]
+//     [none currently in the 13-row drawer set — reserved]
 const DRAWER_ROWS_GUEST: ReadonlyArray<DrawerRow> = [
   // Create
   {
@@ -200,18 +206,8 @@ const DRAWER_ROWS_GUEST: ReadonlyArray<DrawerRow> = [
     target: "/nex-native/manage/orders",
     expectedGuestBehaviour: "REDIRECT-TO-SIGNIN",
   },
-  {
-    section: "your-nex",
-    label: "Wholesale",
-    target: "/nex-native/manage/wholesale",
-    expectedGuestBehaviour: "REDIRECT-TO-SIGNIN",
-  },
-  {
-    section: "your-nex",
-    label: "NEX Store",
-    target: "/nex-native/store",
-    expectedGuestBehaviour: "PUBLIC-RENDER",
-  },
+  // Wholesale + NEX Store suppressed from drawer 2026-11-27 (cycle-4)
+  // via SCOPE_SIMPLIFICATION_HIDDEN_KEYS — see exclusion notes in header.
   {
     section: "your-nex",
     label: "Install NEX",
@@ -225,12 +221,8 @@ const DRAWER_ROWS_GUEST: ReadonlyArray<DrawerRow> = [
     target: "/nex-native/settings",
     expectedGuestBehaviour: "REDIRECT-TO-SIGNIN",
   },
-  {
-    section: "preferences",
-    label: "Buying Guides",
-    target: "/nex-generated/buying-guides",
-    expectedGuestBehaviour: "PUBLIC-RENDER",
-  },
+  // Buying Guides suppressed from drawer 2026-11-27 (cycle-4) via
+  // SCOPE_SIMPLIFICATION_HIDDEN_KEYS — see exclusion notes in header.
   {
     section: "preferences",
     label: "NEX 1",

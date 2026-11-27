@@ -1,0 +1,35 @@
+cycle-5 · drawer-row spec alignment with cycle-4 SCOPE_SIMPLIFICATION_HIDDEN_KEYS · merchant × IE slice
+2026-11-27
+
+Command
+-------
+npx playwright test tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts --reporter=list
+
+Result · merchant-IE slice · 13 drawer rows + 1 auth-setup = 14 tests · 3.2m
+----------------------------------------------------------------------------
+  ✓   1 [auth-setup] authenticate against sandbox via typed credentials (11.0s)
+  ✓   2 create     · List a product → /nex-native/create/product/category (14.9s)
+  ✓   3 your-nex   · Chats and contacts → /nex-native/contacts (14.1s)
+  ✓   4 your-nex   · My profile → /nex-native/profile/me (12.0s)
+  ✓   5 your-nex   · Edit Profile → /nex-native/settings/profile/edit (12.2s)
+  ✓   6 your-nex   · Shop Settings → /nex-native/manage (13.2s)
+  ✓   7 your-nex   · FAQ → /nex-native/manage/shop/faq (11.9s)
+  ✓   8 your-nex   · Chat Settings → /nex-native/settings/chat-settings (12.6s)
+  ✓   9 your-nex   · Payment Providers → /nex-native/settings/payments (13.9s)
+  ✓  10 your-nex   · My Orders → /nex-native/manage/orders (12.2s)
+  ✓  11 your-nex   · Install NEX → /nex-native/install (11.8s)
+  ✓  12 preferences· Settings → /nex-native/settings (11.8s)
+  ✓  13 preferences· NEX 1 → /nex-native/nex-1 (11.6s)
+  ✓  14 cta        · Chat themes library → /nex-native/chat-themes-library (11.8s)
+
+  14 passed (3.2m)
+
+Verifies
+--------
+· Every surfaced drawer row renders under signed-in shop-owner session
+  with a seeded nex_business — status < 500, not 404, no branded
+  not-found UI, body text > 20 chars.
+· Owner-gated rows (/manage, /manage/shop/faq, /manage/orders) pass
+  their ownership check without redirecting out.
+· Fixture teardown executed cleanly · assertNoResidualFixtures returned
+  zero residual rows (quality gate per Strict Completion Standard §2).

@@ -35,8 +35,6 @@
 //   · /nex-native/manage/orders · page.tsx:48-61 · no primary
 //     business → renders empty "start a shop" placeholder in
 //     OrdersListClient (NOT a redirect).
-//   · /nex-native/manage/wholesale · page.tsx · same "start a shop"
-//     placeholder pattern (NOT a redirect).
 //   · /nex-native/create/product/category · page.tsx:95-97 · missing
 //     `business` query param → redirects to /create/product, which
 //     for a buyer (zero owned businesses) redirects onward to
@@ -52,8 +50,10 @@
 //
 // Scope
 // -----
-// Same 16 drawer-row targets as the merchant spec (so the two slices
-// are directly comparable cell-by-cell). The `expectedBuyerBehaviour`
+// Same 13 drawer-row targets as the merchant spec (so the two slices
+// are directly comparable cell-by-cell) after cycle-4 2026-11-27
+// founder scope-simplification seal removed Wholesale / NEX Store /
+// Buying Guides from the drawer. The `expectedBuyerBehaviour`
 // classification is for the report, not a test assertion — the
 // assertion is uniformly "landed on a working, non-404, non-empty
 // surface".
@@ -61,6 +61,13 @@
 // Explicitly excluded
 //   · /nex-native/directory — sealed hidden-until-launch (same
 //     exclusion as the merchant spec).
+//   · /nex-native/manage/wholesale (Wholesale), /nex-native/store
+//     (NEX Store), /nex-generated/buying-guides (Buying Guides) —
+//     removed from the drawer in cycle-4 2026-11-27 via
+//     SCOPE_SIMPLIFICATION_HIDDEN_KEYS in
+//     `control-drawer-client.tsx`. Backing routes remain reachable
+//     via direct URL but are no longer drawer surfaces, so they fall
+//     outside this spec's scope.
 //   · ID and WW country identities — different Worker deployments.
 //   · Signed-out slice — covered by a separate planned spec.
 //   · Desktop viewport parity — stage-a-pixel7 is mobile; desktop
@@ -91,8 +98,8 @@
 //     the entire slice).
 //
 // Classification: NAV COVERAGE SPEC · exercises REAL buyer browser
-// mount of 16 sealed drawer rows against sandbox Supabase via the
-// fixture harness.
+// mount of 13 sealed drawer rows against sandbox Supabase via the
+// fixture harness (after cycle-4 2026-11-27 drawer simplification).
 
 import { expect, test, type Page } from "@playwright/test";
 import {
@@ -104,10 +111,11 @@ import {
   type FixtureHandle,
 } from "./_fixtures/sandbox-test-harness";
 
-// The sealed enumeration mirrors control-drawer-client.tsx:272-490
-// and is intentionally kept in lock-step with the merchant spec's
-// DRAWER_ROWS_SIGNED_IN_OWNER table so the two slices are
-// cell-aligned.
+// The sealed enumeration mirrors the SURFACED drawer rows in
+// control-drawer-client.tsx (after SCOPE_SIMPLIFICATION_HIDDEN_KEYS
+// filter applied in cycle-4 2026-11-27). Intentionally kept in
+// lock-step with the merchant spec's DRAWER_ROWS_SIGNED_IN_OWNER
+// table so the two slices are cell-aligned.
 type ExpectedBuyerBehaviour =
   | "PUBLIC-RENDER"
   | "AUTH-ONLY-RENDER"
@@ -185,20 +193,8 @@ const DRAWER_ROWS_BUYER: ReadonlyArray<DrawerRow> = [
     // shop" placeholder (NOT a redirect).
     expectedBuyerBehaviour: "OWNER-GATE-TO-PLACEHOLDER",
   },
-  {
-    section: "your-nex",
-    label: "Wholesale",
-    target: "/nex-native/manage/wholesale",
-    // page.tsx header: zero owned businesses → "start a shop"
-    // placeholder (NOT a redirect).
-    expectedBuyerBehaviour: "OWNER-GATE-TO-PLACEHOLDER",
-  },
-  {
-    section: "your-nex",
-    label: "NEX Store",
-    target: "/nex-native/store",
-    expectedBuyerBehaviour: "PUBLIC-RENDER",
-  },
+  // Wholesale + NEX Store suppressed from drawer 2026-11-27 (cycle-4)
+  // via SCOPE_SIMPLIFICATION_HIDDEN_KEYS — see exclusion notes in header.
   {
     section: "your-nex",
     label: "Install NEX",
@@ -212,12 +208,8 @@ const DRAWER_ROWS_BUYER: ReadonlyArray<DrawerRow> = [
     target: "/nex-native/settings",
     expectedBuyerBehaviour: "AUTH-ONLY-RENDER",
   },
-  {
-    section: "preferences",
-    label: "Buying Guides",
-    target: "/nex-generated/buying-guides",
-    expectedBuyerBehaviour: "PUBLIC-RENDER",
-  },
+  // Buying Guides suppressed from drawer 2026-11-27 (cycle-4) via
+  // SCOPE_SIMPLIFICATION_HIDDEN_KEYS — see exclusion notes in header.
   {
     section: "preferences",
     label: "NEX 1",

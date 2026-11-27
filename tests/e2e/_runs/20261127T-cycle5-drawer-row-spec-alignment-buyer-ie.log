@@ -1,0 +1,35 @@
+cycle-5 · drawer-row spec alignment with cycle-4 SCOPE_SIMPLIFICATION_HIDDEN_KEYS · buyer × IE slice
+2026-11-27
+
+Command
+-------
+npx playwright test tests/e2e/journey-drawer-rows-buyer-ie.spec.ts --reporter=list
+
+Result · buyer-IE slice · 13 drawer rows + 1 auth-setup = 14 tests · 3.2m
+-------------------------------------------------------------------------
+  ✓   1 [auth-setup] authenticate against sandbox via typed credentials (11.4s)
+  ✓   2 create     · List a product → /nex-native/create/product/category [CREATE-GATE-TO-SETUP] (12.4s)
+  ✓   3 your-nex   · Chats and contacts → /nex-native/contacts [AUTH-ONLY-RENDER] (14.7s)
+  ✓   4 your-nex   · My profile → /nex-native/profile/me [AUTH-ONLY-RENDER] (12.0s)
+  ✓   5 your-nex   · Edit Profile → /nex-native/settings/profile/edit [AUTH-ONLY-RENDER] (12.5s)
+  ✓   6 your-nex   · Shop Settings → /nex-native/manage [OWNER-GATE-TO-SETUP] (12.9s)
+  ✓   7 your-nex   · FAQ → /nex-native/manage/shop/faq [OWNER-GATE-TO-SETUP] (11.6s)
+  ✓   8 your-nex   · Chat Settings → /nex-native/settings/chat-settings [AUTH-ONLY-RENDER] (12.7s)
+  ✓   9 your-nex   · Payment Providers → /nex-native/settings/payments [AUTH-ONLY-RENDER] (12.8s)
+  ✓  10 your-nex   · My Orders → /nex-native/manage/orders [OWNER-GATE-TO-PLACEHOLDER] (11.7s)
+  ✓  11 your-nex   · Install NEX → /nex-native/install [PUBLIC-RENDER] (11.5s)
+  ✓  12 preferences· Settings → /nex-native/settings [AUTH-ONLY-RENDER] (12.0s)
+  ✓  13 preferences· NEX 1 → /nex-native/nex-1 [PUBLIC-RENDER] (11.6s)
+  ✓  14 cta        · Chat themes library → /nex-native/chat-themes-library [PUBLIC-RENDER] (11.6s)
+
+  14 passed (3.2m)
+
+Verifies
+--------
+· Every surfaced drawer row renders under signed-in buyer (zero owned
+  business) × IE session — status < 500, not 404, no branded not-found
+  UI, body text > 20 chars.
+· Owner-gated rows correctly bounce to /manage/shop/setup (redirect
+  destination) or render the placeholder; the drawer surface is still
+  functional end-to-end for a buyer.
+· Fixture teardown executed cleanly · zero residual rows.

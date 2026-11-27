@@ -7,7 +7,40 @@ What requires the owner before continuing?
 
 ---
 
-## Current state · 2026-11-27 cycle 4 (Founder scope-simplification seal · three-pillar NEX launch · 8 non-pillar emitters hidden · pillar routes + infrastructure preserved · typecheck-clean · pending commit)
+## Current state · 2026-11-27 cycle 5 (Drawer-row spec alignment with cycle-4 hidden-keys · 39/39 cells re-verified across 3 identities · 3 spec files aligned · pending commit)
+
+**Delta from cycle 4 below.** Owner directive 2026-11-27 (verbatim): *"continue we aim for launch and make sure our side drawer right is correct links and no more links then need with world class ui layout side drawer and all divert to correct pages and them pages with correct links for pages to allow user control and operate their account"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken.
+
+- **Defect found:** cycle-4 landed `SCOPE_SIMPLIFICATION_HIDDEN_KEYS` in `control-drawer-client.tsx:300-304` hiding three drawer rows (`wholesale` · `nex-store` · `buying-guides`), but all three sibling drawer-row Playwright specs (`journey-drawer-rows-{guest,buyer,signed-in-merchant}-ie.spec.ts`) still enumerated those rows in their `DRAWER_ROWS_*` arrays — claiming drawer coverage for routes the drawer no longer surfaces. Rule-8 false-completion risk.
+- **Fix applied (3 spec files · zero product-code change · no route deletion):** removed the three rows from the `DRAWER_ROWS_*` arrays, updated file-header scope notes with a cycle-4 cross-reference, and preserved the backing routes as reachable via direct URL navigation (`control-drawer-client.tsx` already keeps the suppressed items as commented skeletons for re-exposure).
+- **Re-run evidence (all three slices · live dev server on :3008 under sealed IE identity):**
+  - `tests/e2e/journey-drawer-rows-guest-ie.spec.ts` → **13 passed (32.2 s) · EXIT=0** · log `tests/e2e/_runs/20261127T-cycle5-drawer-row-spec-alignment-guest-ie.log`.
+  - `tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts` → **13 passed (3.2 m) · EXIT=0** · log `-merchant-ie.log` · fixture teardown clean (zero residual rows).
+  - `tests/e2e/journey-drawer-rows-buyer-ie.spec.ts` → **13 passed (3.2 m) · EXIT=0** · log `-buyer-ie.log` · fixture teardown clean.
+  - **Total: 39/39 drawer-row cells VERIFIED across guest+merchant+buyer × IE identities after cycle-4 scope-simplification.**
+
+### Files changed this cycle (standing-policy commit candidates)
+- `tests/e2e/journey-drawer-rows-guest-ie.spec.ts` (MODIFIED · 3 rows + header notes updated)
+- `tests/e2e/journey-drawer-rows-signed-in-merchant-ie.spec.ts` (MODIFIED · 3 rows + header notes updated)
+- `tests/e2e/journey-drawer-rows-buyer-ie.spec.ts` (MODIFIED · 3 rows + header notes updated)
+- `tests/e2e/_runs/20261127T-cycle5-drawer-row-spec-alignment-guest-ie.log` (NEW · evidence)
+- `tests/e2e/_runs/20261127T-cycle5-drawer-row-spec-alignment-merchant-ie.log` (NEW · evidence)
+- `tests/e2e/_runs/20261127T-cycle5-drawer-row-spec-alignment-buyer-ie.log` (NEW · evidence)
+- `docs/engineering/NEX-DELIVERY-LEDGER.md` (cycle-5 decisions-log entry prepended)
+- `docs/engineering/session-handoff.md` (this block)
+
+Excluded (not cycle-5 scope): `scripts/.phase12-audit-test/data/programmer-execution/command_audit.jsonl` (ephemeral audit-tool runtime noise · classified as execution log, not engineering deliverable).
+
+### Next safe action (no approval needed · continue inside Rule 7 + Founder scope-seal)
+- Owner decision still pending on AMBIGUOUS composer Call button `/call-centre` destination (cycle-4 deferral) before touching Chat UI.
+- Continue finish-the-application queue on the three pillars (Chat / Shop / Themes).
+
+### Next action requiring owner authorisation (ONE phrase at a time)
+- Unchanged from cycle-4 — see `docs/engineering/consolidated-approval-queue-2026-11-27.md`.
+
+---
+
+## Previous state · 2026-11-27 cycle 4 (Founder scope-simplification seal · three-pillar NEX launch · 8 non-pillar emitters hidden · pillar routes + infrastructure preserved · typecheck-clean · pending commit)
 
 **Delta from cycle 3 below.** Owner directive 2026-11-27: *"NEX launches with EXACTLY three pillars — NEX Chat · NEX Shop · Chat Themes. Everything else is ON HOLD."* Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No migration applied. No prod touched. No sealed invariant broken. No `main` push. No force-push.
 

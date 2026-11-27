@@ -29,7 +29,8 @@
 //
 // Scope
 // -----
-// Rows exercised (16 authenticated-shop-owner targets):
+// Rows exercised (13 authenticated-shop-owner drawer targets after
+// cycle-4 2026-11-27 founder scope-simplification seal):
 //   Create section:
 //     1 · /nex-native/create/product/category   · "List a product"
 //   Your NEX section:
@@ -41,21 +42,30 @@
 //     7 · /nex-native/settings/chat-settings     · "Chat Settings"
 //     8 · /nex-native/settings/payments          · "Payment Providers"
 //     9 · /nex-native/manage/orders              · "My Orders"
-//    10 · /nex-native/manage/wholesale           · "Wholesale"
-//    11 · /nex-native/store                      · "NEX Store"
-//    12 · /nex-native/install                    · "Install NEX"
+//    10 · /nex-native/install                    · "Install NEX"
 //   Preferences section:
-//    13 · /nex-native/settings                   · "Settings"
-//    14 · /nex-native/nex-generated/buying-guides· "Buying Guides"
-//    15 · /nex-native/nex-1                      · "NEX 1"
+//    11 · /nex-native/settings                   · "Settings"
+//    12 · /nex-native/nex-1                      · "NEX 1"
 //   Direct CTA:
-//    16 · /nex-native/chat-themes-library        · "Chat themes library"
+//    13 · /nex-native/chat-themes-library        · "Chat themes library"
 //
 // Explicitly excluded (and why):
 //   · /nex-native/directory (Discovery) — sealed hidden-until-launch
 //     per 2026-11-24 launch programme. Separate contract: this spec
 //     asserts hidden; promotion of the "revealed" state waits for
 //     the launch flag.
+//   · /nex-native/manage/wholesale (Wholesale) — removed from the
+//     drawer in cycle-4 2026-11-27 via SCOPE_SIMPLIFICATION_HIDDEN_KEYS
+//     (`control-drawer-client.tsx`). Backing route remains reachable
+//     via direct URL but is no longer a drawer surface, so it falls
+//     outside this spec's scope. Restore here if the founder
+//     re-exposes the drawer row.
+//   · /nex-native/store (NEX Store) — same cycle-4 suppression as
+//     above. Backing page in `src/app/nex-native/store/page.tsx`
+//     already filters its catalogue to the two pillar extras.
+//   · /nex-generated/buying-guides (Buying Guides) — same cycle-4
+//     suppression. Backing route remains reachable but is no longer
+//     a drawer surface.
 //
 // Contract per row (what VERIFIED means for this cycle)
 // ------------------------------------------------------
@@ -124,10 +134,11 @@ async function ownerScopedBusinessSweep(
   await sb.from("nex_business").delete().in("id", ownedBizIds);
 }
 
-// The sealed enumeration mirrors control-drawer-client.tsx:272-490.
-// Changing a row's URL in the drawer requires updating this table in
-// the same commit; inventory contract §6 of the Strict Completion
-// Standard 2026-11-25.
+// The sealed enumeration mirrors the SURFACED drawer rows in
+// control-drawer-client.tsx (after SCOPE_SIMPLIFICATION_HIDDEN_KEYS
+// filter applied in cycle-4 2026-11-27). Changing a row's URL in the
+// drawer requires updating this table in the same commit; inventory
+// contract §6 of the Strict Completion Standard 2026-11-25.
 type DrawerRow = Readonly<{
   label: string;
   target: string;
@@ -146,12 +157,13 @@ const DRAWER_ROWS_SIGNED_IN_OWNER: ReadonlyArray<DrawerRow> = [
   { section: "your-nex",    label: "Chat Settings",          target: "/nex-native/settings/chat-settings" },
   { section: "your-nex",    label: "Payment Providers",      target: "/nex-native/settings/payments" },
   { section: "your-nex",    label: "My Orders",              target: "/nex-native/manage/orders" },
-  { section: "your-nex",    label: "Wholesale",              target: "/nex-native/manage/wholesale" },
-  { section: "your-nex",    label: "NEX Store",              target: "/nex-native/store" },
+  // Wholesale + NEX Store suppressed from drawer 2026-11-27 (cycle-4) —
+  // see exclusion notes in header.
   { section: "your-nex",    label: "Install NEX",            target: "/nex-native/install" },
   // Preferences
   { section: "preferences", label: "Settings",               target: "/nex-native/settings" },
-  { section: "preferences", label: "Buying Guides",          target: "/nex-generated/buying-guides" },
+  // Buying Guides suppressed from drawer 2026-11-27 (cycle-4) —
+  // see exclusion notes in header.
   { section: "preferences", label: "NEX 1",                  target: "/nex-native/nex-1" },
   // Direct CTA
   { section: "cta",         label: "Chat themes library",    target: "/nex-native/chat-themes-library" },
