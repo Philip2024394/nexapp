@@ -547,14 +547,16 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
   });
 });
 
-describe("GuestShopEnquiryPopup · hero + identity block (owner directive 2026-11-28 eighth-pass)", () => {
-  // Owner directive 2026-11-28 (eighth-pass, verbatim): "CHANGE THE PAGE
-  // BACK GROUND OF Message X-Rated Tool Belts TO THIS IMAGE 'Scaffold
-  // Workers in the Mist.png' ALSO ADD THE XRATED PROFILE AND LOG IMAGE
-  // AND ADDRESS AND 2 BUTTONS LIKE IT WAS SAME AS X RATED HOME PAGE".
-  // Four assertions pin the four deltas.
+describe("GuestShopEnquiryPopup · full-page background (owner directive 2026-11-28 tenth-pass)", () => {
+  // Owner directive 2026-11-28 (tenth-pass, verbatim): "IMAGE FULL PAGE
+  // BACK GROUND X-Rated Tool Belts · Message X-Rated Tool Belts ·
+  // Notifications of messages will be sent ... Send message · Not now".
+  // The eighth-pass hero strip + round logo + address identity block
+  // are REMOVED · the Scaffold Workers image is now the full-page
+  // background of the popup root, with a legibility scrim and a
+  // frosted form panel so inputs remain readable.
 
-  it("renders a hero background image div referencing the shop-local bg asset by default", () => {
+  it("paints the Scaffold Workers image as the full-page background on the popup root by default", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
@@ -562,20 +564,17 @@ describe("GuestShopEnquiryPopup · hero + identity block (owner directive 2026-1
         postShopEnquiry={async () => makeResponse(200, { ok: true })}
       />,
     );
-    const hero = document.querySelector(
-      "[data-nex-guest-enquiry-hero]",
+    const root = document.querySelector(
+      "[data-nex-guest-shop-enquiry-popup]",
     ) as HTMLElement | null;
-    expect(hero).toBeTruthy();
-    // Default references the scaffold-workers asset the owner supplied.
-    expect(hero!.style.backgroundImage).toContain(
+    expect(root).toBeTruthy();
+    expect(root!.style.backgroundImage).toContain(
       "/nex/shop/scaffold-workers-in-the-mist.png",
     );
-    // The hero sits above the identity block (which anchors on the
-    // card margin-top:-36 so the logo circle overlaps the hero).
-    expect(hero!.style.backgroundSize).toBe("cover");
+    expect(root!.style.backgroundSize).toBe("cover");
   });
 
-  it("honours a caller-supplied heroBackgroundUrl override", () => {
+  it("honours a caller-supplied heroBackgroundUrl override on the popup root", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
@@ -584,89 +583,77 @@ describe("GuestShopEnquiryPopup · hero + identity block (owner directive 2026-1
         postShopEnquiry={async () => makeResponse(200, { ok: true })}
       />,
     );
-    const hero = document.querySelector(
-      "[data-nex-guest-enquiry-hero]",
+    const root = document.querySelector(
+      "[data-nex-guest-shop-enquiry-popup]",
     ) as HTMLElement | null;
-    expect(hero!.style.backgroundImage).toContain("/some/other/bg.png");
-    expect(hero!.style.backgroundImage).not.toContain(
+    expect(root!.style.backgroundImage).toContain("/some/other/bg.png");
+    expect(root!.style.backgroundImage).not.toContain(
       "scaffold-workers-in-the-mist",
     );
   });
 
-  it("renders the shop logo as an <img> when shopLogoUrl is provided", () => {
+  it("removes the eighth-pass hero strip + round logo + shop address identity block", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
         shopLogoUrl="https://cdn.example.com/x-rated-logo.jpg"
-        onDismiss={() => undefined}
-        postShopEnquiry={async () => makeResponse(200, { ok: true })}
-      />,
-    );
-    const logo = document.querySelector(
-      "[data-nex-guest-enquiry-shop-logo]",
-    ) as HTMLImageElement | null;
-    expect(logo).toBeTruthy();
-    expect(logo!.tagName).toBe("IMG");
-    expect(logo!.getAttribute("src")).toBe(
-      "https://cdn.example.com/x-rated-logo.jpg",
-    );
-    // No fallback initial when a real logo is present.
-    expect(
-      document.querySelector("[data-nex-guest-enquiry-shop-logo-fallback]"),
-    ).toBeNull();
-  });
-
-  it("falls back to an initial circle when shopLogoUrl is null", () => {
-    render(
-      <GuestShopEnquiryPopup
-        {...SHOP}
-        shopLogoUrl={null}
-        onDismiss={() => undefined}
-        postShopEnquiry={async () => makeResponse(200, { ok: true })}
-      />,
-    );
-    expect(
-      document.querySelector("[data-nex-guest-enquiry-shop-logo]"),
-    ).toBeNull();
-    const fallback = document.querySelector(
-      "[data-nex-guest-enquiry-shop-logo-fallback]",
-    ) as HTMLElement | null;
-    expect(fallback).toBeTruthy();
-    // First letter of the shop label ("X" for X-Rated Tool Belts).
-    expect(fallback!.textContent).toBe("X");
-  });
-
-  it("renders the shop address line when shopAddress is provided (no 📍 pin · matches X-Rated home-page sixth-pass iteration)", () => {
-    render(
-      <GuestShopEnquiryPopup
-        {...SHOP}
         shopAddress="Yogyakarta, Indonesia"
         onDismiss={() => undefined}
         postShopEnquiry={async () => makeResponse(200, { ok: true })}
       />,
     );
-    const addr = document.querySelector(
-      "[data-nex-guest-enquiry-shop-address]",
-    ) as HTMLElement | null;
-    expect(addr).toBeTruthy();
-    expect(addr!.textContent).toBe("Yogyakarta, Indonesia");
-    // No pin glyph · the X-Rated home page suppresses it on this
-    // template and the enquiry popup mirrors that choice.
-    expect(addr!.textContent).not.toContain("📍");
+    // All four eighth-pass identity nodes must be gone now that the
+    // image is the full-page background.
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-hero]"),
+    ).toBeNull();
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-shop-logo]"),
+    ).toBeNull();
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-shop-logo-fallback]"),
+    ).toBeNull();
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-shop-address]"),
+    ).toBeNull();
   });
 
-  it("omits the address row entirely when shopAddress is null", () => {
+  it("renders a legibility scrim over the full-page background image", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
-        shopAddress={null}
         onDismiss={() => undefined}
         postShopEnquiry={async () => makeResponse(200, { ok: true })}
       />,
     );
+    const scrim = document.querySelector(
+      "[data-nex-guest-enquiry-scrim]",
+    ) as HTMLElement | null;
+    expect(scrim).toBeTruthy();
+    expect(scrim!.style.position).toBe("absolute");
+    // Gradient scrim · must reference the ink tone so the title reads
+    // clean at the top.
+    expect(scrim!.style.background).toContain("10, 21, 38");
+  });
+
+  it("wraps the form in a frosted-white legibility panel so inputs stay readable over the image", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const panel = document.querySelector(
+      "[data-nex-guest-enquiry-form-panel]",
+    ) as HTMLElement | null;
+    expect(panel).toBeTruthy();
+    // Translucent white panel · not fully opaque, not transparent.
+    expect(panel!.style.background).toContain("255, 255, 255");
+    // Form must live inside the legibility panel.
     expect(
-      document.querySelector("[data-nex-guest-enquiry-shop-address]"),
-    ).toBeNull();
+      panel!.querySelector("[data-nex-guest-enquiry-form]"),
+    ).toBeTruthy();
   });
 
   it("renders Send + Not now as a two-button action row (X-Rated home-page pair style)", () => {

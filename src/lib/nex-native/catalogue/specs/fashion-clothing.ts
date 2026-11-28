@@ -130,6 +130,15 @@ export const AccessoriesSpecSchema = z.object({
   colour: z.string().min(1).max(40),
   material: z.string().min(1).max(80),
   size: z.string().max(20).optional(),
+  // Owner directive 2026-11-28 (ninth pass · delta F) · belt-specific
+  // filter attributes exposed on the accessories category so the shop
+  // filter panel (Price / Material / Thread color / Buckle type) can
+  // read real seller-provided values. Both fields are OPTIONAL · a
+  // scarf or belt without a thread colour simply leaves them blank
+  // and the shop filter's thread-colour / buckle-type sections stay
+  // empty for that product.
+  thread_colour: z.string().max(40).optional(),
+  buckle_type: z.string().max(40).optional(),
   care_instructions: z.string().max(400).optional(),
 });
 
@@ -245,6 +254,24 @@ export const FashionClothingSpecs: readonly CategorySpec[] = [
       commonTextField("accessory_type", "Accessory type", 40),
       colourField, materialField,
       { key: "size", label: "Size", kind: "text", maxLength: 20 },
+      // Owner directive 2026-11-28 (ninth pass · delta F) · thread
+      // colour + buckle type expose the belt-specific filter axes so
+      // the shop filter panel can read real values instead of empty
+      // placeholders.
+      {
+        key: "thread_colour",
+        label: "Thread colour",
+        kind: "text",
+        maxLength: 40,
+        placeholder: "e.g. tan, black, contrast white",
+      },
+      {
+        key: "buckle_type",
+        label: "Buckle type",
+        kind: "text",
+        maxLength: 40,
+        placeholder: "e.g. roller, prong, slide, D-ring",
+      },
       careField,
     ],
   },

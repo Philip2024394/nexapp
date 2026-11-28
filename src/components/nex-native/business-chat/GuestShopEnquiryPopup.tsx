@@ -297,6 +297,17 @@ export function GuestShopEnquiryPopup({
   // translateZ(0)` which establishes a new containing block for every
   // `position:fixed` descendant · so `inset:0` now anchors to the
   // phone frame, not the browser viewport.
+  // Owner directive 2026-11-28 (tenth pass) · the Scaffold Workers
+  // in the Mist image is now the FULL PAGE BACKGROUND (not a 180px
+  // top strip + overlapping logo/address identity block, which was
+  // the eighth-pass treatment). The popup is a single scrollable
+  // panel painted over the full-bleed image · a legibility scrim
+  // sits between the image and the content so the form text stays
+  // readable, and the form inputs sit on an inner light panel so
+  // typed text contrasts against the busy photo. The 'Message <shop>'
+  // title + the two action buttons (Send / Not now) are kept per
+  // the tenth-pass mock; the shop logo + address block is removed.
+  const heroUrl = heroBackgroundUrl ?? "/nex/shop/scaffold-workers-in-the-mist.png";
   return (
     <div
       data-nex-guest-shop-enquiry-popup
@@ -307,160 +318,92 @@ export function GuestShopEnquiryPopup({
         position: "fixed",
         inset: 0,
         zIndex: 320,
-        background: "#FFFFFF",
         color: "#0A1526",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+        backgroundImage: `url("${heroUrl}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundRepeat: "no-repeat",
+        backgroundColor: "#0A1526",
       }}
     >
+      {/* Full-bleed legibility scrim · darker at the top so the
+          "Message X-Rated Tool Belts" title reads clean against any
+          image, fading toward the middle where the form card paints
+          its own background. */}
+      <div
+        aria-hidden
+        data-nex-guest-enquiry-scrim
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background:
+            "linear-gradient(to bottom, rgba(10,21,38,0.55) 0%, rgba(10,21,38,0.2) 30%, rgba(10,21,38,0.2) 70%, rgba(10,21,38,0.6) 100%)",
+        }}
+      />
       <section
         data-nex-guest-enquiry-card
         style={{
-          // Keep the content column readable on tablet/desktop while
-          // the outer div owns the full page. No card chrome.
+          position: "relative",
           width: "100%",
           maxWidth: 480,
           margin: "0 auto",
-          padding: "0 0 24px",
+          padding: "20px 0 24px",
           boxSizing: "border-box",
         }}
       >
-        {/* Owner directive 2026-11-28 (eighth-pass) · the enquiry page
-            now reads as the shop's own "home page" header:
-              · hero background image (Scaffold Workers in the Mist by
-                default · overridable per-shop via heroBackgroundUrl)
-              · round shop logo (same 58px circle with accent rim that
-                CoverIdentityBadge uses on the public shop cover)
-              · shop display name
-              · plain-text address (city/country · no 📍 pin, matching
-                X-Rated Tool Belts' sixth-pass home-page iteration)
-            All four are OPTIONAL · when the shop row has no logo/address
-            the block degrades gracefully and the plain Addendum E
-            headline still reads as "Message <shop>". The hero is hidden
-            only if heroBackgroundUrl is explicitly null AND no default
-            is wired · the default keeps every shop with a branded
-            opener. */}
         <div
-          data-nex-guest-enquiry-hero
-          style={{
-            position: "relative",
-            width: "100%",
-            height: 180,
-            backgroundImage: `url("${heroBackgroundUrl ?? "/nex/shop/scaffold-workers-in-the-mist.png"}")`,
-            backgroundSize: "cover",
-            backgroundPosition: "center 35%",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          {/* Dark gradient overlay so the identity block beneath
-              the hero still reads clean on any image. */}
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(to bottom, rgba(10,21,38,0) 0%, rgba(10,21,38,0) 55%, rgba(10,21,38,0.55) 100%)",
-            }}
-          />
-        </div>
-        <div
-          data-nex-guest-enquiry-identity
-          style={{
-            position: "relative",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "0 18px",
-            marginTop: -36,
-          }}
-        >
-          {shopLogoUrl ? (
-            <img
-              data-nex-guest-enquiry-shop-logo
-              src={shopLogoUrl}
-              alt={`${shopLabel} logo`}
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                objectFit: "cover",
-                background: "#FFFFFF",
-                border: `3px solid ${accent}`,
-                boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
-              }}
-            />
-          ) : (
-            <div
-              aria-hidden
-              data-nex-guest-enquiry-shop-logo-fallback
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                background: `linear-gradient(135deg, ${accent} 0%, #0A1526 100%)`,
-                border: `3px solid ${accent}`,
-                boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
-                display: "grid",
-                placeItems: "center",
-                color: "#FFFFFF",
-                fontSize: 24,
-                fontWeight: 900,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {shopLabel.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <div
-            data-nex-guest-enquiry-shop-name
-            style={{
-              marginTop: 10,
-              fontSize: 18,
-              fontWeight: 900,
-              letterSpacing: "-0.01em",
-              color: "#0A1526",
-              textAlign: "center",
-            }}
-          >
-            {shopLabel}
-          </div>
-          {shopAddress && shopAddress.trim().length > 0 ? (
-            <div
-              data-nex-guest-enquiry-shop-address
-              style={{
-                marginTop: 4,
-                fontSize: 12.5,
-                lineHeight: 1.4,
-                color: "#5A6A7E",
-                textAlign: "center",
-                maxWidth: 320,
-              }}
-            >
-              {shopAddress}
-            </div>
-          ) : null}
-        </div>
-        <div
-          style={{ padding: "16px 18px 0", boxSizing: "border-box" }}
+          style={{ padding: "0 18px", boxSizing: "border-box" }}
         >
         <h2
           id="nex-guest-enquiry-headline"
-          style={{ margin: 0, fontSize: 15, fontWeight: 800, letterSpacing: "-0.01em", color: "#3B4A5C" }}
+          data-nex-guest-enquiry-headline
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 900,
+            letterSpacing: "-0.01em",
+            color: "#FFFFFF",
+            textShadow: "0 2px 10px rgba(0,0,0,0.45)",
+          }}
         >
           Message {shopLabel}
         </h2>
         <p
           data-nex-guest-enquiry-honesty
-          style={{ margin: "6px 0 10px", fontSize: 12, lineHeight: 1.4, color: "#5A6A7E" }}
+          style={{
+            margin: "8px 0 14px",
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            color: "#F2F4F8",
+            textShadow: "0 1px 6px rgba(0,0,0,0.5)",
+          }}
         >
           Notifications of messages will be sent to your email address. Please
           check your email is correct and also download our app when prompted
           for easy access and direct messaging reply.
         </p>
 
+        {/* Owner directive 2026-11-28 (tenth pass) · form sits on a
+            frosted white panel so field labels + inputs stay readable
+            over the Scaffold Workers background. Backdrop blur is
+            best-effort · browsers that don't support it still get a
+            legible ~94% opaque white. */}
+        <div
+          data-nex-guest-enquiry-form-panel
+          style={{
+            background: "rgba(255,255,255,0.94)",
+            borderRadius: 16,
+            padding: "16px 14px 14px",
+            boxShadow: "0 18px 38px rgba(0,0,0,0.28)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
+        >
         {state === "sent" ? (
           <SentCard shopLabel={shopLabel} accent={accent} onDismiss={onDismiss} />
         ) : (
@@ -620,6 +563,7 @@ export function GuestShopEnquiryPopup({
             </div>
           </form>
         )}
+        </div>
         </div>
       </section>
     </div>

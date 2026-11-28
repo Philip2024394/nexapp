@@ -60,6 +60,14 @@ import {
   type ShopCurrencyCode,
 } from "@/lib/nex-native/shop-locale/data";
 import { ShopCurrencySwitch } from "./_shop-currency-switch";
+// Owner directive 2026-11-28 (ninth pass) · filter icon beside the
+// "Categories" header + long/center panel inside the phone frame.
+import {
+  ShopFilterPanel,
+  EMPTY_SHOP_FILTER_STATE,
+  isShopFilterActive,
+  type ShopFilterState,
+} from "./_shop-filter-panel";
 
 /**
  * Small helper that renders the translated shop UI chrome string
@@ -761,6 +769,47 @@ export function LayoutProductHeroLandscape({
   // the catalog filter via controlled props so the parent owns the
   // active section id. Empty string = no filter (show every product).
   const [categoryId, setCategoryId] = React.useState<string>("");
+  // Owner directive 2026-11-28 (ninth pass) · filter icon beside the
+  // Categories header opens a panel offering Price / Color / Material
+  // / Thread color / Buckle type dimensions. State lives at the layout
+  // level so the filtered product set flows through to CoverCatalog.
+  const [filterOpen, setFilterOpen] = React.useState<boolean>(false);
+  const [filterState, setFilterState] = React.useState<ShopFilterState>(
+    EMPTY_SHOP_FILTER_STATE,
+  );
+  const filteredProducts = React.useMemo(() => {
+    if (!isShopFilterActive(filterState)) return content.products;
+    const wantedColors = new Set(
+      filterState.colors.map((c) => c.toLowerCase()),
+    );
+    return content.products.filter((p) => {
+      if (
+        filterState.priceMin !== null &&
+        typeof p.price_pence === "number" &&
+        p.price_pence < filterState.priceMin
+      ) {
+        return false;
+      }
+      if (
+        filterState.priceMax !== null &&
+        typeof p.price_pence === "number" &&
+        p.price_pence > filterState.priceMax
+      ) {
+        return false;
+      }
+      if (wantedColors.size > 0) {
+        const productColors = (p.colors ?? []).map((c) =>
+          typeof c === "string" ? c.toLowerCase() : "",
+        );
+        const hit = productColors.some((c) => wantedColors.has(c));
+        if (!hit) return false;
+      }
+      // Material / thread / buckle filters pass through unchanged
+      // until delta-F lands the per-product attribute data.
+      return true;
+    });
+  }, [content.products, filterState]);
+  const filterActive = isShopFilterActive(filterState);
   // Owner directive 2026-11-28 (fourth pass) · pass the shop's own
   // country as a seed to the locale provider so the first paint can
   // skip USD when the shop sits in Indonesia / Japan / etc. The IP-
@@ -883,13 +932,74 @@ export function LayoutProductHeroLandscape({
                 ▾
               </span>
             </div>
+            {/* Owner directive 2026-11-28 (ninth pass) · filter icon
+                sits across from the Categories text as a sibling pill.
+                A dot on the icon marks active filters so the user
+                knows the shop is currently filtered. */}
+            <button
+              type="button"
+              data-nex-cover-filter-button
+              data-nex-cover-filter-active={filterActive ? "true" : "false"}
+              aria-label={
+                filterActive
+                  ? "Edit active filters"
+                  : "Open filters"
+              }
+              onClick={() => setFilterOpen(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+                padding: "0 10px",
+                height: 40,
+                borderRadius: 999,
+                background: "transparent",
+                border: "none",
+                color: "#000000",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M3 5h18" />
+                <path d="M6 12h12" />
+                <path d="M10 19h4" />
+              </svg>
+              {filterActive ? (
+                <span
+                  aria-hidden
+                  data-nex-cover-filter-dot
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
+                    background: "#FF7A00",
+                    border: "1.5px solid #fff",
+                  }}
+                />
+              ) : null}
+            </button>
             {/* Thirty-ninth pass · ShopCurrencySwitch removed from
                 this row · lives inside the side drawer now (see
                 `_burger-menu.tsx`). */}
           </div>
           <CoverCatalog
             sections={content.sections}
-            products={content.products}
+            products={filteredProducts}
             peerAccountId={content.ownerAccountId}
             variant="landscape"
             textOnly
@@ -897,6 +1007,14 @@ export function LayoutProductHeroLandscape({
             controlledActiveId={categoryId}
             onActiveIdChange={setCategoryId}
           />
+          {filterOpen ? (
+            <ShopFilterPanel
+              products={content.products}
+              state={filterState}
+              onApply={setFilterState}
+              onDismiss={() => setFilterOpen(false)}
+            />
+          ) : null}
         </div>
         {content.infoPages?.delivery_details && (
           <section style={{ marginTop: 20 }}>

@@ -110,6 +110,23 @@ export interface ProductPageClientProps {
     readonly score: number;
     readonly count: number;
   } | null;
+  /** Owner directive 2026-11-28 (ninth pass) · when the product is
+   *  sold in multiple colors AND the seller has uploaded a dedicated
+   *  image per color, the gallery footer paints one round swatch per
+   *  variant; tapping swaps the main image to that variant's image.
+   *  Shape intentionally matches the per-variant row that the
+   *  upload-form additions in delta F will populate · `color` is a
+   *  valid CSS color string (hex / named / rgb) and `imageUrl` is
+   *  the hosted image URL. Entries whose imageUrl is nullish or
+   *  missing are skipped. Absent / empty prop → no footer renders.
+   *  The real wiring is gated on adding `image_url` to
+   *  `nex_product_variant` (sandbox migration awaiting owner approval
+   *  phrase `APPROVE MIG XXX SANDBOX APPLY (REVISED 2026-11-27)`). */
+  readonly colorVariants?: ReadonlyArray<{
+    readonly color: string;
+    readonly imageUrl: string;
+    readonly label?: string | null;
+  }> | null;
 }
 
 export function ProductPageClient({
@@ -121,6 +138,7 @@ export function ProductPageClient({
   demoMode = false,
   rating = null,
   isGuest = false,
+  colorVariants = null,
 }: ProductPageClientProps): React.JSX.Element {
   const router = useRouter();
   const [demoNotice, setDemoNotice] = React.useState<string | null>(null);
@@ -183,6 +201,42 @@ export function ProductPageClient({
   const [activeImage, setActiveImage] = React.useState<string | null>(
     images[0] ?? null,
   );
+
+  // ---- Lightbox (ninth-pass 2026-11-28) ---------------------------
+  // Owner directive · tapping the main gallery image opens the image
+  // in a larger centered container with left/right arrows to step
+  // through the other real gallery images. No fabricated images ·
+  // the lightbox walks the same `images` array that seeds the thumbs.
+  const [lightboxOpen, setLightboxOpen] = React.useState(false);
+  const activeIndex = React.useMemo(() => {
+    if (!activeImage) return 0;
+    const i = images.indexOf(activeImage);
+    return i < 0 ? 0 : i;
+  }, [activeImage, images]);
+  const openLightbox = React.useCallback(() => {
+    if (images.length === 0) return;
+    setLightboxOpen(true);
+  }, [images.length]);
+  const closeLightbox = React.useCallback(() => setLightboxOpen(false), []);
+  const stepLightbox = React.useCallback(
+    (delta: number) => {
+      if (images.length === 0) return;
+      const next =
+        (activeIndex + delta + images.length) % images.length;
+      setActiveImage(images[next] ?? null);
+    },
+    [activeIndex, images],
+  );
+  React.useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") closeLightbox();
+      else if (e.key === "ArrowLeft") stepLightbox(-1);
+      else if (e.key === "ArrowRight") stepLightbox(+1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxOpen, closeLightbox, stepLightbox]);
 
   // ---- Description / specs expand ---------------------------------
   const [descExpanded, setDescExpanded] = React.useState(false);
@@ -390,34 +444,90 @@ export function ProductPageClient({
         </div>
       </header>
 
-      {/* ── Gallery · vertical thumbs (left) + main image (right) ─
-          Owner directive 2026-11-28 (forty-fourth pass) · the main
-          image now paints directly on the page (no card chrome, no
-          inset panel) · matches the front-card editorial treatment
-          one-for-one. The thumb column always renders four fixed
-          slots — three product-image thumbs + one video slot at the
-          bottom — so the gallery reads the same whether the seller
-          has filled every slot or not. Empty image slots show a
-          subtle outline; the video slot shows a play glyph until
-          the seller attaches a product video. */}
+      {/* ── Gallery · main image (top, full width) + thumb row (below)
+          Owner directive 2026-11-28 (ninth pass) · thumbs + video moved
+          UNDER the main image so the main image can occupy the full
+          width of the phone frame. Tapping the main image opens the
+          lightbox (lightbox block mounted at the end of the page).
+          Supersedes the forty-fourth-pass vertical-thumb-column layout.
+          The thumb row always renders four fixed slots — three
+          product-image thumbs + one video slot at the end — so the
+          strip reads the same whether the seller has filled every slot
+          or not. Empty image slots show a subtle outline; the video
+          slot shows a play glyph until the seller attaches a product
+          video. */}
       <div
         data-nex-product-gallery
+        data-nex-product-gallery-layout="stacked"
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          flexDirection: "column",
+          alignItems: "stretch",
           gap: 10,
         }}
       >
+        <button
+          type="button"
+          data-nex-product-gallery-main
+          data-nex-product-gallery-main-interactive={activeImage ? "true" : "false"}
+          aria-label={
+            activeImage
+              ? `${product.name} · tap to enlarge image`
+              : `${product.name} · no image`
+          }
+          disabled={!activeImage}
+          onClick={openLightbox}
+          style={{
+            width: "100%",
+            aspectRatio: "1 / 1",
+            background: "transparent",
+            border: "none",
+            borderRadius: 0,
+            overflow: "hidden",
+            display: "grid",
+            placeItems: "center",
+            padding: 0,
+            cursor: activeImage ? "zoom-in" : "default",
+          }}
+        >
+          {activeImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={activeImage}
+              alt={product.name}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: INK_DIM,
+              }}
+            >
+              Image coming soon
+            </span>
+          )}
+        </button>
+
         <div
           data-nex-product-gallery-thumbs
+          data-nex-product-gallery-thumbs-orientation="horizontal"
           role="list"
           aria-label="Product images"
           style={{
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "row",
             gap: 8,
-            width: 56,
-            flexShrink: 0,
+            width: "100%",
+            overflowX: "auto",
           }}
         >
           {Array.from({ length: MAX_THUMBS }).map((_, i) => {
@@ -445,6 +555,7 @@ export function ProductPageClient({
                   height: 56,
                   minWidth: 44,
                   minHeight: 44,
+                  flexShrink: 0,
                   borderRadius: 12,
                   background: hasImage ? "#fff" : "transparent",
                   border: isActive
@@ -476,8 +587,8 @@ export function ProductPageClient({
             );
           })}
           {/* Video slot · placeholder container until a product-video
-              field lands on nex_product. Owner directive 2026-11-28
-              (forty-fourth pass) · "1 container for video". */}
+              field lands on nex_product. Ninth-pass 2026-11-28 · lives
+              at the end of the horizontal thumb strip. */}
           <div
             data-nex-product-gallery-video-slot
             role="listitem"
@@ -487,6 +598,7 @@ export function ProductPageClient({
               height: 56,
               minWidth: 44,
               minHeight: 44,
+              flexShrink: 0,
               borderRadius: 12,
               background: "#111418",
               border: "1px solid rgba(0,0,0,0.12)",
@@ -508,47 +620,60 @@ export function ProductPageClient({
           </div>
         </div>
 
-        <div
-          data-nex-product-gallery-main
-          role={activeImage ? undefined : "img"}
-          aria-label={activeImage ? undefined : `${product.name} · no image`}
-          style={{
-            flex: 1,
-            aspectRatio: "1 / 1",
-            background: "transparent",
-            border: "none",
-            borderRadius: 0,
-            overflow: "hidden",
-            display: "grid",
-            placeItems: "center",
-          }}
-        >
-          {activeImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={activeImage}
-              alt={product.name}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          ) : (
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: INK_DIM,
-              }}
-            >
-              Image coming soon
-            </span>
-          )}
-        </div>
+        {/* Owner directive 2026-11-28 (ninth pass) · color-variant
+            swatches footer. Renders only when the seller has uploaded
+            per-color variant images · absent / empty → no footer. Tap
+            a swatch to swap the main image (and keep the lightbox in
+            sync via the shared activeImage state). */}
+        {colorVariants && colorVariants.length > 0 ? (
+          <div
+            data-nex-product-gallery-color-variants
+            role="list"
+            aria-label="Color variants"
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 10,
+              paddingTop: 4,
+            }}
+          >
+            {colorVariants
+              .filter(
+                (v): v is { color: string; imageUrl: string; label?: string | null } =>
+                  typeof v?.color === "string" &&
+                  typeof v?.imageUrl === "string" &&
+                  v.imageUrl.length > 0,
+              )
+              .map((v) => {
+                const isActive = v.imageUrl === activeImage;
+                return (
+                  <button
+                    key={`${v.color}-${v.imageUrl}`}
+                    type="button"
+                    role="listitem"
+                    data-nex-product-color-variant
+                    data-nex-product-color-variant-active={isActive ? "true" : "false"}
+                    aria-label={`Color variant · ${v.label ?? v.color}`}
+                    aria-pressed={isActive}
+                    onClick={() => setActiveImage(v.imageUrl)}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      background: v.color,
+                      cursor: "pointer",
+                      border: isActive
+                        ? `3px solid ${ORANGE}`
+                        : "1px solid rgba(0,0,0,0.12)",
+                      padding: 0,
+                      boxShadow: isActive ? "0 0 0 2px #fff inset" : "none",
+                    }}
+                  />
+                );
+              })}
+          </div>
+        ) : null}
       </div>
 
       {/* ── Title · optional star row · price + stock pill ──────
@@ -1066,6 +1191,172 @@ export function ProductPageClient({
               returnTo={authGate.returnTo}
             />
           </div>
+        </div>
+      ) : null}
+
+      {/* Lightbox · ninth-pass 2026-11-28 · opens on main-image tap.
+          Fixed overlay anchored to the sealed .nex-native-frame
+          containing block (position:fixed inside the transformed
+          ancestor renders inside the phone frame on desktop and
+          full-viewport on <500px). Left / Right arrows + keyboard
+          ←/→ step through the real gallery images. No fabricated
+          images — walks the same `images` array that seeds the
+          thumb strip. */}
+      {lightboxOpen && activeImage ? (
+        <div
+          data-nex-product-lightbox
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${product.name} · image ${activeIndex + 1} of ${images.length}`}
+          onClick={closeLightbox}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(10, 21, 38, 0.86)",
+            zIndex: 110,
+            display: "grid",
+            placeItems: "center",
+            padding: 12,
+          }}
+        >
+          <button
+            type="button"
+            data-nex-product-lightbox-close
+            aria-label="Close enlarged image"
+            onClick={(e) => {
+              e.stopPropagation();
+              closeLightbox();
+            }}
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+              border: "none",
+              fontSize: 18,
+              fontWeight: 900,
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+              lineHeight: 1,
+            }}
+          >
+            <span aria-hidden>×</span>
+          </button>
+
+          {images.length > 1 ? (
+            <button
+              type="button"
+              data-nex-product-lightbox-prev
+              aria-label="Previous image"
+              onClick={(e) => {
+                e.stopPropagation();
+                stepLightbox(-1);
+              }}
+              style={{
+                position: "absolute",
+                left: 6,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.6)",
+                color: "#fff",
+                border: "none",
+                fontSize: 22,
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                lineHeight: 1,
+              }}
+            >
+              <span aria-hidden>‹</span>
+            </button>
+          ) : null}
+
+          {images.length > 1 ? (
+            <button
+              type="button"
+              data-nex-product-lightbox-next
+              aria-label="Next image"
+              onClick={(e) => {
+                e.stopPropagation();
+                stepLightbox(+1);
+              }}
+              style={{
+                position: "absolute",
+                right: 6,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.6)",
+                color: "#fff",
+                border: "none",
+                fontSize: 22,
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                lineHeight: 1,
+              }}
+            >
+              <span aria-hidden>›</span>
+            </button>
+          ) : null}
+
+          <div
+            data-nex-product-lightbox-stage
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              aspectRatio: "1 / 1",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeImage}
+              alt={`${product.name} · image ${activeIndex + 1}`}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </div>
+
+          {images.length > 1 ? (
+            <div
+              data-nex-product-lightbox-counter
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                bottom: 14,
+                left: "50%",
+                transform: "translateX(-50%)",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                background: "rgba(0,0,0,0.5)",
+                padding: "4px 10px",
+                borderRadius: 999,
+              }}
+            >
+              {activeIndex + 1} / {images.length}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
