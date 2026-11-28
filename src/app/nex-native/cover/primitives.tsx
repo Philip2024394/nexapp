@@ -1296,7 +1296,17 @@ export function CoverProductCard({
             backgroundImage: product.image_url
               ? `url(${product.image_url})`
               : `linear-gradient(135deg, var(--nex-accent-faint), var(--nex-panel))`,
-            backgroundSize: "cover",
+            // Owner directive 2026-11-28 (twelfth pass) · Template 15
+            // editorial row uses `contain` so transparent-background
+            // product PNGs (e.g. background-removed tool bags) keep
+            // their transparent margins intact and the shop wallpaper
+            // reads through on the sides. `cover` on a 2.5:1 landscape
+            // frame with a near-square PNG scales the subject up and
+            // crops away ALL transparency, which hid the cutout look
+            // the owner expected. Grid + generic landscape keep `cover`
+            // because their 1:1 / small-thumb framing is designed for
+            // photo-style product shots that should fill the tile.
+            backgroundSize: isLandscape && textOnly ? "contain" : "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
             position: "relative",
