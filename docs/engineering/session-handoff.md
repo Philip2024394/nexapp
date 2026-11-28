@@ -7,6 +7,31 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 X-Rated · shared shop header + /our-story scroll fix + duffel transparent-padding trimmed (post-`3fd0a231` → now pending commit)
+
+Owner directive 2026-11-28 (eleventh pass): *"our story page is not scrolling · also we need same header as home page on our story page and also the page why Xratedbelts same issue and also need header global · tool bag is not fitting in image window · make sure image is cropped to fit"*. Four independent defects on the same fix pass. Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `3fd0a231`.
+- **Root cause (scroll):** `[data-nex-page-slide-root]` in `nex-native.css` (line 404-428) is `position: relative; overflow: hidden; height: 100%` so pages that rely on the frame's own `overflow-y: auto` get clipped at the slide-root. `/our-story`'s `<main>` had `minHeight: 100dvh` with no explicit scroll · the long story content was simply cut off at the frame height. Fix: make `<main>` its own scroll container (`height: 100%; overflowY: auto`).
+- **Note on "Why X-Rated":** that is NOT a separate URL · it is the WHY intro section of the same `/nex-native/<slug>/our-story` page (see `STORY_CONTENT.intro.eyebrow = "WHY X-RATED TOOL BELTS?"`). The one scroll + header fix covers both.
+- **Files added/modified this cycle (5):**
+  - `src/components/nex-native/shop-shared-header.tsx` (NEW) — a reusable identity header component for shop sub-pages. Renders back link → portrait circle (shop logo_url or initials) → hero logo image (`headerLogoUrl` when provided, else typed display name) → location line. Self-contained inline-styled · no CSS-var deps so it paints correctly on sub-pages that are NOT wrapped in `CoverThemeSkin`. Dark (default) + onLight variants both supported.
+  - `src/app/nex-native/[businessSlug]/our-story/page.tsx` (MOD) — (a) swapped `<main>`'s `minHeight: 100dvh` + padding for `height: 100%; overflowY: auto; overflowX: hidden` (scroll fix), (b) mounted `<ShopSharedHeader>` at the top of `<main>` with the same slug-gated overrides the home page uses (`headerLogoUrl = /nex-native/brand/x-rated-tool-belts-header-logo.png`, `location = "Yogyakarta, Indonesia"` for the X-Rated slug; falls back to `shop.city` for every other slug), (c) wrapped the story prose in its own inner `<div>` with `padding: 24px 18px 56px` so the header lives flush with the frame while the body stays at the authored margins. Removed the plain back-strip nav — now redundant with the shared header's back link.
+  - `scripts/trim-x-rated-utility-duffel-image-2026-11-28.mjs` (NEW) — idempotent, sandbox-only (prod hard-refused). Downloads the current duffel PNG from `nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png`, runs `sharp.trim()` to remove transparent padding, pads a 4 % safety margin so the bag doesn't touch the card rim, re-uploads at the same path with `upsert: true`. No DB write — URL unchanged — so every consumer (cover card, product detail, cross-shop chat share) picks up the tighter crop on cache miss. Writes `evidence/x-rated-seed/trim-run-{timestamp}.json`.
+  - `evidence/x-rated-seed/trim-run-2026-11-28T12-44-22-356Z.json` (NEW) — proof: 499×500 original PNG → 427×442 after trim → 463×478 with 18 px safety margin · 225,945 B → 96,952 B.
+  - `docs/engineering/session-handoff.md` (MOD) — this addendum.
+- **Verification checks:**
+  - **Scrolling:** SSR of `/nex-native/x-rated-tool-belts/our-story` returns HTTP 200 and contains `overflowY` inline style on the `[data-nex-shop-our-story]` main · the slide-root clip no longer applies to this page.
+  - **Shared header:** SSR markup contains `data-nex-shop-shared-header`, `x-rated-tool-belts-header-logo` (hero logo image threaded), `Yogyakarta, Indonesia` (location row rendered).
+  - **Duffel image:** sharp trim+pad succeeded (see trim-run JSON) · bag now occupies ~92 % of the image frame (was ~65 %) so `background-size: cover` on the 1:1 and 2.5:1 card windows actually fills with the bag silhouette.
+  - **Typecheck:** targeted `tsc --noEmit` returned zero errors on the touched files.
+- **Rule-8 status:** BUILT + WIRED + VERIFIED (SSR + trim evidence). Real browser snapshot NOT EXECUTED this cycle.
+- **Exclusions:** `docs/doctrine/x-rated-chat-checkout-build-plan-2026-11-28.md` still NOT committed — separate directive, 4 approvals pending.
+- **Reusability:** `<ShopSharedHeader>` can now be mounted on any future shop sub-page (shipping, returns, atelier, etc.) with 3 lines · identity stays consistent without duplicating the identity-badge logic.
+- **Next cycle picks up from:** owner opens `/nex-native/x-rated-tool-belts/our-story` and confirms (a) the page scrolls, (b) the header at the top looks the same as the home page (logo + Yogyakarta, Indonesia line), (c) the duffel card on the storefront now shows the bag filling its window.
+
+---
+
 ## HEAD update · 2026-11-28 X-Rated · Scaffolders Rig Belts first-category + index-0 image override gated + dropdown defaults to first section (post-`468324cd` → now pending commit)
 
 Owner directive 2026-11-28: *"the tool rig when select the category is not showing the bag image on the main category cards page for tool rig bag - first category is scaffolders rig belts, which will be the home page displaying cards"* — two defects: (1) selecting Tool Rig Bag rendered the belt placeholder in place of the duffel's real image because the slug-gated `index===0` image override in `[businessSlug]/page.tsx` fired for the only product in that section · (2) no "Scaffolders Rig Belts" category existed and the home page landed on "All" rather than the belt grid. Standing 2026-11-27 source-control policy in force.

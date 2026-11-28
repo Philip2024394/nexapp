@@ -21,6 +21,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBusinessBySlug } from "@/lib/nex-native/business-service";
+import { ShopSharedHeader } from "@/components/nex-native/shop-shared-header";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -278,51 +279,56 @@ export default async function OurStoryPage({
   const shopHref = `/nex-native/${encodeURIComponent(businessSlug)}`;
   const chatHref = `${shopHref}?open-chat=1`;
 
+  // Owner directive 2026-11-28 (eleventh pass) · shop sub-pages must
+  // mount the same shop identity header that the home page shows.
+  // Slug-gated overrides (header logo + "Yogyakarta, Indonesia")
+  // mirror the live rules in /[businessSlug]/page.tsx so identity is
+  // consistent between the storefront and the story sub-page.
+  const headerLogoUrl =
+    businessSlug === "x-rated-tool-belts"
+      ? "/nex-native/brand/x-rated-tool-belts-header-logo.png"
+      : null;
+  const headerLocation =
+    businessSlug === "x-rated-tool-belts"
+      ? "Yogyakarta, Indonesia"
+      : (shop.city ?? null);
+
   return (
     <main
+      // Owner directive 2026-11-28 (eleventh pass) · fix scrolling.
+      // The segment layout's `[data-nex-page-slide-root]` is
+      // `height: 100%; overflow: hidden` (see nex-native.css line
+      // 404-428) · pages that rely on the frame's own
+      // `overflow-y: auto` get clipped because the slide-root takes
+      // 100 % of the frame. Make this page its OWN scroll container
+      // so the long story content actually scrolls inside the frame.
       style={{
-        minHeight: "100dvh",
+        height: "100%",
+        overflowY: "auto",
+        overflowX: "hidden",
         background: PALETTE.bg,
         color: PALETTE.ink,
         fontFamily: SANS,
-        padding: "28px 18px 56px",
       }}
       data-nex-shop-our-story
       data-nex-shop-our-story-slug={businessSlug}
     >
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        {/* Back strip */}
-        <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 22,
-            fontSize: 12,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.12em",
-            color: PALETTE.inkDim,
-          }}
-        >
-          <Link
-            href={shopHref}
-            data-nex-shop-our-story-back
-            style={{
-              color: PALETTE.accentDeep,
-              textDecoration: "none",
-              borderBottom: `1px solid ${PALETTE.accent}`,
-              paddingBottom: 2,
-            }}
-          >
-            ← Back to shop
-          </Link>
-          <span aria-hidden style={{ opacity: 0.45 }}>
-            ·
-          </span>
-          <span>{shop.display_name ?? businessSlug}</span>
-        </nav>
+      {/* Shared shop identity header · matches the home page */}
+      <ShopSharedHeader
+        shopSlug={businessSlug}
+        displayName={shop.display_name ?? businessSlug}
+        portraitUrl={shop.logo_url ?? null}
+        headerLogoUrl={headerLogoUrl}
+        location={headerLocation}
+      />
 
+      <div
+        style={{
+          maxWidth: 720,
+          margin: "0 auto",
+          padding: "24px 18px 56px",
+        }}
+      >
         {/* Area 1 · Why */}
         <StoryAreaView area={story.intro} />
 

@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-11-28T12:44:22.359Z",
+  "product_id": "7fe7b701-11b3-4949-a43a-47c7570998f7",
+  "source": {
+    "bucket": "nex-business-assets",
+    "path": "x-rated-tool-belts/products/utility-duffel-s.png",
+    "bytes": 225945,
+    "width": 499,
+    "height": 500
+  },
+  "trim": {
+    "width": 427,
+    "height": 442,
+    "offset_top": -27,
+    "offset_left": -38
+  },
+  "output": {
+    "path": "x-rated-tool-belts/products/utility-duffel-s.png",
+    "bytes": 96952,
+    "content_type": "image/png",
+    "margin_px": 18,
+    "public_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png"
+  },
+  "db_updated": false
+}
