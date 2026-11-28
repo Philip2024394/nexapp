@@ -7,6 +7,36 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 X-Rated Utility Duffel Bag S seeded into sandbox (post-`c4f313a0` → now pending commit)
+
+Owner directive 2026-11-28 (10-instruction build directive, verbatim intent): add a real X-Rated Tool Belts Utility Duffel (Small) product — name `Black X-Rated Utility Duffel Bag` · category `Tool Rig Bag` (new shop section) · price **£7.50 GBP** (explicit: not £4.50, not £45.00) · size S 30×20×12 · materials `Cordura`, `Cordura 600D`, `polyester` · full description preserved verbatim · use existing product-media + product-creation architecture · SANDBOX ONLY (`kdstoyyeygcopkogqsyv`) · verify DB record + storefront + basket flow · commit + push under standing 2026-11-27 policy. Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `c4f313a0`.
+- **Files added this cycle (6 new · 0 modified · 0 deleted, plus handoff):**
+  - `scripts/_inspect-x-rated-before-seed-2026-11-28.mjs` (NEW) — read-only inspection: hard-refuses prod ref, confirms X-Rated business row, lists existing products + sections, enumerates `nex_product` column shape, checks storage buckets. Writes `evidence/x-rated-seed/pre-insert-inspection.json`.
+  - `scripts/_inspect-x-rated-detail-2026-11-28.mjs` (NEW) — second-pass read-only inspection: samples existing X-Rated products for `department_id`/`category_id`/`image_url` conventions, counts department+category usage repo-wide, surfaces FK constraints (`nex_product.section_id → nex_product_section(id) ON DELETE SET NULL`). Writes `evidence/x-rated-seed/detail-inspection.json`.
+  - `scripts/seed-x-rated-utility-duffel-s-2026-11-28.mjs` (NEW) — idempotent sandbox seed. Hard-refuses `ijvqdvsvwtwxzcqmoqit`, requires `kdstoyyeygcopkogqsyv`. Three phases: (1) sharp palette-quantise PNG (3.15 MB → 808 KB, under 2 MB bucket cap · JPEG fallback path if palette PNG still > 2 MB, not triggered) · (2) upload to `nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png` via service-role client with `upsert:true` + `cacheControl:"31536000"` · (3) pg transaction: idempotent section upsert by `(business_id, name)`, product upsert by `(business_id, sku)` with BEGIN/COMMIT/ROLLBACK. Writes `evidence/x-rated-seed/seed-run-{timestamp}.json`.
+  - `evidence/x-rated-seed/pre-insert-inspection.json` (NEW, 11 KB).
+  - `evidence/x-rated-seed/detail-inspection.json` (NEW, 2 KB).
+  - `evidence/x-rated-seed/seed-run-2026-11-28T12-14-24-154Z.json` (NEW, 4 KB).
+  - `docs/product/x-rated-tool-rig-bag-s-2026-11-28.md` (NEW) — reviewed pre-seed payload doc (informational · superseded by seed-run evidence for final values).
+- **Seed run result (sandbox `kdstoyyeygcopkogqsyv`):**
+  - Section id `0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde` · name `Tool Rig Bag` · created on `nex_business` `22222222-2222-4222-8222-222222299902`.
+  - Product id `7fe7b701-11b3-4949-a43a-47c7570998f7` · sku `XRTB-018` · name `Black X-Rated Utility Duffel Bag` · `price_pence=750` · `currency=GBP` · `status=live` · `stock_status=in_stock` · `department_id=tools_diy_construction` · `category_id=bags_luggage` · `section_id=0a33717d-…` · `image_url=https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png` · spec canonical (Cordura/Cordura 600D/polyester · 30×20×12 cm · S · water-resistant · 4 features verbatim).
+- **Verification checks:**
+  - **Image** — public URL returned HTTP 200 · `Content-Type: image/png` · `Content-Length: 828102` · Cloudflare CDN.
+  - **DB readback** — `SELECT` post-insert matched payload field-for-field (price, currency, status, image_url, sku, department_id, category_id, section_id, spec).
+  - **Storefront SSR** — `GET /nex-native/x-rated-tool-belts` → HTTP 200 · 166,459 bytes · product-detail JSON-LD includes `"name":"Black X-Rated Utility Duffel Bag"`, `"priceCurrency":"GBP"`, `"price":"7.50"`, `"availability":"https://schema.org/InStock"`.
+  - **Route probes (all HTTP 200):** `/nex-native/cart` (1.54s), `/nex-native/chat/peer/<ownerId>?pending_product=7fe7b701-…` (4.22s), `/nex-native/x-rated-tool-belts` reload (2.20s).
+- **Rule-8 status:** BUILT + WIRED + VERIFIED (DB · image · storefront · product-detail · chat-handoff route · cart route all reachable and well-formed on sandbox). No real browser-rendered screenshot captured this cycle · Playwright snapshot is NOT EXECUTED.
+- **Flagged for owner (not a defect):** currency inconsistency — this product is GBP · the other 17 X-Rated products in sandbox are IDR. Followed explicit directive; owner may choose to normalise currency fleet-wide later. Category choice `bags_luggage` is a judgment call (duffel IS a bag · observed in use elsewhere · other X-Rated products use `other`); owner can edit via management UI.
+- **Exclusions:** `docs/doctrine/x-rated-chat-checkout-build-plan-2026-11-28.md` NOT committed this cycle — belongs to the separate X-Rated Chat Checkout directive which is still awaiting owner approvals (migration scope · fine-state strategy · attachment naming · sandbox phrase).
+- **Next cycle picks up from:** either (1) owner reviews live sandbox listing at `http://localhost:3008/nex-native/x-rated-tool-belts` + product detail + optional category normalisation, or (2) owner issues the four pending approvals for the X-Rated Chat Checkout build plan.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched (no prod DB, no prod migration, no prod deploy, no main push, no live Stripe/PayPal).
+
+---
+
 ## HEAD update · 2026-11-28 ninth + tenth pass · filter icon + panel, gallery restructure + lightbox + color-variant UI, full-page background on enquiry popup (post-`eb0b59be` → now `461469f0`)
 
 Owner directive 2026-11-28 (ninth-pass, verbatim): *"ACROSS FROM TEXT Categories ADD FILTER ICON WHEN SELECTED USER CAN FILTER FOR PRICE - MATERIAL - THREAD COLOR - BUCKLE TYPE AND ANY OTHER . THE FILTER OPENS INSIDE THE PHONE SCREEN CONTAINER LONG AND CENTER STYLE AND IS WORLD CLASS DESIGN UI LAYOUT - PRODUCT PAGE FOR XRATED BELTS MOVE THE THUMBNAIL IMAGE AND VIDEO UNDER THE IMAGE , ALLOWING IMAGE FULL WIDTH ,WHEN IMAGE IS CLIKED IT WILL OPEN IN LARGER CONTAINER WITH ARROW ON LEFT SIDE AND RIGHT SIDE FOR NEXT IMAGE IF NEXT IMAGES HAVE . AND IF THE BELT IS AVILABLE IN DIFFERENT COLORS THE ROUND BUTTONS WILL APEAR FOOTER OF THE CONTAINER IF SELECTED WILL CHANGE THE IMAGE TO THAT COLOR VARIENT IMAGE . WE MUST MAKE SURE THESE SETTINGS ARE ALSO IN THE UPLOAD PAGE WHAT WE ARE ADDONG TO FRONT APP"*.

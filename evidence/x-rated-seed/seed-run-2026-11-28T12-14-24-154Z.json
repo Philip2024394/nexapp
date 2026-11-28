@@ -1,0 +1,107 @@
+{
+  "imageUrl": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png",
+  "imageBytes": 828102,
+  "imageContentType": "image/png",
+  "business": {
+    "id": "22222222-2222-4222-8222-222222299902",
+    "slug": "x-rated-tool-belts",
+    "display_name": "X-Rated Tool Belts",
+    "owner_account_id": "11111111-1111-4111-8111-111111111112"
+  },
+  "section": {
+    "id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde",
+    "name": "Tool Rig Bag",
+    "created": true
+  },
+  "product": {
+    "id": "7fe7b701-11b3-4949-a43a-47c7570998f7",
+    "business_id": "22222222-2222-4222-8222-222222299902",
+    "name": "Black X-Rated Utility Duffel Bag",
+    "description": "A compact, water-resistant utility duffel designed to store and transport your tool belt rig and tools.\n\nMade using Cordura, Cordura 600D and polyester materials, the bag provides a practical storage solution for working professionals. An external pocket provides convenient storage for scaffolders' cards or site drawings.\n\nKeep your tool belt rig neatly stored away at the end of the day or transport it easily from one job site to the next.",
+    "price_pence": "750",
+    "currency": "GBP",
+    "status": "live",
+    "created_at": "2026-11-28T12:14:21.095Z",
+    "updated_at": "2026-11-28T12:14:21.095Z",
+    "image_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png",
+    "gallery_urls": null,
+    "tags": null,
+    "stock_status": "in_stock",
+    "sku": "XRTB-018",
+    "dispatch_time": null,
+    "sample_request_time": null,
+    "spec": {
+      "brand": "X-Rated Tool Belts",
+      "condition": "new",
+      "materials": [
+        "Cordura",
+        "Cordura 600D",
+        "polyester"
+      ],
+      "additional": {
+        "features": [
+          "external pocket for scaffolders' cards or site drawings",
+          "compact for carrying tool belt rigs and tools",
+          "keeps the tool belt rig neatly stored away",
+          "convenient for transporting between job sites"
+        ],
+        "size_label": "S",
+        "water_resistance": "water-resistant"
+      },
+      "dimensions": {
+        "d": 12,
+        "h": 20,
+        "w": 30,
+        "unit": "cm"
+      }
+    },
+    "section_id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde",
+    "size_chart_url": null,
+    "department_id": "tools_diy_construction",
+    "category_id": "bags_luggage",
+    "__action": "inserted"
+  },
+  "verify_read_back": {
+    "id": "7fe7b701-11b3-4949-a43a-47c7570998f7",
+    "name": "Black X-Rated Utility Duffel Bag",
+    "price_pence": "750",
+    "currency": "GBP",
+    "status": "live",
+    "image_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png",
+    "sku": "XRTB-018",
+    "department_id": "tools_diy_construction",
+    "category_id": "bags_luggage",
+    "section_id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde",
+    "section_name": "Tool Rig Bag",
+    "spec": {
+      "brand": "X-Rated Tool Belts",
+      "condition": "new",
+      "materials": [
+        "Cordura",
+        "Cordura 600D",
+        "polyester"
+      ],
+      "additional": {
+        "features": [
+          "external pocket for scaffolders' cards or site drawings",
+          "compact for carrying tool belt rigs and tools",
+          "keeps the tool belt rig neatly stored away",
+          "convenient for transporting between job sites"
+        ],
+        "size_label": "S",
+        "water_resistance": "water-resistant"
+      },
+      "dimensions": {
+        "d": 12,
+        "h": 20,
+        "w": 30,
+        "unit": "cm"
+      }
+    }
+  },
+  "sandbox_urls": {
+    "storefront_shop": "http://localhost:3008/nex-native/x-rated-tool-belts",
+    "product_detail": "http://localhost:3008/nex-native/x-rated-tool-belts/7fe7b701-11b3-4949-a43a-47c7570998f7",
+    "manage_orders_list": "http://localhost:3008/nex-native/manage/products"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "timestamp": "2026-11-28T12:12:38.339Z",
+  "sample_products": [
+    {
+      "id": "b5f037d2-0edc-499c-888f-410f259170ac",
+      "name": "Classic Leather Tool Belt · 8-Pocket",
+      "department_id": "tools_diy_construction",
+      "category_id": "other",
+      "image_url": null,
+      "gallery_urls": null,
+      "stock_status": "in_stock",
+      "sku": "XRTB-001",
+      "dispatch_time": null,
+      "section_id": null,
+      "spec": {}
+    },
+    {
+      "id": "de1e7350-66c1-4f0f-b632-44872151b2e8",
+      "name": "Heavy-Duty Framer Rig",
+      "department_id": "tools_diy_construction",
+      "category_id": "other",
+      "image_url": null,
+      "gallery_urls": null,
+      "stock_status": "in_stock",
+      "sku": "XRTB-002",
+      "dispatch_time": null,
+      "section_id": null,
+      "spec": {}
+    },
+    {
+      "id": "7a9d12ea-e4f0-4aba-8288-dc8506ac1a4b",
+      "name": "Electrician's Pouch · Compact",
+      "department_id": "tools_diy_construction",
+      "category_id": "other",
+      "image_url": null,
+      "gallery_urls": null,
+      "stock_status": "in_stock",
+      "sku": "XRTB-003",
+      "dispatch_time": null,
+      "section_id": null,
+      "spec": {}
+    }
+  ],
+  "all_departments": [
+    {
+      "department_id": "tools_diy_construction",
+      "n": 17
+    },
+    {
+      "department_id": "everything_else",
+      "n": 16
+    },
+    {
+      "department_id": "jewellery_watches",
+      "n": 3
+    },
+    {
+      "department_id": "fashion_clothing",
+      "n": 3
+    }
+  ],
+  "all_categories": [
+    {
+      "category_id": "other",
+      "n": 28
+    },
+    {
+      "category_id": "unclassified",
+      "n": 5
+    },
+    {
+      "category_id": "watches",
+      "n": 3
+    },
+    {
+      "category_id": "bags_luggage",
+      "n": 3
+    }
+  ],
+  "foreign_keys": [
+    {
+      "conname": "nex_product_business_id_fkey",
+      "def": "FOREIGN KEY (business_id) REFERENCES nex_business(id) ON DELETE RESTRICT"
+    },
+    {
+      "conname": "nex_product_section_id_fkey",
+      "def": "FOREIGN KEY (section_id) REFERENCES nex_product_section(id) ON DELETE SET NULL"
+    }
+  ]
+}
