@@ -38,6 +38,34 @@
     "NEX_PUBLIC_SITE_URL_IE": "https://nexcorner.com",
     "NEX_PUBLIC_SITE_URL_WW": "https://nexcorner.com"
   },
+  // Owner directive 2026-11-28 · XRATEDBELTS.COM vanity domain.
+  // Routes bind the production Worker to the customer-facing hostnames
+  // for the X-Rated Tool Belts shop. These take effect ONLY on the
+  // NEXT production deploy and require:
+  //   1. DNS for xratedbelts.com already pointing at Cloudflare
+  //      (either via NS change to Cloudflare, or via Cloudflare-hosted
+  //       zone with the apex + www proxied).
+  //   2. The `xratedbelts.com` zone added to this Cloudflare account.
+  //   3. Owner-authorised `workflow_dispatch` of cloudflare-deploy.yml
+  //      targeting production.
+  // Deploy is intentionally NOT automatic; the push that lands these
+  // routes does not trigger a production deploy (release-audit branch
+  // deploys preview only · production is manual-dispatch).
+  // Using `custom_domain: true` so Cloudflare automatically provisions
+  // the A/AAAA records that point the hostnames at the Worker and
+  // issues the Universal SSL certificate. Prerequisite: the
+  // `xratedbelts.com` zone must exist in this Cloudflare account
+  // before `wrangler deploy` is run against production.
+  "routes": [
+    {
+      "pattern": "xratedbelts.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.xratedbelts.com",
+      "custom_domain": true
+    }
+  ],
   // Crons declared here stay DORMANT (commented) until Vercel crons are
   // confirmed off. Enabling this list is the second deploy per the
   // staged cutover plan.

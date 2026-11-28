@@ -17,6 +17,10 @@ import {
 } from "@/lib/nex-native/seo/site-url-resolver";
 import { loadPublicShopsForSitemap } from "@/lib/nex-native/seo/sitemap-service";
 import { isPrelaunchModeOn } from "@/lib/nex-native/prelaunch/feature-flag";
+import {
+  resolveVanityForCurrentRequest,
+  vanityOrigin,
+} from "@/lib/nex-native/vanity-domains/host-identity";
 
 type ChangeFrequency = NonNullable<
   MetadataRoute.Sitemap[number]["changeFrequency"]
@@ -97,6 +101,26 @@ const PRELAUNCH_STATIC_ENTRIES: readonly StaticEntry[] = [
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const entries: MetadataRoute.Sitemap = [];
+
+  // Vanity domain · the sitemap served on xratedbelts.com must enumerate
+  // ONLY the public, customer-facing surfaces of that shop under the
+  // vanity origin. Private paths, nexcorner marketing, directory and
+  // cross-shop URLs are intentionally omitted · the vanity-host sitemap
+  // is a single-shop crawl surface.
+  const vanity = await resolveVanityForCurrentRequest();
+  if (vanity) {
+    const base = vanityOrigin(vanity);
+    // Apex host serves the shop home at "/" via the middleware rewrite.
+    const vanityStaticPaths: readonly StaticEntry[] = [
+      { path: "/", changeFrequency: "daily", priority: 1.0 },
+      { path: "/our-story", changeFrequency: "monthly", priority: 0.7 },
+    ];
+    for (const spec of vanityStaticPaths) {
+      const entry = emit(base, spec.path, now, spec.changeFrequency, spec.priority);
+      if (entry) entries.push(entry);
+    }
+    return entries;
+  }
 
   // NEX prelaunch · narrow sitemap matching the public allowlist.
   if (isPrelaunchModeOn()) {

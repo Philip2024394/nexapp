@@ -53,6 +53,12 @@ import {
   KNOWN_DEVICE_MAX_AGE_SECONDS,
   KNOWN_DEVICE_VALUE,
 } from "@/lib/nex-native/app/known-device-cookie";
+// Owner directive 2026-11-28 · XRATEDBELTS.COM vanity-domain setup.
+// Pure imports only · no I/O · safe to run at the Edge. See
+// src/lib/nex-native/vanity-domains/ for the host → shop mapping
+// and the rewrite decision function.
+import { findVanityByHost, isWwwHost } from "@/lib/nex-native/vanity-domains/map";
+import { resolveVanityAction } from "@/lib/nex-native/vanity-domains/rewrite-path";
 // L-008 (2026-11-26) · the NEX-024 "account-active seen" cookie is
 // NOT written in middleware · see the comment block below where the
 // handler was removed. The write lives in the Route Handler
@@ -226,6 +232,56 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const pathname = req.nextUrl.pathname;
   const flagOn = isPrelaunchModeOn();
   const cid = resolveCorrelationId(req);
+
+  // ── Vanity-domain rewrite layer ───────────────────────────────────
+  // Owner directive 2026-11-28 · when the request's Host header is a
+  // registered vanity domain (e.g. xratedbelts.com), apply host-based
+  // routing BEFORE every other decision so the customer sees the
+  // vanity URL and the app renders the mapped NEX shop.
+  //
+  // Decisions:
+  //   · www.xratedbelts.com/*  → 308 redirect to xratedbelts.com/*
+  //   · xratedbelts.com/       → rewrite to /nex-native/x-rated-tool-belts
+  //   · xratedbelts.com/our-story → rewrite to /nex-native/<slug>/our-story
+  //   · xratedbelts.com/product/<id> → rewrite to /nex-native/product/<id>
+  //   · framework internals and already-internal /nex-native paths
+  //     pass through untouched.
+  //
+  // Rewrites preserve the browser URL (no location change). The
+  // CoverThemeSkin + shop route render exactly as if the customer
+  // had visited /nex-native/x-rated-tool-belts on the canonical host.
+  const hostHeader = req.headers.get("host");
+  const vanity = findVanityByHost(hostHeader);
+  if (vanity) {
+    const action = resolveVanityAction(
+      pathname,
+      vanity,
+      isWwwHost(hostHeader, vanity),
+    );
+    if (action.kind === "www_redirect") {
+      const target = req.nextUrl.clone();
+      target.host = action.targetHost;
+      // Preserve path + search as-is.
+      return attachCid(NextResponse.redirect(target, 308), cid);
+    }
+    if (action.kind === "rewrite") {
+      const target = req.nextUrl.clone();
+      target.pathname = action.internalPath;
+      // search preserved by clone()
+      const rewrite = NextResponse.rewrite(target);
+      // Mark the response so downstream can observe vanity context
+      // (telemetry, canonical-URL polish). Harmless header for
+      // non-vanity requests (never set).
+      rewrite.headers.set("x-nex-vanity-host", vanity.host);
+      rewrite.headers.set("x-nex-vanity-slug", vanity.shopSlug);
+      // Still run the auth-refresh pass so sessions stay valid.
+      const refreshed = await refreshNexAuthSession(req, rewrite);
+      return attachCid(refreshed, cid);
+    }
+    // passthrough · fall through to the rest of the pipeline. The
+    // auth refresh + CID attach at the end of this function will
+    // still run for passthrough responses.
+  }
 
   // Flag OFF · path was not matched by the pre-prelaunch matcher ·
   // return a clean pass-through. 2026-11-20 · route through attachCid

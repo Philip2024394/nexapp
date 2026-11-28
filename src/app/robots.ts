@@ -24,6 +24,10 @@ import {
 } from "@/lib/nex-native/seo/site-url-resolver";
 import { isPrelaunchModeOn } from "@/lib/nex-native/prelaunch/feature-flag";
 import { listPublicAllowlistSnapshot } from "@/lib/nex-native/prelaunch/allowlist";
+import {
+  resolveVanityForCurrentRequest,
+  vanityOrigin,
+} from "@/lib/nex-native/vanity-domains/host-identity";
 
 const ALLOWED_SEARCH_BOTS: readonly string[] = [
   "Googlebot",
@@ -47,7 +51,44 @@ const DISALLOWED_TRAINING_BOTS: readonly string[] = [
  *  buying guides are allow-crawled. Everything else is disallowed for
  *  every user-agent. When the flag is off, the pre-existing public /
  *  private partition is returned unchanged. */
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  // Vanity domain · emit a shop-scoped robots policy that points at the
+  // vanity-host sitemap and references the vanity origin as `host`. The
+  // allow/disallow rules themselves are unchanged from the NEX default
+  // (search bots allowed on public surfaces, training bots blanket
+  // Disallow, private prefixes blocked for everyone).
+  const vanity = await resolveVanityForCurrentRequest();
+  if (vanity) {
+    const vanityBase = vanityOrigin(vanity);
+    const vanitySitemap = assertProdSafeUrl(
+      `${vanityBase}/sitemap.xml`,
+      "robots.sitemap (vanity)",
+    );
+    const privateDisallow: readonly string[] = PRIVATE_PATH_PREFIXES.map(
+      (p) => `${p}/`,
+    );
+    return {
+      rules: [
+        ...ALLOWED_SEARCH_BOTS.map((bot) => ({
+          userAgent: bot,
+          allow: ["/"],
+          disallow: [...privateDisallow],
+        })),
+        ...DISALLOWED_TRAINING_BOTS.map((bot) => ({
+          userAgent: bot,
+          disallow: ["/"],
+        })),
+        {
+          userAgent: "*",
+          allow: ["/"],
+          disallow: [...privateDisallow],
+        },
+      ],
+      sitemap: vanitySitemap,
+      host: vanityBase,
+    };
+  }
+
   const base = nexSiteUrl();
   const sitemapUrl = assertProdSafeUrl(`${base}/sitemap.xml`, "robots.sitemap");
 
