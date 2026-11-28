@@ -1,9 +1,9 @@
-# Shop Chat First-Message Popup · Design Document (REVISED)
+# Shop Chat First-Message / Guest Enquiry · Design Document (Rev 3)
 
 **Owner-authorised:** 2026-11-28
 **Author:** engineering
-**Status:** DRAFT · awaiting owner sign-off before implementation
-**Scope:** ALL nexapp shop templates (course-correction 2026-11-28 supersedes X-Rated-first scope)
+**Status:** DRAFT Rev 3 · first implementable revision · awaiting named approvals before mutating-code begins
+**Scope:** X-Rated Tool Belts first, then every shop template, under the new owner constraint "separate from E2E NEX Chat unless an approved secure architecture supports integration · no plaintext storage · no encryption weakening".
 
 ---
 
@@ -11,22 +11,69 @@
 
 | Rev | Date | Change | Driver |
 |---|---|---|---|
-| 1 | 2026-11-28 | Initial design: separate `nex_shop_enquiry` channel distinct from NEX Chat, guests stay guests, email-only reply. | Owner brief earlier 2026-11-28. |
-| 2 | 2026-11-28 | **Course correction** — pop-up details activate the visitor's NEX account, the first message enters real NEX Chat with the shop owner, same flow across every shop template. | Owner message 2026-11-28: *"same flow for all shop templates — user can send message into the chat after fill out the details on pop up container first time and it appears in chat and their account active. correct"* |
+| 1 | 2026-11-28 | Separate `nex_shop_enquiry` channel distinct from NEX Chat, plaintext storage intentional, email-only reply, guests stay guests. | Owner brief earlier 2026-11-28. |
+| 2 | 2026-11-28 | Pop-up details activate NEX account, first message enters real NEX Chat. Required relaxing the E2E plaintext-freeze seal for `shop_first_message`. | Owner course-correction mid-session. |
+| **3** | **2026-11-28** | **Final architecture.** Separate channel (Rev 1 shape) BUT with no plaintext storage anywhere — email is the single source of truth for the message body, DB stores only non-reversible metadata. Merchant replies via email thread. | Owner constraint 2026-11-28 (post-push 7eda0b7f): *"Keep this separate from ordinary E2E NEX Chat unless an approved secure architecture supports the integration. Do not introduce plaintext storage or weaken existing encryption."* |
 
-Rev 1's data-model (new `nex_shop_enquiry` tables, separate HQ "Shop Enquiry" channel) is **dropped**. Rev 2 layers on top of the existing peer-chat + provisional-account infrastructure instead of parallel tables.
+Rev 2's "enters NEX Chat with account active" direction is **dropped** because it required relaxing the sealed 2026-11-09 plaintext-freeze on `nex_peer_message`, which the owner has now explicitly forbidden.
+
+Rev 3 reconciles the two constraints: separate from NEX Chat ∧ no new plaintext storage. The reconciling pattern is **"email-as-body"** — the enquiry body is delivered directly to the merchant's email and never persisted in NEX. The DB stores only hashed sender-identity + timestamp + status for inbox listing and replay-prevention.
 
 ---
 
-## 1 · Objective (course-corrected)
+## 1 · Objective (Rev 3)
 
-Build a single pop-up container that lets a first-time shop visitor **send a chat message to the shop owner in one step**. Submitting the form:
+> Customer opens X-Rated shop → presses Contact Shop → enters name, telephone, email, country and message → submits → enquiry reaches X-Rated HQ inbox → merchant replies through a verified delivery channel. — Owner, 2026-11-28.
 
-1. Activates a NEX account using the submitted details (name, phone, email, country).
-2. Delivers the visitor's first message into the real NEX Chat conversation with the shop owner.
-3. Routes the visitor into that chat screen afterwards, with Install-NEX invitation shown per existing PWA rules.
+The pop-up is a single-step guest-enquiry form. On submit:
 
-This replaces the current two-button `ShopChatRegistrationPopup` (route-to-signup pattern) with an inline form + first-message pattern. The flow is identical on every shop template (X-Rated, cover, future verticals).
+1. The message body is sent as an email to the shop owner's verified merchant email (verified delivery channel #1).
+2. A metadata-only row is persisted in `nex_shop_enquiry` — hashed sender identity, timestamp, status, no body, no recoverable plaintext.
+3. The HQ shop inbox displays the row with "message delivered to your email at <merchant-address>".
+4. Merchant replies by replying to the email; reply hits the customer's submitted address (verified delivery channel #2).
+5. Visitor is shown a confirmation and the existing "Install NEX" invitation per the 2026-11-24 PWA timing rules.
+
+Scope is X-Rated Tool Belts first; the same pop-up, endpoint, and email adapter are reused unchanged by every shop template once X-Rated is proven.
+
+This supersedes Rev 2's "message appears in NEX Chat" direction.
+
+---
+
+## 1A · Why email-as-body is the chosen reconciliation
+
+The owner has two overlapping constraints that any Rev 3 must satisfy simultaneously:
+
+- **C1** — no weakening of the 2026-11-09 device-only E2E seal for `nex_peer_message`.
+- **C2** — no new plaintext storage anywhere.
+
+C1 rules out Rev 2 (which persisted a plaintext row in `nex_peer_message` under a relaxed freeze flag).
+C2 rules out Rev 1's original `nex_shop_enquiry.message_body text NOT NULL` column.
+
+Three architectures were considered for Rev 3; only one meets both:
+
+| Option | Body location | Verdict |
+|---|---|---|
+| (a) Encrypt-at-rest in a new table (server-side symmetric key) | Encrypted blob in DB | Rejected — "encrypted at rest" is not the same as the device-only E2E seal; it's a plaintext-equivalent for anyone with server access. Violates spirit of C2. |
+| (b) Public-key encrypt to merchant's uploaded public key | Ciphertext in DB, decryption client-side | Rejected — merchants today don't have an NEX device-key chain; would require new keyring infra and reliable merchant device onboarding before shop enquiries are usable at all. Blocks launch. |
+| **(c) Email-as-body · metadata-only DB row** | **Only in the email provider's transit** | **Chosen.** No DB plaintext. No new encryption subsystem. Reuses the already-planned email adapter. Verified delivery proof = provider's 2xx+message-id. Reply path is the email thread. |
+
+Trade-offs of (c), documented honestly:
+
+- The email provider (e.g. Resend/Postmark/Brevo) now holds the plaintext transiently in their logs. Their retention policy becomes part of NEX's data-handling surface. This must be disclosed in the shop's privacy copy.
+- Merchants without a working email address cannot receive enquiries. Onboarding gate: `nex_business.contact_email` must be set and verified before the shop's FAB enables the pop-up. Shops without a verified email render the FAB in a disabled state with "This shop is not accepting enquiries yet" copy.
+- Attachment flow is deferred — Phase 1 is text-only. Image attachments would require either the provider's inbound-mail features (complex) or a separate authenticated upload surface (out of scope).
+
+---
+
+> **Rev 3 note.** §2–§11 below were drafted for Rev 2 (activate-account + NEX-Chat architecture). Where they still apply (field list, country default, rate-limit, popup caller enumeration, install-timing, honesty copy) they remain authoritative. Where they describe account activation, peer-chat writes, or the `shop_first_message` plaintext-freeze relax, **Rev 3 §1 + §1A supersede them**.
+> Owner decisions carried forward into Rev 3:
+> - §5.1 → **Replace the two-button popup** (not augment).
+> - §5.2 → **No account creation in this flow** (visitor stays a guest; email is the identity).
+> - §5.3 → **(c) Email-as-body** (not Q, not R).
+> - §5.4 → **Merchant email is the delivery channel**, not a side-channel notification.
+> - §5.6 → **New rate-limit bucket `shop_enquiry_submit`** — IP-hash scoped. Sandbox migration required · named approval phrase required.
+> - §5.7 → N/A under Rev 3 (no account minted).
+> - §5.10 → N/A under Rev 3 (no provisional to merge).
 
 ---
 
@@ -34,12 +81,11 @@ This replaces the current two-button `ShopChatRegistrationPopup` (route-to-signu
 
 | Term | Meaning |
 |---|---|
-| **Pop-up** | The inline modal that collects details + first message. Replaces today's two-button `ShopChatRegistrationPopup`. |
-| **First-time visitor** | Any shop cover visitor whose session is not yet a NEX account AND not yet a provisional account. |
-| **Returning provisional** | A visitor whose cookie already resolves to a provisional account (per `resolveNexAppOrProvisionalSession`). Pop-up is skipped; they land directly in the peer chat. |
-| **Returning full account** | A signed-in NEX user. Pop-up is skipped; existing behaviour unchanged (`router.push('/nex-native/<slug>?open-chat=1')`). |
-| **Shop owner** | `nex_business.owner_account_id`. |
-| **Active account** | Whatever the owner's product decision §5.2 fixes to — provisional (fastest, lowest friction, no email verification) OR fully-verified (highest trust, requires email click). Both options analysed below. |
+| **Pop-up** | The inline modal collecting name/phone/email/country/message. Replaces today's two-button `ShopChatRegistrationPopup` on every shop template. |
+| **Enquiry** | One form submission. One row in `nex_shop_enquiry` (metadata only). |
+| **Verified delivery channel** | Email provider accepted the message with 2xx and returned a message-id. Both directions (NEX→merchant, merchant→customer) use this. |
+| **Shop owner email** | `nex_business.contact_email`. Must be present + verified before the pop-up is enabled on that shop. |
+| **Metadata-only row** | DB row with hashed sender identity, timestamp, status, provider message-id. No body. No raw IP. No raw email/phone — only HMAC-SHA256 with daily-rotated salt. |
 
 ---
 

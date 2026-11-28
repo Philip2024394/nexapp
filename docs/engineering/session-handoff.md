@@ -7,6 +7,28 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 HQ inbox defect fix · Resend bridge · shop-enquiry design Rev 3 (post-7eda0b7f cycle)
+
+Owner directive 2026-11-28 (post-push 7eda0b7f): fix HQ shop inbox defect · browser verify HQ page + Our Story · reconcile shop-chat design against E2E seal · inspect email adapter · update handoff + ledger. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`.
+
+- **Remote HEAD before cycle:** `7eda0b7f` (three commits from prior cycle: HQ command surface, X-Rated Our Story, design doc Rev 2).
+- **Remote HEAD after cycle:** `<pending-push>` — to be filled after this cycle's push completes.
+- **Commits this cycle (target: 2):**
+  - `fix(hq-shops)` · `fetchShopMessageInboxMeta` now reads `nex_peer_conversation`/`nex_peer_message` (mig-047 peer-chat system) instead of the legacy `nex_conversation`/`nex_message` (mig-004 business-chat system). Shop messaging FAB routes through peer-chat; inbox panel was pointed at the obsolete table pair. Participant identity preserved via `nex_business.owner_account_id` resolve. Metadata-only read enforced (no body/ciphertext column selected). Owner's own outbound and Nex-sentinel messages excluded so "inbox" is inbound-only. 1 file changed.
+  - `feat(email-adapter-bridge) + docs(shop-enquiry-rev3)` · new `src/lib/nex-native/email-send-adapter-resend-bridge.ts` implementing nex-native `SendAdapter` interface by delegating to the nex-common `resendAdapter` — type-safe scaffolding, NOT activated (DEFAULT_ADAPTER stays `ConsoleAdapter` dry-run). Guest-enquiry design doc revised to Rev 3: separate from NEX Chat, email-as-body, no plaintext storage, no encryption weakening. Supersedes Rev 1 & Rev 2 architectures. 2 files changed.
+- **Tests:** none run this cycle. Typecheck baseline unchanged (1402 pre-existing errors, 0 reference new files). Browser smoke verified for `/nex-native/x-rated-tool-belts/our-story` (26× section data-attrs, "Why X-Rated" present) and `/nex-native/x-rated-tool-belts` (FAB rendered, 161KB) and `/nex-native/hq/shops/x-rated-tool-belts` (gate correctly denies anonymous → 62KB fallback shell). **Inbox-fix row rendering NOT browser-verified this cycle** · requires HQ-admin session or `NEX_DEV_IMPERSONATE_HANDLE` env var + server restart, deferred.
+- **Exclusions:** none — standing-policy explicit staging per file.
+- **Known defects logged:**
+  - HQ-inbox rendering with real HQ session NOT VERIFIED (BUILT + TYPECHECKED).
+  - Email adapter activation NOT PERFORMED (DEFAULT_ADAPTER stays ConsoleAdapter; needs named owner approval + `NEX_EMAIL_DEFAULT_FROM` env var).
+- **Next cycle picks up from:**
+  - Browser-verify HQ inbox rows with impersonation (plan NEX_DEV_IMPERSONATE_HANDLE flow).
+  - Propose + request named approval for `shop_enquiry_submit` sandbox rate-limit bucket (Rev 3 §5.6 equivalent).
+  - Propose + request named approval for Resend bridge activation (`setDefaultAdapter(new ResendBridgeAdapter())`) once `NEX_EMAIL_DEFAULT_FROM` set.
+  - Request named approval for the guest-enquiry endpoint migration (new `nex_shop_enquiry` metadata-only table per Rev 3 §1A).
+
+---
+
 ## HEAD update · 2026-11-28 shop-cover polish (Template 15 X-Rated Tool Belts · currency switch · product gallery · side drawer)
 
 Owner directive 2026-11-28 (verbatim, trailing): *"commit and push github"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. No prod. No migration. No `main` push. No force-push. No secrets.
