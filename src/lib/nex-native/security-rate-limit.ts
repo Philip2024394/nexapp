@@ -74,7 +74,14 @@ export type SecurityRateLimitAction =
   // account_create (which has its own 503-escalation state). An HQ
   // admin issuing legitimate grants should NEVER be slowed down by
   // the account_create ring hitting the 503 fuse.
-  | "hq_admin_grant";
+  | "hq_admin_grant"
+  // Rev 3 guest-shop-enquiry · public POST /api/nex-native/shop-enquiry.
+  // Keyed by hashed IP (unauthenticated endpoint). Matches the CHECK
+  // constraint widening in migration 372. Policy: 5 per 15min — matches
+  // password_change's abuse-defence floor, enough slack for a legitimate
+  // visitor typo + resubmit, caps spammy repeat posts ahead of the DB-
+  // backed duplicate window.
+  | "shop_enquiry_submit";
 
 /** Owner directive 2026-11-08 · Part A · per-action behaviour when
  *  the DB-backed path cannot run (probe negative) OR when a
@@ -176,6 +183,19 @@ export const SECURITY_RATE_LIMITS: Record<
     fallback: "in_memory",
     rationale:
       "Per HQ admin account · 30 grants per 15min is comfortably above any legitimate single-operator workload and caps credential-compromise damage. Dedicated ring so a slow account_create 503 fuse never blocks legitimate grants and so grant bursts never poison the account_create ring. in_memory fallback · fail-closed per-lambda cap is strictly better than fail-open on a privileged surface.",
+  },
+  // Rev 3 guest-shop-enquiry · public POST /api/nex-native/shop-enquiry.
+  // Per hashed IP · unauthenticated. 5 submits per 15 min is above any
+  // legitimate visitor pattern (usual flow is one submit per shop) and
+  // caps automated form spam. fallback=in_memory because this ring MUST
+  // NOT fail open · unlimited guest form posts is the exact abuse vector
+  // we are guarding against + a provider bill-up risk.
+  shop_enquiry_submit: {
+    windowMinutes: 15,
+    maxPerWindow: 5,
+    fallback: "in_memory",
+    rationale:
+      "Per hashed IP · 5 enquiry submissions per 15min caps form-spam while leaving room for a legitimate visitor to retry after a typo. fallback=in_memory so a Supabase wobble cannot silently open the gate on a public unauthenticated POST.",
   },
 };
 
