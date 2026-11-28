@@ -283,17 +283,24 @@ export function BurgerMenu({
               bottom: 0,
               width: 280,
               maxWidth: "calc(100% - 48px)",
-              // Owner directive 2026-11-28 (forty-fourth pass) · drawer
-              // background promoted to the sealed Warm Ivory #FFF9E9
-              // used as free-chat's page base (CSS var
-              // --nex-world-background-base). Matches the free-chat
-              // drawer look-and-feel. Orange left rim + halo kept so
-              // the drawer still reads as belonging to the X-Rated
-              // theme. Sublabel/caret colour is threaded via a CSS
-              // variable so the hardcoded dark-theme #B5C3D6 dim is
-              // overridden only within THIS drawer (other sheets that
-              // share the same style constant stay unchanged).
-              background: "var(--nex-world-background-base, #FFF9E9)",
+              // Owner directive 2026-11-28 (forty-fifth pass) · drawer
+              // paint: start with the sealed free-chat Warm Ivory
+              // #FFF9E9 base, then (for the X-Rated Tool Belts shop
+              // only) layer the scaffolder PNG on top anchored to the
+              // bottom of the drawer so the cream sky sits at the top
+              // and the workers appear at the bottom. Every other
+              // storefront keeps the plain cream drawer so this
+              // asset doesn't bleed into unrelated shops. Orange
+              // left rim + halo kept so the drawer still reads as
+              // belonging to the X-Rated theme. Sublabel/caret
+              // colour is threaded via a CSS variable so the
+              // hardcoded dark-theme dim is overridden only within
+              // THIS drawer (other sheets that share the same style
+              // constant stay unchanged).
+              background:
+                content?.slug === "x-rated-tool-belts"
+                  ? "url('/nex-native/brand/x-rated-tool-belts-drawer-bg.png') center bottom / cover no-repeat, var(--nex-world-background-base, #FFF9E9)"
+                  : "var(--nex-world-background-base, #FFF9E9)",
               borderLeft: "1.5px solid rgba(249,115,22,0.75)",
               boxShadow:
                 "-8px 0 32px rgba(0,0,0,0.25), -2px 0 32px rgba(249,115,22,0.22)",
@@ -428,6 +435,20 @@ export function BurgerMenu({
               sublabel="Your story · what you make"
               onClick={() => openSheet("about")}
             />
+            {/* Owner directive 2026-11-28 (forty-sixth pass) · dedicated
+                long-form "Our story" page for X-Rated Tool Belts · Why +
+                About brand copy. Slug-gated so other storefronts keep
+                the existing inline About Us sheet and do not expose a
+                route that resolves to notFound() for shops without
+                content. */}
+            {content?.slug === "x-rated-tool-belts" ? (
+              <MenuRow
+                icon="📖"
+                label="Our story"
+                sublabel="Why X-Rated · about the brand"
+                href={`/nex-native/${content.slug}/our-story`}
+              />
+            ) : null}
             {/* Owner directive 2026-11-28 (thirty-ninth pass) · currency
                 picker as a dedicated burger row · trigger renders inline
                 on the right side of the row showing the active flag ·
