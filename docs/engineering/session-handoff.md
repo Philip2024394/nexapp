@@ -7,7 +7,7 @@ What requires the owner before continuing?
 
 ---
 
-## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · third-pass Path A auto-create account + honesty copy + mobile fit (post-8c825e91 → now `<PATH-A-SHA>`)
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · third-pass Path A auto-create account + honesty copy + mobile fit (post-8c825e91 → now `d4827206`)
 
 Owner directive 2026-11-28 (third-pass, verbatim): *"I would therefore choose Path A, AND THEN change this - Your message is emailed directly to this shop. Their reply goes to the email you give here. NEX does not store the message body. to - Notifications OF MESSAGES WILL BE SENT TO YOUR EMAIL ADDRESS PLEASE CHECK YOUR EMAIL IS CORRECT AND ALSO DOWN LOAD OUR APP WHEN PROMPTED FOR EASY ACCESS AND DIRECT MESSAGEING REPLY . THE MESSAGE WINDOW CONTAINER MUST FIT ON MOBILE SCREEN PAGE NOT CONTAINER."* Standing 2026-11-27 source-control policy still in force on `release-audit-v1-2026-11-14`.
 
