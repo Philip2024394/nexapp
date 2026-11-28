@@ -340,7 +340,7 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
     expect(sentinel!.textContent).not.toMatch(/Select your country/);
   });
 
-  it("renders as a full page · no backdrop · no card frame (owner directive 2026-11-28 fifth-pass)", () => {
+  it("renders as a phone-frame-anchored full page · no backdrop · no card frame · no portal (owner directive 2026-11-28 sixth-pass)", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
@@ -352,13 +352,23 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
     expect(
       document.querySelector("[data-nex-guest-enquiry-backdrop]"),
     ).toBeNull();
-    // The outer wrapper must fill the viewport (100vw × 100dvh).
+    // The outer wrapper must anchor to the phone frame via position:
+    // fixed + inset:0. Width + height come from the containing block
+    // (`.nex-native-frame` on desktop via its transform:translateZ(0)
+    // sealed in nex-native.css; the browser viewport on <500px). No
+    // explicit 100vw/100dvh · that would escape the frame on desktop.
     const root = document.querySelector(
       "[data-nex-guest-shop-enquiry-popup]",
     ) as HTMLElement | null;
     expect(root).toBeTruthy();
-    expect(root!.style.width).toBe("100vw");
-    expect(root!.style.height).toBe("100dvh");
+    expect(root!.style.position).toBe("fixed");
+    expect(root!.style.inset).toBe("0px");
+    expect(root!.style.width).toBe(""); // no explicit viewport-pin
+    expect(root!.style.height).toBe(""); // no explicit viewport-pin
+    // Critical: the popup must render IN-PLACE inside its React
+    // parent's subtree, NOT portalled to document.body. Otherwise it
+    // escapes the phone frame on desktop.
+    expect(document.body.firstElementChild).not.toBe(root);
     // No rounded card chrome on the inner column.
     const card = document.querySelector(
       "[data-nex-guest-enquiry-card]",

@@ -34,7 +34,6 @@
 // linkage is deliberately not fabricated client-side.
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import {
   EMAIL_SHAPE,
   NAME_MAX,
@@ -271,24 +270,29 @@ export function GuestShopEnquiryPopup({
     }
   }
 
-  if (!mounted || typeof document === "undefined") return null;
+  if (!mounted) return null;
 
-  return createPortal(
+  // Owner directive 2026-11-28 (sixth-pass, clarifying fifth-pass):
+  // the Send-message view must fill the PHONE SCREEN (the sealed
+  // `.nex-native-frame` container on desktop/tablet, the full viewport
+  // on real phones <500px) · NOT the whole desktop screen. We do this
+  // by rendering IN-PLACE inside the shop page's React tree (no portal
+  // to `document.body`) so the popup is a DOM descendant of
+  // `.nex-native-frame`. Per the sealed 2026-10-26 trick
+  // (`nex-native.css:226-266`), the frame carries `transform:
+  // translateZ(0)` which establishes a new containing block for every
+  // `position:fixed` descendant · so `inset:0` now anchors to the
+  // phone frame, not the browser viewport.
+  return (
     <div
       data-nex-guest-shop-enquiry-popup
       role="dialog"
       aria-modal="true"
       aria-labelledby="nex-guest-enquiry-headline"
       style={{
-        // Owner directive 2026-11-28 (fifth-pass): the Send-message
-        // view must BE the page, not a container overlaying the shop
-        // page. Fill the full dynamic viewport, no backdrop, no card
-        // frame, no shop page visible behind. Scroll inside the view.
         position: "fixed",
         inset: 0,
         zIndex: 320,
-        width: "100vw",
-        height: "100dvh",
         background: "#FFFFFF",
         color: "#0A1526",
         overflowY: "auto",
@@ -466,8 +470,7 @@ export function GuestShopEnquiryPopup({
           </form>
         )}
       </section>
-    </div>,
-    document.body,
+    </div>
   );
 }
 

@@ -634,3 +634,39 @@ Inside-view scrolling is now the outer wrapper's responsibility (`overflowY:auto
 - **No** route-level promotion to a new URL (e.g. `/nex-native/shop/[slug]/enquiry`). Owner's standing verdict ("Keep the implementation. Do not start another architecture debate.") rules out a routing refactor in this cycle. The popup still mounts via `createPortal(..., document.body)` and the shop FAB is still its trigger — but visually it is now a full page, not an overlay card.
 - **No** change to the dismiss semantics beyond removing the backdrop click target. Escape key + "Not now" button still both dismiss.
 - **No** change to validation, auto-prefix, red-glow, or privacy contract. Addendum B + Addendum C invariants preserved verbatim.
+
+---
+
+## Addendum E · sixth-pass · clarifying fifth-pass · phone-screen, not desktop-screen
+
+**Date:** 2026-11-28 (same-day, sixth-pass).
+
+**Owner correction (verbatim):**
+
+> "I SAID MOBILE PHONE SCREEN INSIDE PHONE NOT FULL DESKTOP SCREEN"
+
+The fifth-pass implementation (`980cba3f`) set the popup wrapper to `width:100vw · height:100dvh` and kept the `createPortal(..., document.body)` mount. On desktop this made the popup fill the **browser viewport**, breaking out of the sealed `.nex-native-frame` phone chrome. The directive is: fill the PHONE SCREEN (frame on desktop/tablet · viewport on <500px real phones), not the whole desktop.
+
+### E-1 · Root cause in a sentence
+
+`.nex-native-frame` uses `transform: translateZ(0)` (CSS sealed 2026-10-26 · `src/app/nex-native/nex-native.css:226-266`) to establish a **new containing block** for every `position:fixed` descendant — so `position:fixed; inset:0` anchors to the frame, **but only for DOM descendants of the frame**. The fifth-pass `createPortal(..., document.body)` detached the popup from the frame subtree, so its `position:fixed` resolved against the real viewport.
+
+### E-2 · Fix
+
+- **Drop `createPortal`** entirely. Render the popup in-place inside the shop page's React tree. `_shop-chat-fab.tsx` mounts `<GuestShopEnquiryPopup>` inside the shop page, which is inside `.nex-native-frame`, so the popup DOM is now a frame descendant.
+- **Drop `width:100vw` + `height:100dvh`** from the outer wrapper. With `position:fixed; inset:0` and the frame as the containing block, width + height come from the frame — 288 × 624px on desktop (per the 2026-11-09 shrink), full viewport on <500px.
+- **Keep** every other invariant from Addenda B · C · D (honesty copy · phone+country row · prefix match · red glow · "Select" sentinel · no card chrome).
+
+### E-3 · Test strengthened
+
+The fifth-pass test (`"renders as a full page · no backdrop · no card frame"`) asserted `root.style.width === "100vw"` and `root.style.height === "100dvh"`. Rewritten as `"renders as a phone-frame-anchored full page · no backdrop · no card frame · no portal"`:
+
+- `root.style.position === "fixed"` + `root.style.inset === "0px"`.
+- **No** explicit `width` / `height` inline styles (so they don't pin to the browser viewport).
+- `document.body.firstElementChild !== root` — pins the no-portal rule: if a future change re-introduces `createPortal(..., document.body)` the test fails.
+
+### E-4 · What is NOT in this addendum
+
+- **No** route-level promotion to `/nex-native/shop/[slug]/enquiry`. Standing verdict ("Keep the implementation. Do not start another architecture debate.") still in force. Component is still a modal view visually filling the phone screen.
+- **No** change to the `.nex-native-frame` CSS or the 2026-10-26 `transform: translateZ(0)` seal. The fix is in the popup, not the frame.
+- **No** change to validation, auto-prefix, red-glow, honesty copy, or privacy contract. Addenda B · C · D preserved verbatim.
