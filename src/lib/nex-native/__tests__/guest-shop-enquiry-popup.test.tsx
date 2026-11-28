@@ -314,11 +314,58 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
     expect(select).toBeTruthy();
     const options = Array.from(select!.querySelectorAll("option"));
     const values = options.map((o) => o.getAttribute("value"));
-    expect(values[0]).toBe(""); // "Select your country…" sentinel
+    expect(values[0]).toBe(""); // "Select" sentinel (owner directive 2026-11-28 fifth-pass)
     // Launch markets first, in sealed order.
     expect(values.slice(1, 6)).toEqual(["IE", "GB", "US", "ID", "AU"]);
     // Includes a non-launch market past the first five.
     expect(values).toContain("DE");
+  });
+
+  it("renders the short 'Select' sentinel for the country dropdown (owner directive 2026-11-28 fifth-pass)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const select = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-country']",
+    ) as HTMLSelectElement | null;
+    expect(select).toBeTruthy();
+    const sentinel = select!.querySelector("option[value='']");
+    expect(sentinel).toBeTruthy();
+    expect(sentinel!.textContent).toBe("Select");
+    // Explicitly reject the old long sentinel.
+    expect(sentinel!.textContent).not.toMatch(/Select your country/);
+  });
+
+  it("renders as a full page · no backdrop · no card frame (owner directive 2026-11-28 fifth-pass)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    // The old shaded backdrop must be gone · the view IS the page.
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-backdrop]"),
+    ).toBeNull();
+    // The outer wrapper must fill the viewport (100vw × 100dvh).
+    const root = document.querySelector(
+      "[data-nex-guest-shop-enquiry-popup]",
+    ) as HTMLElement | null;
+    expect(root).toBeTruthy();
+    expect(root!.style.width).toBe("100vw");
+    expect(root!.style.height).toBe("100dvh");
+    // No rounded card chrome on the inner column.
+    const card = document.querySelector(
+      "[data-nex-guest-enquiry-card]",
+    ) as HTMLElement | null;
+    expect(card).toBeTruthy();
+    expect(card!.style.borderRadius).toBe("");
+    expect(card!.style.boxShadow).toBe("");
   });
 
   it("places Phone and Country side-by-side on one row (owner directive 2026-11-28 third-pass)", () => {

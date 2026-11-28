@@ -595,3 +595,42 @@ The user requirement "won't allow send" was already enforced: `onSubmit` calls `
 - **No** auto-format of the phone body as the user types. We prepend/swap the dial-code prefix; we don't try to space-format "+353 87 123 4567" into the national-destination-code layout. That requires a libphonenumber-style parser · out of scope and not requested.
 - **No** disambiguation of US vs CA from the +1 prefix. Both legitimately match; either country+phone pair sends successfully. Fine-grained disambiguation would need either a separate "Area code → US/CA" lookup or a secondary UI question · not requested.
 - **No** change to the server validator. `parseShopEnquiryBody` still only requires an ISO-3166 alpha-2 country and a shape-valid international phone · the prefix-match check is a CLIENT UX rule. If a user bypasses the client (DOM edit, curl), the server still accepts the message with the fields it receives. Owner can escalate the prefix check to a server rule in a later cycle if desired.
+
+---
+
+## Addendum D · fifth-pass · country sentinel shortened + popup promoted to full page
+
+**Date:** 2026-11-28 (same-day, fifth-pass).
+
+**Owner directive (verbatim):**
+
+> "CHANGE SECT YOUR COUNTRY TO sELECT - SEND MESSAGE CONTAINER SHOULD BE PAGE NO CONTAINER"
+
+Two discrete deltas.
+
+### D-1 · Country-dropdown sentinel shortened
+
+- **Before:** `<option value="">Select your country…</option>`
+- **After:** `<option value="">Select</option>`
+
+The dropdown's own `<label>` already reads "Country" — the sentinel does not need to repeat it. The shorter word fits inside the narrower 40%-width column introduced by the phone+country row (Addendum C) without truncation on small phones.
+
+### D-2 · Popup promoted from overlay-card to full page
+
+- **Before:** `position:fixed; inset:0` outer with a semi-transparent dark backdrop + blur, centring a `maxWidth:360 · maxHeight:92dvh · borderRadius:18 · boxShadow` white card above the shop page. The shop page was visible-behind through the backdrop.
+- **After:** The outer wrapper itself fills the viewport (`width:100vw · height:100dvh`), white background, no backdrop element. The inner section still constrains its reading column (`maxWidth:480; margin:0 auto`) so tablet/desktop don't stretch full-width, but it carries no card chrome — no border-radius, no box-shadow, no max-height. When the Send-message view is open, it IS the page. The shop page is not visible behind.
+
+Inside-view scrolling is now the outer wrapper's responsibility (`overflowY:auto; WebkitOverflowScrolling:touch`), not a card. The dismiss button ("Not now") remains inside the form — it is the explicit way to return to the shop page, replacing the implicit backdrop-click dismissal (no backdrop to click).
+
+### D-3 · Tests added
+
+`guest-shop-enquiry-popup.test.tsx` gains 2 new tests:
+
+- `"renders the short 'Select' sentinel for the country dropdown"` — asserts the first `option[value='']` text is exactly `"Select"` and explicitly rejects the old `"Select your country"` wording.
+- `"renders as a full page · no backdrop · no card frame"` — asserts the `[data-nex-guest-enquiry-backdrop]` element no longer exists, the outer wrapper has `width:100vw` + `height:100dvh` inline, and the inner `[data-nex-guest-enquiry-card]` has no `borderRadius` or `boxShadow`.
+
+### D-4 · What is NOT in this addendum
+
+- **No** route-level promotion to a new URL (e.g. `/nex-native/shop/[slug]/enquiry`). Owner's standing verdict ("Keep the implementation. Do not start another architecture debate.") rules out a routing refactor in this cycle. The popup still mounts via `createPortal(..., document.body)` and the shop FAB is still its trigger — but visually it is now a full page, not an overlay card.
+- **No** change to the dismiss semantics beyond removing the backdrop click target. Escape key + "Not now" button still both dismiss.
+- **No** change to validation, auto-prefix, red-glow, or privacy contract. Addendum B + Addendum C invariants preserved verbatim.

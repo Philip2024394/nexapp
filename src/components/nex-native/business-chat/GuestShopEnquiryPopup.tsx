@@ -280,47 +280,33 @@ export function GuestShopEnquiryPopup({
       aria-modal="true"
       aria-labelledby="nex-guest-enquiry-headline"
       style={{
+        // Owner directive 2026-11-28 (fifth-pass): the Send-message
+        // view must BE the page, not a container overlaying the shop
+        // page. Fill the full dynamic viewport, no backdrop, no card
+        // frame, no shop page visible behind. Scroll inside the view.
         position: "fixed",
         inset: 0,
         zIndex: 320,
-        display: "grid",
-        placeItems: "center",
-        padding: 16,
+        width: "100vw",
+        height: "100dvh",
+        background: "#FFFFFF",
+        color: "#0A1526",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}
     >
-      <div
-        aria-hidden
-        data-nex-guest-enquiry-backdrop
-        onClick={state !== "sending" ? onDismiss : undefined}
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(0,0,0,0.65)",
-          backdropFilter: "blur(3px)",
-          WebkitBackdropFilter: "blur(3px)",
-        }}
-      />
       <section
         data-nex-guest-enquiry-card
         style={{
-          position: "relative",
+          // Keep the content column readable on tablet/desktop while
+          // the outer div owns the full page. No card chrome.
           width: "100%",
-          maxWidth: 360,
-          // Owner directive 2026-11-28 (second-pass second-step): the
-          // popup must fit the mobile screen without pushing the shop
-          // page behind off-viewport. 92dvh respects the dynamic
-          // viewport (iOS keyboard, Android chrome). Internal overflow
-          // still scrolls inside the card if a huge accessibility font
-          // size forces it.
-          maxHeight: "92dvh",
-          overflowY: "auto",
-          background: "#FFFFFF",
-          color: "#0A1526",
-          borderRadius: 18,
-          padding: "18px 18px 14px",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)",
-          fontFamily:
-            "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+          maxWidth: 480,
+          margin: "0 auto",
+          padding: "18px 18px 24px",
+          boxSizing: "border-box",
         }}
       >
         <h2
@@ -526,7 +512,7 @@ function CountrySelect(props: {
           transition: "box-shadow 160ms ease",
         }}
       >
-        <option value="">Select your country…</option>
+        <option value="">Select</option>
         {COUNTRY_CATALOGUE_SORTED.map((c) => (
           <option key={c.code} value={c.code}>
             {c.flag} {c.label}
