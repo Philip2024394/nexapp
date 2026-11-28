@@ -7,6 +7,30 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · second-pass popup directive (post-60e6f013 → via 9c953d20 → now 8c825e91)
+
+Owner directive 2026-11-28 (second-pass, verbatim): *"when user fills out the form and press send it automatly creates account for user - their phone number is required and add drop down for each country + also remove this Prefer your own NEX account? Create one"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`.
+
+- **Remote HEAD before cycle:** `9c953d20` (first-pass 2026-11-28: GuestShopEnquiryPopup created + FAB anon branch rewired, pushed earlier same day).
+- **Remote HEAD after cycle:** `8c825e91` — pushed to `origin release-audit-v1-2026-11-14` · fast-forward from `9c953d20` · verified via `git ls-remote origin release-audit-v1-2026-11-14` = `8c825e9182a6d913eba4783f78ed96a0a1d33ac6`.
+- **Commits this cycle (1):**
+  - `8c825e91 feat(shop-fab): phone required · country dropdown · remove secondary CTA` — 6 files. GuestShopEnquiryPopup: phone required (empty + malformed rejected inline); country replaced with native `<select>` backed by sealed `COUNTRY_CATALOGUE_SORTED` (launch markets IE/GB/US/ID/AU first, then alphabetical) + catalogue-membership defence against DOM edits; "Prefer your own NEX account? Create one" secondary Link removed; `shopSlug` destructure dropped (prop kept for caller stability). `parseShopEnquiryBody`: `ParsedBody.phone` tightened `string | null` → `string`; missing/empty phone → `{ field: "phone", reason: "required" }`; `buildPlainEmailBody` unconditionally emits `Phone:` line. Design-doc Addendum A (A-1 to A-5) appended beneath sealed Rev 3 §§1–11. Cycle report `cycle-strict-completion-2026-11-28-rev3-second-pass.md` added.
+- **Automated tests executed this cycle (all green):** popup suite 17 passed (was 13; +5 tests covering missing-phone, catalogue-order dropdown shape, no-country-selected, CTA-removed, phone round-trip in request body); validator suite 21 passed (rewrote phone-optional → phone-required + buildPlainEmailBody always-includes-phone). Combined focused run `npx vitest run src/lib/nex-native/__tests__/shop-enquiry-validation.test.ts src/lib/nex-native/__tests__/guest-shop-enquiry-popup.test.tsx` = 38 passed / 0 failed / 0 skipped / 2.40 s. Scoped `npx tsc --noEmit | grep` on changed files = 0 errors.
+- **Exclusions:** none — all four modified source files + design-doc addendum + cycle report staged in a single logical commit per NEX-DELIVERY-RULES "never mix unrelated features". No stray edits in the working tree.
+- **DELIBERATELY NOT WIRED this cycle · owner decision pending:** the directive's "auto-create NEX account on Send" clause. Three available paths with trade-offs documented in design-doc Addendum A-4 and cycle report §6:
+  - **Path A** — `auth.admin.createUser({ email, phone, email_confirm: false })` from the shop-enquiry route + linked nex_account insert. Opens a new unauthenticated account-creation POST surface; needs OTP/sign-in-link follow-up to make accounts usable; needs stricter rate-limit than the current per-IP guard.
+  - **Path B** — Pivot the FAB anon branch to Bridge 99's `/api/nex-native/first-message` atomic RPC. Requires device Curve25519 keypair + nacl.box ciphertext fan-out + salted provisional fingerprint; fundamentally incompatible with Rev 3 email-as-body and effectively unwinds `9c953d20`.
+  - **Path C** — Extend `nex_account` with `email`/`phone`/`country` columns + RLS. Requires amending the sealed 2026-09-23 Identity Doctrine.
+  - Honest non-fabrication preserved: the popup does not show any "account created" state and does not stash any local-storage pseudo-account. The Sent card copy is unchanged from `9c953d20`.
+- **Standing blockers unchanged from `60e6f013` cycle:** migration 372 still NOT applied (sandbox or prod); `NEX_SHOP_ENQUIRY_HMAC_KEY` still NOT provisioned; `DEFAULT_ADAPTER` still `ConsoleAdapter` (no real email leaves NEX); no production touched.
+- **Next cycle picks up from:** owner picks A / B / C on auto-create-account. Independent authorised items still unblocked: propose+request sandbox mig 372 apply, propose+request HMAC key provisioning, propose+request Resend bridge activation, Playwright preview run.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses (production DB `ijvqdvsvwtwxzcqmoqit`, production migration, live Stripe/PayPal, prod deploy, `main` pushes, force-push, `--no-verify`) hard-gated and untouched.
+
+**Operation receipt (Safety Constitution §7).** Repository root `C:/Users/Victus/nexapp`. Remote `https://github.com/Philip2024394/nexapp.git`. Branch `release-audit-v1-2026-11-14`. HEAD advanced `9c953d20` → `8c825e91`. One commit. Pre-commit + commit-msg + pre-push hooks all PASSED. Deployment NOT triggered by this push (production dispatch-only per memory `project_nexapp_push_to_deploy_2026_11_23` — preview worker rebuild only applies to Actions-enabled branches, which `release-audit-v1-2026-11-14` already is).
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry foundation · endpoint + migration 372 draft + privacy contract tests (post-9c550e4f cycle)
 
 Owner directive 2026-11-28 (7-item NEXT CYCLE): verify HQ inbox correction · complete Rev 3 design doc · build independent implementation foundation · prepare Resend adapter · design HQ merchant reply · commit+push under 2026-11-27 standing policy · deliver Rule-9 report with 6-level verification taxonomy. **Critical guardrail (owner 2026-11-28):** *"the proposed nex_shop_enquiry table must not store the message body, phone number or raw email address… a hash is not automatically anonymous data."*
