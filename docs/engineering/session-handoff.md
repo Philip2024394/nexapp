@@ -7,6 +7,28 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry foundation · endpoint + migration 372 draft + privacy contract tests (post-9c550e4f cycle)
+
+Owner directive 2026-11-28 (7-item NEXT CYCLE): verify HQ inbox correction · complete Rev 3 design doc · build independent implementation foundation · prepare Resend adapter · design HQ merchant reply · commit+push under 2026-11-27 standing policy · deliver Rule-9 report with 6-level verification taxonomy. **Critical guardrail (owner 2026-11-28):** *"the proposed nex_shop_enquiry table must not store the message body, phone number or raw email address… a hash is not automatically anonymous data."*
+
+- **Remote HEAD before cycle:** `ba0fef10` (cycle-14 handoff-record commit).
+- **Remote HEAD after cycle:** `60e6f013` — pushed to `origin release-audit-v1-2026-11-14` · fast-forward from `ba0fef10` · verified via `git ls-remote origin release-audit-v1-2026-11-14` = `60e6f013f23c5311b8768b591a3a52c755f65450`.
+- **Commits this cycle (3):**
+  - `d4ac5a46 feat(shop-enquiry): Rev 3 design doc + migration 372 draft (not applied)` — design doc updated (`public_email` not `contact_email`; §7.5 verifiability-of-merchant-reply-delivery added). New `nex-supabase/migrations/372_nex_shop_enquiry.sql` draft: metadata-only columns (id · shop_business_id FK CASCADE · created_at · delivery_status CHECK · email_provider_message_id · email_provider_error · sender_identity_hmac · rate_limit_key_hmac · sender_country_code), 3 indexes, RLS (owner SELECT/DELETE, no UPDATE/INSERT), `nex_shop_enquiry_purge_old` SECURITY DEFINER (30d default, 7d floor), widens `nex_security_rate_limit_action_check` with `shop_enquiry_submit`. 2 files changed. **NOT APPLIED to sandbox or production.**
+  - `3f07ad54 feat(shop-enquiry): endpoint + validator + mock adapter + rate-limit + privacy tests` — new POST `/api/nex-native/shop-enquiry` (public, unauthenticated; daily-rotated HMAC key; fail-closed when `NEX_SHOP_ENQUIRY_HMAC_KEY` missing; 10-min dedup; honest 400/404/409/429/500/503 surface; metadata-only insert). Pure validator extracted at `src/lib/nex-native/shop-enquiry/validation.ts`. Mock adapter at `src/lib/nex-native/shop-enquiry/mock-send-adapter.ts` (4 modes). `security-rate-limit.ts` widened with `shop_enquiry_submit` policy (5 per 15min per hashed IP, in_memory fallback). Three privacy/behaviour test files (see §4 verification). 7 files changed.
+  - `60e6f013 test(hq-shop): source-contract test pins fetchShopMessageInboxMeta peer-chat fix` — `hq-shop-inbox-contract.test.ts` · 7 tests asserting peer-chat table reads, metadata-only column list, owner+HQ-sentinel exclusion, owner_account_id scoping, hard `.limit()`. 1 file changed.
+- **Automated tests executed this cycle (all green):** 80 tests across 4 files — `shop-enquiry-validation` (26) · `shop-enquiry-mock-adapter` (11) · `shop-enquiry-privacy-contract` (36) · `hq-shop-inbox-contract` (7). Full-project `npx tsc --noEmit -p tsconfig.json` exit 0, zero errors on new files.
+- **Exclusions:** none — all cycle work staged explicitly across 3 logical commits.
+- **Known blockers / NOT PERFORMED this cycle:**
+  - Live-browser HQ inbox verification (impersonation as `nex-99901`, seeded sandbox + mig 206 + Playwright) — NOT EXECUTED. Covered partially by source-contract test; true E2E proof requires future cycle.
+  - Migration 372 NOT applied anywhere. Owner approval phrase required to apply to sandbox `kdstoyyeygcopkogqsyv`.
+  - `NEX_SHOP_ENQUIRY_HMAC_KEY` NOT provisioned. Endpoint returns 503 `temporarily_unavailable` until env var set.
+  - Default email adapter remains `ConsoleAdapter`. Resend bridge not activated.
+  - No real customer email sent.
+- **Next cycle picks up from:** (a) propose+request sandbox apply of mig 372 · (b) propose+request `NEX_SHOP_ENQUIRY_HMAC_KEY` provisioning · (c) write Playwright spec to live-verify HQ inbox once sandbox seed exists · (d) propose+request Resend bridge activation + `NEX_EMAIL_DEFAULT_FROM`.
+
+---
+
 ## HEAD update · 2026-11-28 HQ inbox defect fix · Resend bridge · shop-enquiry design Rev 3 (post-7eda0b7f cycle)
 
 Owner directive 2026-11-28 (post-push 7eda0b7f): fix HQ shop inbox defect · browser verify HQ page + Our Story · reconcile shop-chat design against E2E seal · inspect email adapter · update handoff + ledger. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`.
