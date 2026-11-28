@@ -35,7 +35,7 @@ export interface RawBody {
 
 export interface ParsedBody {
   readonly name: string;
-  readonly phone: string | null;
+  readonly phone: string;
   readonly email: string;
   readonly country: string;
   readonly message: string;
@@ -72,17 +72,21 @@ export function parseShopEnquiryBody(
     return { field: "email", reason: "shape" };
   }
 
-  let phone: string | null = null;
-  if (raw.phone != null && raw.phone !== "") {
-    if (typeof raw.phone !== "string") {
-      return { field: "phone", reason: "shape" };
-    }
-    const stripped = raw.phone.replace(/[\s-]/g, "");
-    if (!PHONE_SHAPE.test(stripped)) {
-      return { field: "phone", reason: "shape" };
-    }
-    phone = stripped;
+  // Phone is required · owner directive 2026-11-28. The visitor supplies a
+  // reachable phone so the merchant has a secondary contact channel outside
+  // the email round-trip. Empty / missing / wrong-type all fail the same way
+  // so the client can map this field back inline.
+  if (raw.phone == null || raw.phone === "") {
+    return { field: "phone", reason: "required" };
   }
+  if (typeof raw.phone !== "string") {
+    return { field: "phone", reason: "shape" };
+  }
+  const stripped = raw.phone.replace(/[\s-]/g, "");
+  if (!PHONE_SHAPE.test(stripped)) {
+    return { field: "phone", reason: "shape" };
+  }
+  const phone = stripped;
 
   let country: string;
   if (raw.country == null || raw.country === "") {
@@ -124,7 +128,7 @@ export function buildPlainEmailBody(
   lines.push("─── Visitor ───");
   lines.push(`Name:    ${parsed.name}`);
   lines.push(`Email:   ${parsed.email}`);
-  if (parsed.phone) lines.push(`Phone:   ${parsed.phone}`);
+  lines.push(`Phone:   ${parsed.phone}`);
   lines.push(`Country: ${parsed.country}`);
   lines.push("");
   lines.push("─── Message ───");

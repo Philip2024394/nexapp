@@ -46,6 +46,15 @@ function fillHappyPath(): void {
   fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
     target: { value: "aoife@example.com" },
   });
+  // Phone is required · owner directive 2026-11-28.
+  fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
+    target: { value: "+447700900000" },
+  });
+  // Country is a required dropdown selection · catalogue-backed.
+  fireEvent.change(
+    document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+    { target: { value: "IE" } },
+  );
   fireEvent.change(
     screen.getByPlaceholderText("What would you like to ask about?"),
     {
@@ -186,7 +195,42 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
     ).toBeTruthy();
   });
 
-  it("refuses to send with a malformed phone (only when phone is non-empty)", async () => {
+  it("refuses to send with a missing phone (phone is required · 2026-11-28)", async () => {
+    const post = vi.fn();
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={post}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText("e.g. Aoife Byrne"), {
+      target: { value: "Aoife" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "aoife@example.com" },
+    });
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "IE" } },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("What would you like to ask about?"),
+      { target: { value: "Hello, long enough message to pass the floor." } },
+    );
+    // phone intentionally left blank
+    await act(async () => {
+      fireEvent.submit(
+        document.querySelector("[data-nex-guest-enquiry-form]")!,
+      );
+    });
+    expect(post).not.toHaveBeenCalled();
+    expect(
+      document.querySelector("[data-nex-field-error='nex-guest-enquiry-phone']"),
+    ).toBeTruthy();
+  });
+
+  it("refuses to send with a malformed phone", async () => {
     const post = vi.fn();
     render(
       <GuestShopEnquiryPopup
@@ -208,6 +252,76 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
     expect(
       document.querySelector("[data-nex-field-error='nex-guest-enquiry-phone']"),
     ).toBeTruthy();
+  });
+
+  it("refuses to send without a country selection", async () => {
+    const post = vi.fn();
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={post}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText("e.g. Aoife Byrne"), {
+      target: { value: "Aoife" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "aoife@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
+      target: { value: "+447700900000" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("What would you like to ask about?"),
+      { target: { value: "Hello, long enough message to pass the floor." } },
+    );
+    // country left at the empty-sentinel "" option
+    await act(async () => {
+      fireEvent.submit(
+        document.querySelector("[data-nex-guest-enquiry-form]")!,
+      );
+    });
+    expect(post).not.toHaveBeenCalled();
+    expect(
+      document.querySelector("[data-nex-field-error='nex-guest-enquiry-country']"),
+    ).toBeTruthy();
+  });
+
+  it("renders every catalogue country in the dropdown including launch markets at the top", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const select = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-country']",
+    ) as HTMLSelectElement | null;
+    expect(select).toBeTruthy();
+    const options = Array.from(select!.querySelectorAll("option"));
+    const values = options.map((o) => o.getAttribute("value"));
+    expect(values[0]).toBe(""); // "Select your country…" sentinel
+    // Launch markets first, in sealed order.
+    expect(values.slice(1, 6)).toEqual(["IE", "GB", "US", "ID", "AU"]);
+    // Includes a non-launch market past the first five.
+    expect(values).toContain("DE");
+  });
+
+  it("does not render the removed 'Prefer your own NEX account? Create one' secondary CTA", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-create-account]"),
+    ).toBeNull();
+    const html = document.body.innerHTML;
+    expect(html).not.toMatch(/Prefer your own NEX account/i);
   });
 });
 
@@ -397,13 +511,13 @@ describe("GuestShopEnquiryPopup · request body shape", () => {
         postShopEnquiry={post as never}
       />,
     );
+    // fillHappyPath now sets phone + country=IE. Override country to GB to
+    // keep this test's historical assertion on the country round-trip.
     fillHappyPath();
-    fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
-      target: { value: "+447700900000" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("GB"), {
-      target: { value: "gb" }, // lowercase on input, uppercased by controlled handler
-    });
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "GB" } },
+    );
     await act(async () => {
       fireEvent.submit(
         document.querySelector("[data-nex-guest-enquiry-form]")!,
@@ -425,8 +539,10 @@ describe("GuestShopEnquiryPopup · request body shape", () => {
     ]) {
       expect(captured!).not.toHaveProperty(forbidden);
     }
-    // Country was uppercased client-side.
+    // Country code round-trips as the dropdown value.
     expect(captured!["country"]).toBe("GB");
+    // Phone round-trips as the required international-format string.
+    expect(captured!["phone"]).toBe("+447700900000");
     // shop_business_id threaded through from the prop.
     expect(captured!["shop_business_id"]).toBe(SHOP.shopBusinessId);
   });

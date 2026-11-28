@@ -59,10 +59,11 @@ describe("parseShopEnquiryBody · happy path", () => {
     expect(p.phone).toBe("+447700900000");
   });
 
-  it("accepts a body without phone (phone is optional in Phase 1)", () => {
-    const out = parseShopEnquiryBody(base({ phone: undefined }), ENV_GB);
-    const p = out as ParsedBody;
-    expect(p.phone).toBeNull();
+  it("rejects a body without phone (phone required · owner directive 2026-11-28)", () => {
+    const outUndef = parseShopEnquiryBody(base({ phone: undefined }), ENV_GB);
+    expect(outUndef).toEqual({ field: "phone", reason: "required" });
+    const outEmpty = parseShopEnquiryBody(base({ phone: "" }), ENV_GB);
+    expect(outEmpty).toEqual({ field: "phone", reason: "required" });
   });
 
   it("defaults country from env when omitted", () => {
@@ -167,13 +168,9 @@ describe("buildPlainEmailBody · honesty + content", () => {
     expect(body).toContain("ENQ-ID-1");
   });
 
-  it("omits phone when not provided", () => {
-    const body = buildPlainEmailBody(
-      { ...parsed, phone: null },
-      "Shop Name",
-      "ENQ-ID-2",
-    );
-    expect(body).not.toContain("Phone:");
+  it("always includes phone (phone required · owner directive 2026-11-28)", () => {
+    const body = buildPlainEmailBody(parsed, "Shop Name", "ENQ-ID-2");
+    expect(body).toContain("Phone:   +447700900000");
   });
 
   it("tells the merchant that replies go directly to the visitor and NEX does not store", () => {

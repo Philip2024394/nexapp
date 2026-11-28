@@ -21,20 +21,27 @@
 //     endpoint_not_ready · HMAC key not provisioned · mig 372 not applied)
 //     the visitor sees an honest "almost ready" message, NOT a false success.
 //
-// Secondary CTA · "Prefer your own NEX account? Create one". This preserves
-// the account-creation pathway from ShopChatRegistrationPopup so visitors who
-// want the full NEX Chat experience are not forced down the email route.
+// Owner directive 2026-11-28 (second-pass): secondary "Prefer your own NEX
+// account? Create one" CTA REMOVED. Phone is now required. Country is a
+// dropdown populated from the sealed country catalogue (launch markets
+// IE/GB/US/ID/AU float to top).
+//
+// Auto-create-account on Send (also part of the 2026-11-28 second-pass
+// directive) is NOT WIRED in this component. The sealed path to create a
+// real NEX account from a public, unauthenticated POST surface is an owner-
+// gated engineering decision · see the Rule-9 report for the three
+// available paths. The popup still posts the Rev 3 enquiry · the account-
+// linkage is deliberately not fabricated client-side.
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import {
   EMAIL_SHAPE,
   NAME_MAX,
   MESSAGE_MIN,
   MESSAGE_MAX,
 } from "@/lib/nex-native/shop-enquiry/validation";
-import { buildShopChatRegistrationHrefs } from "@/lib/nex-native/business-chat/shop-chat-registration-popup";
+import { COUNTRY_CATALOGUE_SORTED } from "@/lib/nex-native/country-catalogue";
 
 export interface GuestShopEnquiryPopupProps {
   readonly shopName: string | null;
@@ -71,8 +78,11 @@ interface FieldErrors {
 /** Client-side mirror of parseShopEnquiryBody. Kept intentionally simple · the
  *  server is authoritative. This exists so the user gets inline feedback
  *  before making a network round-trip. */
+const COUNTRY_CODE_SET: ReadonlySet<string> = new Set(
+  COUNTRY_CATALOGUE_SORTED.map((c) => c.code),
+);
+
 function localValidate(form: EnquiryPayload): FieldErrors {
-  const errors: FieldErrors = {};
   const out: Record<string, string> = {};
   const name = form.name.trim();
   if (name.length < 1 || name.length > NAME_MAX) out.name = "Enter your name (max 80).";
@@ -81,12 +91,21 @@ function localValidate(form: EnquiryPayload): FieldErrors {
   const email = form.email.trim();
   if (email.length === 0) out.email = "Email is required.";
   else if (!EMAIL_SHAPE.test(email)) out.email = "That doesn't look like an email address.";
-  if (form.phone.trim().length > 0) {
+  // Phone is required · owner directive 2026-11-28.
+  const rawPhone = form.phone.trim();
+  if (rawPhone.length === 0) {
+    out.phone = "Phone is required.";
+  } else {
     const stripped = form.phone.replace(/[\s-]/g, "");
     if (!/^\+?[1-9]\d{6,14}$/.test(stripped)) out.phone = "Phone must be international format, e.g. +447700900000.";
   }
-  if (form.country.trim().length > 0 && !/^[A-Za-z]{2}$/.test(form.country.trim())) {
-    out.country = "Use the two-letter country code (e.g. GB).";
+  // Country must be one of the catalogue codes · the dropdown enforces this
+  // but we re-check defensively (users can edit the DOM).
+  const country = form.country.trim().toUpperCase();
+  if (country.length === 0) {
+    out.country = "Choose your country.";
+  } else if (!COUNTRY_CODE_SET.has(country)) {
+    out.country = "Select a country from the list.";
   }
   const message = form.message.trim();
   if (message.length < MESSAGE_MIN) out.message = `Please write at least ${MESSAGE_MIN} characters.`;
@@ -96,7 +115,6 @@ function localValidate(form: EnquiryPayload): FieldErrors {
 
 export function GuestShopEnquiryPopup({
   shopName,
-  shopSlug,
   shopBusinessId,
   accent,
   onDismiss,
@@ -127,11 +145,6 @@ export function GuestShopEnquiryPopup({
   }, [onDismiss, state]);
 
   const shopLabel = shopName?.trim() || "this shop";
-
-  const hrefs = React.useMemo(
-    () => buildShopChatRegistrationHrefs(shopSlug, null),
-    [shopSlug],
-  );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -299,7 +312,7 @@ export function GuestShopEnquiryPopup({
               dataAttr="nex-guest-enquiry-email"
             />
             <Field
-              label="Phone (optional)"
+              label="Phone"
               value={form.phone}
               onChange={(v) => setForm({ ...form, phone: v })}
               placeholder="+44 7700 900000"
@@ -308,16 +321,11 @@ export function GuestShopEnquiryPopup({
               autoComplete="tel"
               dataAttr="nex-guest-enquiry-phone"
             />
-            <Field
-              label="Country (optional)"
+            <CountrySelect
               value={form.country}
-              onChange={(v) => setForm({ ...form, country: v.toUpperCase().slice(0, 2) })}
-              placeholder="GB"
+              onChange={(v) => setForm({ ...form, country: v })}
               error={errors.country}
               disabled={state === "sending"}
-              autoComplete="country"
-              maxLength={2}
-              dataAttr="nex-guest-enquiry-country"
             />
             <TextArea
               label="Your message"
@@ -383,28 +391,6 @@ export function GuestShopEnquiryPopup({
               {state === "sending" ? "Sending…" : "Send message"}
             </button>
 
-            <Link
-              href={hrefs.signUpHref}
-              data-nex-guest-enquiry-create-account
-              style={{
-                display: "block",
-                width: "100%",
-                marginTop: 10,
-                padding: "10px 14px",
-                borderRadius: 12,
-                background: "transparent",
-                color: "#0A1526",
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: "0.04em",
-                textAlign: "center",
-                textDecoration: "none",
-                border: "1px solid rgba(10,21,38,0.15)",
-                boxSizing: "border-box",
-              }}
-            >
-              Prefer your own NEX account? Create one
-            </Link>
             <button
               type="button"
               data-nex-guest-enquiry-dismiss
@@ -431,6 +417,59 @@ export function GuestShopEnquiryPopup({
       </section>
     </div>,
     document.body,
+  );
+}
+
+function CountrySelect(props: {
+  readonly value: string;
+  readonly onChange: (code: string) => void;
+  readonly error?: string;
+  readonly disabled?: boolean;
+}): React.JSX.Element {
+  return (
+    <label
+      style={{ display: "block", margin: "10px 0 0", fontSize: 12, fontWeight: 700, color: "#3B4A5C" }}
+    >
+      Country
+      <select
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+        disabled={props.disabled}
+        autoComplete="country"
+        data-nex-field="nex-guest-enquiry-country"
+        style={{
+          display: "block",
+          width: "100%",
+          marginTop: 4,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: props.error
+            ? "1px solid rgba(220,65,45,0.6)"
+            : "1px solid rgba(10,21,38,0.15)",
+          fontSize: 13.5,
+          fontFamily: "inherit",
+          color: "#0A1526",
+          background: "#FFFFFF",
+          boxSizing: "border-box",
+          appearance: "auto",
+        }}
+      >
+        <option value="">Select your country…</option>
+        {COUNTRY_CATALOGUE_SORTED.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.flag} {c.label}
+          </option>
+        ))}
+      </select>
+      {props.error ? (
+        <span
+          data-nex-field-error="nex-guest-enquiry-country"
+          style={{ display: "block", marginTop: 4, color: "#8C1F15", fontSize: 11.5, fontWeight: 600 }}
+        >
+          {props.error}
+        </span>
+      ) : null}
+    </label>
   );
 }
 

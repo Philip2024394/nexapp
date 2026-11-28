@@ -417,3 +417,48 @@ Phase 3 — Production (separate approval, out of scope today):
 - No touching the sealed Emergency Help SOS flow, the 2026-11-09 device-only E2E seal on `nex_peer_message`, or the 2026-11-24 PWA install-timing rules.
 - No live Stripe / PayPal.
 - No attachments in Phase 1. Phase 2 will address text-only limit if the owner authorises.
+
+---
+
+## Addendum A · 2026-11-28 (second-pass directive)
+
+Owner directive issued after the Rev 3 commit `9c953d20`:
+
+> "when user fills out the form and press send it automatly creates account for user - their phone number is required and add drop down for each country + also remove this Prefer your own NEX account? Create one"
+
+The §§4–11 sealed body above describes Phase 1 of Rev 3 and remains authoritative for the enquiry-delivery and no-plaintext-storage contract. This addendum captures the three UI/validator deltas that are now in force, plus one path that is **not wired** and the reason:
+
+### A-1 · Phone is now required (supersedes §4 Phone row)
+
+- Client validator (`GuestShopEnquiryPopup.localValidate`) rejects an empty phone with inline "Phone is required."
+- Server validator (`parseShopEnquiryBody`) rejects a missing phone with `{ field: "phone", reason: "required" }` (new) and a malformed phone with `{ field: "phone", reason: "shape" }` (unchanged).
+- `ParsedBody.phone` is now `string` (was `string | null`).
+- `buildPlainEmailBody` always emits the `Phone:` line.
+
+### A-2 · Country is now a dropdown (supersedes §4 Country row free-text input)
+
+- The popup now renders a `<select>` populated from the sealed `COUNTRY_CATALOGUE_SORTED` (launch markets IE/GB/US/ID/AU first, then alphabetical).
+- The empty-sentinel option forces an explicit choice — the client validator rejects an unselected country with "Choose your country." and rejects an out-of-catalogue value with "Select a country from the list." (defensive against DOM edits).
+- The server validator continues to accept any ISO-3166 alpha-2 (unchanged).
+- The `nex-enquiry-session` pre-fill described in §4.1 only ever pre-filled name + country, which is unchanged — the catalogue list is a superset of any previously-stored code.
+
+### A-3 · Secondary "Prefer your own NEX account? Create one" CTA removed
+
+The secondary Link that pointed into `ShopChatRegistrationPopup`'s sign-up flow is removed from `GuestShopEnquiryPopup`. The visitor now has a single primary action (Send) and a "Not now" dismiss. The `ShopChatRegistrationPopup` itself is untouched and continues to gate the Product Detail Sheet "More Details" and the anon chat preview composer-send.
+
+### A-4 · Auto-create NEX account on Send — NOT WIRED (owner decision pending)
+
+The second-pass directive also requested: *"when user fills out the form and press send it automaty creates account for user"*. This is **not implemented** in this cycle. The honest reason is that creating a NEX account from a public, unauthenticated POST surface is an owner-gated engineering decision, not a drop-in validator change:
+
+The nex_account schema (migration 001) has four columns only — `id · supabase_user_id · display_name · created_at` — anchored by the 2026-09-23 Identity Doctrine that *email, phone and WhatsApp are attributes stored on `auth.users`, never on `nex_account`*. There is therefore no column for name + phone + email on nex_account itself. The three available paths are:
+
+- **Path A · `auth.admin.createUser({ email, phone, email_confirm: false })` from the shop-enquiry route, then insert a nex_account row linked to that `supabase_user_id`.**  Pro: uses the sealed Supabase auth surface. Con: a new unauthenticated account-creation POST (anyone can mint an unverified account against any email); needs OTP or sign-in-link follow-up to make the account actually usable; needs rate-limit tightening beyond the current per-IP guard. Any PII leakage expands from "shop merchant's inbox only" to "nex_account + auth.users row keyed by visitor's email".
+- **Path B · Bridge 99 provisional-account RPC (`nex_bridge99_create_first_message`, migration 104) via `/api/nex-native/first-message`.** Pro: already sealed, atomic, creates the account AND the first chat message in one transaction. Con: requires a device Curve25519 keypair, nacl.box ciphertext fan-out, and a salted provisional fingerprint — fundamentally incompatible with the Rev 3 email-as-body design, because the "message body" would now be encrypted and routed through `nex_peer_message`, not emailed. Picking B effectively unwinds the Rev 3 commit `9c953d20` and replaces the shop FAB flow with the signed-in peer-chat flow.
+- **Path C · Extend the Identity Doctrine so nex_account carries `email`, `phone`, `country` directly** (new column migration, new RLS). Con: requires breaking a sealed doctrine; needs owner authorisation at the doctrine layer, not just the migration layer.
+
+The popup still posts the Rev 3 enquiry correctly. The account-linkage is deliberately **not fabricated** — no local-storage pseudo-account, no fake "signed in" UI, no false claim of account creation in the Sent card. Choosing A, B, or C is the next unblocked owner decision.
+
+### A-5 · Honesty invariants preserved
+
+The three changes in A-1, A-2, A-3 do not weaken any §§5–11 honesty invariant: no message body stored, no raw email/phone/name stored in nex_shop_enquiry, no HTML email, no false "sent" state, the metadata row still writes after the adapter so `delivery_status` is always accurate.
+
