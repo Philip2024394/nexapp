@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-11-28T13:35:17.613Z",
+  "product_id": "7fe7b701-11b3-4949-a43a-47c7570998f7",
+  "source": {
+    "path": "C:/Users/Victus/Downloads/XRATED BELTS Heavy-Duty Gear Bag.png",
+    "bytes": 2874840,
+    "width": 1331,
+    "height": 1182
+  },
+  "trim": {
+    "width": 1309,
+    "height": 1180
+  },
+  "output": {
+    "bucket": "nex-business-assets",
+    "path": "x-rated-tool-belts/products/utility-duffel-s-gallery-2.png",
+    "bytes": 769865,
+    "content_type": "image/png",
+    "width": 1413,
+    "height": 1284,
+    "margin_px": 52,
+    "public_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s-gallery-2.png"
+  },
+  "db": {
+    "before": null,
+    "after": [
+      "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s-gallery-2.png"
+    ],
+    "idempotent": false
+  }
+}
