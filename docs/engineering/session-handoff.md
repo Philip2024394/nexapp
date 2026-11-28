@@ -7,6 +7,22 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · sixth-pass phone-frame-anchored full page (post-358d4beb → now `40208787`)
+
+Owner correction 2026-11-28 (sixth-pass, verbatim): *"I SAID MOBILE PHONE SCREEN INSIDE PHONE NOT FULL DESKTOP SCREEN"*. Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `358d4beb`.
+- **Fifth-pass regression:** that cycle set `width:100vw · height:100dvh` on the popup wrapper AND kept `createPortal(..., document.body)`. On desktop this detached the popup from `.nex-native-frame` and filled the entire browser viewport, breaking the sealed mobile-first visual contract.
+- **Commits this cycle (1):** `feat(shop-enquiry): phone-frame-anchored full page (clarify fifth-pass)`. Removed `createPortal` + `react-dom` import. Removed explicit `width:100vw` + `height:100dvh` from the outer wrapper · now `position:fixed; inset:0` resolves against the frame's `transform: translateZ(0)` containing block (sealed 2026-10-26 · `nex-native.css:226-266`). `mounted` gate simplified (no more `document` guard). All Addenda B/C/D invariants preserved verbatim.
+- **Automated tests this cycle:** rewrote one fifth-pass test → sixth-pass version (`"renders as a phone-frame-anchored full page · no backdrop · no card frame · no portal"`). Asserts `position:fixed` + `inset:0px` + absent width/height inline styles + `document.body.firstElementChild !== root` (pins no-portal). Popup vitest count unchanged at 24. Combined focused run (same 7 suites) = **149 passed / 0 failed / 0 skipped**. Scoped tsc clean.
+- **Exclusions:** none. The sealed `.nex-native-frame` CSS is NOT touched · the fix is in the popup.
+- **Standing blockers unchanged:** migration 372 still NOT applied, HMAC key still NOT provisioned, `DEFAULT_ADAPTER` still `ConsoleAdapter`, real-device Playwright full-viewport + glow snapshot still NOT authored, live `auth.admin.createUser` still NOT exercised against sandbox.
+- **Next cycle picks up from:** no outstanding engineering decision from this correction. Next milestone unchanged from fifth-pass: real-sandbox verification of Path A against `kdstoyyeygcopkogqsyv`.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched.
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · fifth-pass "Select" sentinel + full-page view (post-70770ce2 → now `980cba3f`)
 
 Owner directive 2026-11-28 (fifth-pass, verbatim): *"CHANGE SECT YOUR COUNTRY TO sELECT - SEND MESSAGE CONTAINER SHOULD BE PAGE NO CONTAINER"*. Standing 2026-11-27 source-control policy in force. Owner's standing verdict ("Keep the implementation. Do not start another architecture debate.") preserved — no route-level promotion attempted.
