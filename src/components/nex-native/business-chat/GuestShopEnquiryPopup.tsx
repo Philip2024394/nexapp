@@ -42,6 +42,11 @@ import {
   MESSAGE_MAX,
 } from "@/lib/nex-native/shop-enquiry/validation";
 import { COUNTRY_CATALOGUE_SORTED } from "@/lib/nex-native/country-catalogue";
+import {
+  isoToDialCode,
+  phoneStartsWithDialCodeForIso,
+  stripKnownDialCodePrefix,
+} from "@/lib/nex-native/country/iso-to-dial-code";
 
 export interface GuestShopEnquiryPopupProps {
   readonly shopName: string | null;
@@ -107,6 +112,19 @@ function localValidate(form: EnquiryPayload): FieldErrors {
   } else if (!COUNTRY_CODE_SET.has(country)) {
     out.country = "Select a country from the list.";
   }
+  // Owner directive 2026-11-28 (third-pass second-step): the phone
+  // prefix MUST match the selected country's dial code. Only run this
+  // once we've already decided both phone and country are shape-valid
+  // on their own · otherwise we'd double-up error messages for empty
+  // fields.
+  if (!out.phone && !out.country) {
+    if (!phoneStartsWithDialCodeForIso(form.phone, country)) {
+      const expected = isoToDialCode(country);
+      out.phone = expected
+        ? `Phone must start with ${expected} for the selected country.`
+        : "Phone prefix doesn't match the selected country.";
+    }
+  }
   const message = form.message.trim();
   if (message.length < MESSAGE_MIN) out.message = `Please write at least ${MESSAGE_MIN} characters.`;
   else if (message.length > MESSAGE_MAX) out.message = `Maximum ${MESSAGE_MAX} characters.`;
@@ -145,6 +163,33 @@ export function GuestShopEnquiryPopup({
   }, [onDismiss, state]);
 
   const shopLabel = shopName?.trim() || "this shop";
+
+  /** Owner directive 2026-11-28 (third-pass second-step): when the
+   *  user changes country, re-prefix the phone number with the new
+   *  country's dial code. If the phone is empty, seed it with the
+   *  dial code so the user sees exactly what prefix to continue from.
+   *  If the phone currently carries ANY known dial code, swap that
+   *  prefix for the new one. If the phone carries a non-catalogue
+   *  prefix or raw national digits, we DON'T silently mangle it ·
+   *  we leave the body alone and prepend. */
+  function handleCountryChange(nextIso: string): void {
+    const nextDial = isoToDialCode(nextIso);
+    if (!nextDial) {
+      setForm({ ...form, country: nextIso });
+      return;
+    }
+    const rest = stripKnownDialCodePrefix(form.phone);
+    // If `rest` equals the stripped-original, user had no known
+    // prefix · we still want to prepend the new one. If the field was
+    // empty, we seed with just the dial code.
+    const nextPhone = rest.length === 0 ? nextDial : `${nextDial}${rest}`;
+    setForm({ ...form, country: nextIso, phone: nextPhone });
+    // If the previous error on phone was a prefix mismatch, clear it
+    // optimistically · the submit path will re-validate anyway.
+    if (errors.phone && errors.phone.startsWith("Phone must start with ")) {
+      setErrors({ ...errors, phone: undefined });
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -319,22 +364,34 @@ export function GuestShopEnquiryPopup({
               autoComplete="email"
               dataAttr="nex-guest-enquiry-email"
             />
-            <Field
-              label="Phone"
-              value={form.phone}
-              onChange={(v) => setForm({ ...form, phone: v })}
-              placeholder="+44 7700 900000"
-              error={errors.phone}
-              disabled={state === "sending"}
-              autoComplete="tel"
-              dataAttr="nex-guest-enquiry-phone"
-            />
-            <CountrySelect
-              value={form.country}
-              onChange={(v) => setForm({ ...form, country: v })}
-              error={errors.country}
-              disabled={state === "sending"}
-            />
+            {/* Owner directive 2026-11-28 (third-pass second-step):
+                phone + country share one row so the user visually
+                pairs them. Country change auto-re-prefixes phone. */}
+            <div
+              data-nex-guest-enquiry-phone-country-row
+              style={{ display: "flex", gap: 10, alignItems: "flex-start" }}
+            >
+              <div style={{ flex: "1 1 60%", minWidth: 0 }}>
+                <Field
+                  label="Phone"
+                  value={form.phone}
+                  onChange={(v) => setForm({ ...form, phone: v })}
+                  placeholder="+44 7700 900000"
+                  error={errors.phone}
+                  disabled={state === "sending"}
+                  autoComplete="tel"
+                  dataAttr="nex-guest-enquiry-phone"
+                />
+              </div>
+              <div style={{ flex: "1 1 40%", minWidth: 0 }}>
+                <CountrySelect
+                  value={form.country}
+                  onChange={handleCountryChange}
+                  error={errors.country}
+                  disabled={state === "sending"}
+                />
+              </div>
+            </div>
             <TextArea
               label="Your message"
               value={form.message}
@@ -445,6 +502,7 @@ function CountrySelect(props: {
         disabled={props.disabled}
         autoComplete="country"
         data-nex-field="nex-guest-enquiry-country"
+        data-nex-field-invalid={props.error ? "true" : undefined}
         style={{
           display: "block",
           width: "100%",
@@ -452,14 +510,20 @@ function CountrySelect(props: {
           padding: "10px 12px",
           borderRadius: 10,
           border: props.error
-            ? "1px solid rgba(220,65,45,0.6)"
+            ? "1.5px solid rgba(220,65,45,0.85)"
             : "1px solid rgba(10,21,38,0.15)",
+          // Owner directive 2026-11-28 (third-pass second-step):
+          // invalid fields glow red so the user cannot miss them.
+          boxShadow: props.error
+            ? "0 0 0 3px rgba(220,65,45,0.22), 0 0 10px rgba(220,65,45,0.35)"
+            : "none",
           fontSize: 13.5,
           fontFamily: "inherit",
           color: "#0A1526",
           background: "#FFFFFF",
           boxSizing: "border-box",
           appearance: "auto",
+          transition: "box-shadow 160ms ease",
         }}
       >
         <option value="">Select your country…</option>
@@ -507,6 +571,7 @@ function Field(props: {
         autoComplete={props.autoComplete}
         maxLength={props.maxLength}
         data-nex-field={props.dataAttr}
+        data-nex-field-invalid={props.error ? "true" : undefined}
         style={{
           display: "block",
           width: "100%",
@@ -514,13 +579,19 @@ function Field(props: {
           padding: "10px 12px",
           borderRadius: 10,
           border: props.error
-            ? "1px solid rgba(220,65,45,0.6)"
+            ? "1.5px solid rgba(220,65,45,0.85)"
             : "1px solid rgba(10,21,38,0.15)",
+          // Owner directive 2026-11-28 (third-pass second-step):
+          // invalid fields glow red so the user cannot miss them.
+          boxShadow: props.error
+            ? "0 0 0 3px rgba(220,65,45,0.22), 0 0 10px rgba(220,65,45,0.35)"
+            : "none",
           fontSize: 13.5,
           fontFamily: "inherit",
           color: "#0A1526",
           background: "#FFFFFF",
           boxSizing: "border-box",
+          transition: "box-shadow 160ms ease",
         }}
       />
       {props.error ? (
@@ -558,6 +629,7 @@ function TextArea(props: {
         disabled={props.disabled}
         maxLength={props.maxLength}
         data-nex-field={props.dataAttr}
+        data-nex-field-invalid={props.error ? "true" : undefined}
         rows={4}
         style={{
           display: "block",
@@ -566,8 +638,14 @@ function TextArea(props: {
           padding: "9px 12px",
           borderRadius: 10,
           border: props.error
-            ? "1px solid rgba(220,65,45,0.6)"
+            ? "1.5px solid rgba(220,65,45,0.85)"
             : "1px solid rgba(10,21,38,0.15)",
+          // Owner directive 2026-11-28 (third-pass second-step):
+          // invalid fields glow red so the user cannot miss them.
+          boxShadow: props.error
+            ? "0 0 0 3px rgba(220,65,45,0.22), 0 0 10px rgba(220,65,45,0.35)"
+            : "none",
+          transition: "box-shadow 160ms ease",
           fontSize: 13.5,
           fontFamily: "inherit",
           color: "#0A1526",

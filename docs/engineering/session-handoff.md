@@ -7,6 +7,21 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · fourth-pass phone↔country prefix match + red-glow invalid fields (post-79456cb7 → now `<PREFIX-SHA>`)
+
+Owner directive 2026-11-28 (fourth-pass, verbatim): *"I THINK THESE 1 ROW AND COUNTRY MUST MATCH PHONE NUMBER PREFIX - Phone +44 7700 900000 Country - ALSO IF USER MISSING 1 FIELD IT WILL GLOWING RED COLOR AND WONT ALLOW SEND INTO THE CHAT WINDOW."* Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `79456cb7`.
+- **Commits this cycle (1):** `feat(shop-enquiry): phone↔country prefix match + red-glow invalid fields`. New helper `src/lib/nex-native/country/iso-to-dial-code.ts` (108 lines · ISO2 → primary E.164 dial code reverse map · 35 catalogue countries · `isoToDialCode`, `stripPhone`, `phoneStartsWithDialCodeForIso`, `ALL_DIAL_CODES_LONGEST_FIRST`, `stripKnownDialCodePrefix`). Popup: Phone + Country wrapped in `[data-nex-guest-enquiry-phone-country-row]` flexbox (60/40 split). `localValidate` gains prefix-match rule (gated on neither-phone-nor-country-having-a-prior-error to avoid double-messaging). `handleCountryChange(iso)` auto-prefixes the phone on country change: empty phone → seeded with new dial code; known-prefix phone → prefix swapped, subscriber digits preserved; unknown-prefix phone → new prefix prepended, body untouched. All three `Field` / `CountrySelect` / `TextArea` components gain red-glow `boxShadow: "0 0 0 3px rgba(220,65,45,0.22), 0 0 10px rgba(220,65,45,0.35)"` + `data-nex-field-invalid="true"` attribute + border thickened 1px→1.5px + 160ms box-shadow transition.
+- **Automated tests this cycle:** new `iso-to-dial-code.test.ts` (7 describe blocks, 17 assertions, every-catalogue-country coverage pin). Popup suite grew 17→22 (+5 new tests: side-by-side row, auto-prefill on country change, prefix-swap preserves subscriber digits, mismatched-prefix rejection, data-nex-field-invalid attribute on all five required fields after blank submit). `fillHappyPath` rewritten (country first, then matching +353 phone). One pre-existing test ("POSTs the sealed Rev 3 column set") rebuilt in GB-first field order so it no longer relied on a mismatched prefix. Combined focused run (`iso-to-dial-code` + `guest-shop-enquiry-popup` + `shop-enquiry-validation` + `shop-enquiry-provision-account` + `shop-enquiry-privacy-contract` + `shop-enquiry-mock-adapter` + `country-catalogue`) = **147 passed / 0 failed / 0 skipped / 5.07 s**. Scoped tsc clean.
+- **Exclusions:** none.
+- **Standing blockers unchanged:** migration 372 still NOT applied, HMAC key still NOT provisioned, `DEFAULT_ADAPTER` still `ConsoleAdapter`, no production touched, no real-device Playwright glow/viewport snapshot authored, no CA/US disambiguation (both legitimately match +1 by design), no server-side mirror of the prefix rule (Addendum C-5 documents the reason).
+- **Next cycle picks up from:** no outstanding engineering decision from the owner directive. Authorised independent items unchanged from `d4827206`.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched.
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · third-pass Path A auto-create account + honesty copy + mobile fit (post-8c825e91 → now `d4827206`)
 
 Owner directive 2026-11-28 (third-pass, verbatim): *"I would therefore choose Path A, AND THEN change this - Your message is emailed directly to this shop. Their reply goes to the email you give here. NEX does not store the message body. to - Notifications OF MESSAGES WILL BE SENT TO YOUR EMAIL ADDRESS PLEASE CHECK YOUR EMAIL IS CORRECT AND ALSO DOWN LOAD OUR APP WHEN PROMPTED FOR EASY ACCESS AND DIRECT MESSAGEING REPLY . THE MESSAGE WINDOW CONTAINER MUST FIT ON MOBILE SCREEN PAGE NOT CONTAINER."* Standing 2026-11-27 source-control policy still in force on `release-audit-v1-2026-11-14`.

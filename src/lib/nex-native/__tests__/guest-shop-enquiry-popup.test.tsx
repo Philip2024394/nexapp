@@ -46,15 +46,16 @@ function fillHappyPath(): void {
   fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
     target: { value: "aoife@example.com" },
   });
-  // Phone is required · owner directive 2026-11-28.
-  fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
-    target: { value: "+447700900000" },
-  });
-  // Country is a required dropdown selection · catalogue-backed.
+  // Country first · changing it auto-prefixes the phone with the
+  // country's dial code (owner directive 2026-11-28 third-pass).
   fireEvent.change(
     document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
     { target: { value: "IE" } },
   );
+  // Phone matching IE's +353 prefix.
+  fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
+    target: { value: "+353871234567" },
+  });
   fireEvent.change(
     screen.getByPlaceholderText("What would you like to ask about?"),
     {
@@ -320,6 +321,159 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
     expect(values).toContain("DE");
   });
 
+  it("places Phone and Country side-by-side on one row (owner directive 2026-11-28 third-pass)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const row = document.querySelector(
+      "[data-nex-guest-enquiry-phone-country-row]",
+    );
+    expect(row).toBeTruthy();
+    // Both fields must live inside that row container.
+    expect(
+      row!.querySelector("[data-nex-field='nex-guest-enquiry-phone']"),
+    ).toBeTruthy();
+    expect(
+      row!.querySelector("[data-nex-field='nex-guest-enquiry-country']"),
+    ).toBeTruthy();
+  });
+
+  it("auto-prefills the phone dial code when the user picks a country (empty-phone case)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const phone = screen.getByPlaceholderText(
+      "+44 7700 900000",
+    ) as HTMLInputElement;
+    expect(phone.value).toBe("");
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "IE" } },
+    );
+    expect(phone.value).toBe("+353");
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "GB" } },
+    );
+    // Switching country swaps the dial-code prefix · body is empty here.
+    expect(phone.value).toBe("+44");
+  });
+
+  it("swaps the dial-code prefix when the user changes country, preserving the subscriber digits", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "IE" } },
+    );
+    const phone = screen.getByPlaceholderText(
+      "+44 7700 900000",
+    ) as HTMLInputElement;
+    // User types the Irish subscriber number after the auto-prefill.
+    fireEvent.change(phone, { target: { value: "+353871234567" } });
+    // Now they change their mind to GB.
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "GB" } },
+    );
+    // Subscriber digits preserved · dial code swapped IE→GB.
+    expect(phone.value).toBe("+44871234567");
+  });
+
+  it("refuses to send when the phone prefix does not match the selected country", async () => {
+    const post = vi.fn();
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={post}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText("e.g. Aoife Byrne"), {
+      target: { value: "Aoife Byrne" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "aoife@example.com" },
+    });
+    // Pick country IE first (auto-prefills +353).
+    fireEvent.change(
+      document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
+      { target: { value: "IE" } },
+    );
+    // Then manually overwrite phone with a GB number · mismatch.
+    fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
+      target: { value: "+447700900000" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("What would you like to ask about?"),
+      {
+        target: { value: "Hello, long enough message to pass the floor." },
+      },
+    );
+    await act(async () => {
+      fireEvent.submit(
+        document.querySelector("[data-nex-guest-enquiry-form]")!,
+      );
+    });
+    expect(post).not.toHaveBeenCalled();
+    const err = document.querySelector(
+      "[data-nex-field-error='nex-guest-enquiry-phone']",
+    );
+    expect(err).toBeTruthy();
+    expect(err!.textContent ?? "").toMatch(/\+353/);
+  });
+
+  it("marks invalid fields with data-nex-field-invalid='true' so the red glow is visually applied", async () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={vi.fn()}
+      />,
+    );
+    // Submit immediately with everything blank · every required field
+    // should end up with data-nex-field-invalid='true' (the box-shadow
+    // red glow is bound to this attribute via inline styles).
+    await act(async () => {
+      fireEvent.submit(
+        document.querySelector("[data-nex-guest-enquiry-form]")!,
+      );
+    });
+    const name = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-name']",
+    ) as HTMLElement | null;
+    const email = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-email']",
+    ) as HTMLElement | null;
+    const phone = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-phone']",
+    ) as HTMLElement | null;
+    const country = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-country']",
+    ) as HTMLElement | null;
+    const message = document.querySelector(
+      "[data-nex-field='nex-guest-enquiry-message']",
+    ) as HTMLElement | null;
+    expect(name?.getAttribute("data-nex-field-invalid")).toBe("true");
+    expect(email?.getAttribute("data-nex-field-invalid")).toBe("true");
+    expect(phone?.getAttribute("data-nex-field-invalid")).toBe("true");
+    expect(country?.getAttribute("data-nex-field-invalid")).toBe("true");
+    expect(message?.getAttribute("data-nex-field-invalid")).toBe("true");
+  });
+
   it("does not render the removed 'Prefer your own NEX account? Create one' secondary CTA", () => {
     render(
       <GuestShopEnquiryPopup
@@ -522,12 +676,30 @@ describe("GuestShopEnquiryPopup · request body shape", () => {
         postShopEnquiry={post as never}
       />,
     );
-    // fillHappyPath now sets phone + country=IE. Override country to GB to
-    // keep this test's historical assertion on the country round-trip.
-    fillHappyPath();
+    // This test asserts GB round-trip. Build it directly in GB-order so
+    // the phone prefix matches the country from the start · the
+    // country change no longer silently swaps prefix mid-test.
+    fireEvent.change(screen.getByPlaceholderText("e.g. Aoife Byrne"), {
+      target: { value: "Aoife Byrne" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "aoife@example.com" },
+    });
     fireEvent.change(
       document.querySelector("[data-nex-field='nex-guest-enquiry-country']")!,
       { target: { value: "GB" } },
+    );
+    fireEvent.change(screen.getByPlaceholderText("+44 7700 900000"), {
+      target: { value: "+447700900000" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("What would you like to ask about?"),
+      {
+        target: {
+          value:
+            "Hello, I'd like to buy the brown Tool Belt please. Can you ship to Ireland?",
+        },
+      },
     );
     await act(async () => {
       fireEvent.submit(

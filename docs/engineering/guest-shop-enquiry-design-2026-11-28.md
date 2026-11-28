@@ -527,3 +527,71 @@ The textarea still has `resize: "vertical"` so the user can enlarge it if they n
 - No linkage from `nex_shop_enquiry` to the new auth user. Metadata row stays contact-free per Rev 3 §§5–§6.
 - No new rate-limit path. The existing per-IP guard on `/api/nex-native/shop-enquiry` covers account-creation attempts transitively, because account creation only runs after a successful adapter send.
 - No UI claim that an account was created. The Sent card wording is unchanged. The honest `account_created` boolean is in the JSON response for future surfaces that want to show a message, but is not surfaced in the current UI.
+
+---
+
+## Addendum C · phone↔country prefix match + glow-red invalid fields (owner-sealed 2026-11-28)
+
+Owner directive 2026-11-28 (third-pass second-step), verbatim:
+
+> "I THINK THESE 1 ROW AND COUNTRY MUST MATCH PHONE NUMBER PREFIX - Phone +44 7700 900000 Country - ALSO IF USER MISSING 1 FIELD IT WILL GLOWING RED COLOR AND WONT ALLOW SEND INTO THE CHAT WINDOW."
+
+Three deltas built together.
+
+### C-1 · Phone + Country share one visual row
+
+The popup form now renders Phone and Country side-by-side inside `[data-nex-guest-enquiry-phone-country-row]` (`flex: row; gap:10px; align-items:flex-start`). Phone takes 60% of the row, Country takes 40%. Name, Email, Message rows are unchanged. The visual pairing reinforces the C-2 logical pairing (prefix must match).
+
+### C-2 · Phone prefix must match the selected country
+
+New helper `src/lib/nex-native/country/iso-to-dial-code.ts` carries the ISO2 → primary-E.164-dial-code reverse map for every catalogue country (35 entries). The honest-limitation convention of `dial-code-to-iso.ts` is preserved: `+1` resolves to US (CA also maps to `+1` here · we accept either country as a matching user intent); `+44` resolves to GB.
+
+Validator addition inside `localValidate`:
+
+```
+if (!out.phone && !out.country) {
+  if (!phoneStartsWithDialCodeForIso(form.phone, country)) {
+    const expected = isoToDialCode(country);
+    out.phone = expected
+      ? `Phone must start with ${expected} for the selected country.`
+      : "Phone prefix doesn't match the selected country.";
+  }
+}
+```
+
+The prefix check runs only when phone and country have both passed their shape checks · this prevents double-error UX ("Phone is required" AND "Phone must start with +353").
+
+On country change the popup calls `handleCountryChange(nextIso)`:
+
+- If the phone is empty, seed it with the new country's dial code so the user sees "+353" or "+44" and can keep typing.
+- If the phone currently starts with ANY known catalogue dial code, swap that prefix for the new one — preserving the user's subscriber digits.
+- If the phone starts with no known prefix, prepend the new one — never mangle the user's digits.
+- If a stale "Phone must start with …" error is on screen, clear it optimistically; submit will re-validate anyway.
+
+### C-3 · Red glow on invalid fields
+
+Each input / select / textarea now carries:
+
+- `data-nex-field-invalid="true"` when `error` is set.
+- `border: 1.5px solid rgba(220,65,45,0.85)` (up from `1px rgba(220,65,45,0.6)`).
+- `boxShadow: "0 0 0 3px rgba(220,65,45,0.22), 0 0 10px rgba(220,65,45,0.35)"` — a two-layer red glow (inner ring + outer bloom).
+- `transition: box-shadow 160ms ease` — the glow fades in rather than snapping.
+
+The user requirement "won't allow send" was already enforced: `onSubmit` calls `localValidate` first and returns early if any error is present. The glow is the visual half of the same rule.
+
+### C-4 · Tests added
+
+- `src/lib/nex-native/__tests__/iso-to-dial-code.test.ts` (NEW · 7 describe blocks, 17 assertions) · coverage of every catalogue country, launch-market prefixes, case-insensitivity, null-handling, `stripPhone`, `phoneStartsWithDialCodeForIso` positive + negative, `ALL_DIAL_CODES_LONGEST_FIRST` ordering invariant, `stripKnownDialCodePrefix` strip/preserve/empty cases.
+- `guest-shop-enquiry-popup.test.tsx` gains 5 new popup tests:
+  - Phone + Country rendered inside `[data-nex-guest-enquiry-phone-country-row]`.
+  - Country change auto-prefills phone (empty-phone case · IE→+353, swap IE→GB→+44).
+  - Country change preserves subscriber digits on prefix swap (+353871234567 + GB → +44871234567).
+  - Mismatched phone/country rejected with error citing the expected dial code.
+  - All five required fields carry `data-nex-field-invalid="true"` after a blank-form submit (bound to the red glow).
+- `fillHappyPath` helper rewritten: pick country IE first (auto-prefills), then set phone to +353871234567 (matches IE). Historical tests that override country rebuild fields in the correct order so no test silently relied on a mismatched prefix.
+
+### C-5 · What is NOT in this addendum
+
+- **No** auto-format of the phone body as the user types. We prepend/swap the dial-code prefix; we don't try to space-format "+353 87 123 4567" into the national-destination-code layout. That requires a libphonenumber-style parser · out of scope and not requested.
+- **No** disambiguation of US vs CA from the +1 prefix. Both legitimately match; either country+phone pair sends successfully. Fine-grained disambiguation would need either a separate "Area code → US/CA" lookup or a secondary UI question · not requested.
+- **No** change to the server validator. `parseShopEnquiryBody` still only requires an ISO-3166 alpha-2 country and a shape-valid international phone · the prefix-match check is a CLIENT UX rule. If a user bypasses the client (DOM edit, curl), the server still accepts the message with the fields it receives. Owner can escalate the prefix check to a server rule in a later cycle if desired.
