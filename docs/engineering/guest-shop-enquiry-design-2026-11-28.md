@@ -462,3 +462,68 @@ The popup still posts the Rev 3 enquiry correctly. The account-linkage is delibe
 
 The three changes in A-1, A-2, A-3 do not weaken any §§5–11 honesty invariant: no message body stored, no raw email/phone/name stored in nex_shop_enquiry, no HTML email, no false "sent" state, the metadata row still writes after the adapter so `delivery_status` is always accurate.
 
+
+---
+
+## Addendum B · second-pass second-step · Path A chosen (owner-sealed 2026-11-28)
+
+Following Addendum A-4 the owner elected **Path A** and added two client-side refinements:
+
+1. **Path A implemented** · `auth.admin.createUser({ email, email_confirm:false })` + linked `nex_account` row.
+2. **Honesty copy replaced** · the §4 "Your message is emailed directly…" line becomes a notification + app-install call-to-action.
+3. **Mobile fit** · the popup container must fit the mobile viewport, not overflow behind the shop page.
+
+### B-1 · Account provisioning helper
+
+New file `src/lib/nex-native/shop-enquiry/provision-account.ts` exports `provisionShopEnquiryAccount(input)` returning one of three outcomes:
+
+- `created` → `auth.users` row minted with `email_confirm:false` + `user_metadata = { nex_source:"guest_shop_enquiry", display_name, visitor_phone, country, created_via_shop_business_id, created_at_iso }`; a linked `nex_account` row is inserted with `supabase_user_id` + `display_name`.
+- `pre_existing_auth_user` → `createUser` returned the "already registered" error (pattern-matched against five known variants); no `nex_account` row is inserted. The visitor can later claim the account via the normal `/sign-in` magic-link flow.
+- `error` → network failure, Supabase outage, or `nex_account` insert failure. The `auth.users` row (if it was created) is NOT rolled back — the visitor can still claim it later.
+
+**Identity Doctrine invariants preserved:** phone goes in `user_metadata.visitor_phone`, NEVER on `auth.users.phone`. The `nex_account` table schema is unchanged (still four columns). No new migration.
+
+### B-2 · Route wiring
+
+`src/app/api/nex-native/shop-enquiry/route.ts` gains step 9b between the adapter result and the metadata insert:
+
+- Runs only when `delivery_status ∈ {"delivered", "dry_run"}`. If the adapter failed, no account is created — avoids orphaned accounts for undelivered enquiries.
+- Wrapped in `try/catch`. Account creation can NEVER block the enquiry response — the email is the primary deliverable.
+- Success-response gains three honest fields: `account_created: boolean`, `account_pre_existing: boolean`, `account_error: string | null` (first 500 chars only).
+- No session is minted. The shop page session stays anon.
+- No linkage is written back to `nex_shop_enquiry` — the Rev 3 metadata privacy contract (§§5–§6, §A-5) stays intact.
+
+### B-3 · Honesty copy replacement (supersedes §4 honesty line)
+
+Popup `data-nex-guest-enquiry-honesty` copy changes from:
+
+> Your message is emailed directly to this shop. Their reply goes to the email you give here. NEX does not store the message body.
+
+to:
+
+> Notifications of messages will be sent to your email address. Please check your email is correct and also download our app when prompted for easy access and direct messaging reply.
+
+The server contract that NEX does not store the message body still holds (migration 372 + `shop-enquiry-privacy-contract.test.ts`) — the claim is now carried by the architecture rather than inline UI copy. The Sent card's secondary line (`NEX does not store the content of your message or the shop's reply.`) is unchanged.
+
+### B-4 · Mobile viewport fit
+
+The popup container already carried `maxHeight: 92dvh` and `overflowY: auto`. Additional tightening:
+
+- Card padding `22px 20px 18px` → `18px 18px 14px`
+- Honesty paragraph margin `8px 0 14px` → `6px 0 10px`, lineHeight `1.45 → 1.4`
+- Message textarea `rows={5} minHeight:110 padding:10px 12px` → `rows={4} minHeight:78 padding:9px 12px`
+- New `data-nex-guest-enquiry-card` attribute for future Playwright viewport assertions
+
+The textarea still has `resize: "vertical"` so the user can enlarge it if they need more room. The container-level `92dvh` cap ensures the card fits on an iPhone SE and Pixel 7 without pushing the shop page behind off-viewport.
+
+### B-5 · Tests added
+
+- `src/lib/nex-native/__tests__/shop-enquiry-provision-account.test.ts` — 7 tests covering created / pre_existing (three error-message variants) / error (network, no-user, nex_account insert fail). Mocks `@/lib/nex-native/supabase-admin`.
+- `guest-shop-enquiry-popup.test.tsx` honesty test rewritten to assert the new notification + app-download copy and explicitly reject the pre-second-pass text.
+
+### B-6 · What is NOT in Path A (intentional)
+
+- No session is minted and no magic-link/OTP is auto-sent. The visitor must go through `/sign-in` on a return visit to activate the account. This keeps the public shop-enquiry POST from being able to trigger emails beyond the merchant notification itself.
+- No linkage from `nex_shop_enquiry` to the new auth user. Metadata row stays contact-free per Rev 3 §§5–§6.
+- No new rate-limit path. The existing per-IP guard on `/api/nex-native/shop-enquiry` covers account-creation attempts transitively, because account creation only runs after a successful adapter send.
+- No UI claim that an account was created. The Sent card wording is unchanged. The honest `account_created` boolean is in the JSON response for future surfaces that want to show a message, but is not surfaced in the current UI.

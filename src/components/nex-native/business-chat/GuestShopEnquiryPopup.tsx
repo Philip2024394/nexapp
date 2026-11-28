@@ -256,16 +256,23 @@ export function GuestShopEnquiryPopup({
         }}
       />
       <section
+        data-nex-guest-enquiry-card
         style={{
           position: "relative",
           width: "100%",
           maxWidth: 360,
+          // Owner directive 2026-11-28 (second-pass second-step): the
+          // popup must fit the mobile screen without pushing the shop
+          // page behind off-viewport. 92dvh respects the dynamic
+          // viewport (iOS keyboard, Android chrome). Internal overflow
+          // still scrolls inside the card if a huge accessibility font
+          // size forces it.
           maxHeight: "92dvh",
           overflowY: "auto",
           background: "#FFFFFF",
           color: "#0A1526",
           borderRadius: 18,
-          padding: "22px 20px 18px",
+          padding: "18px 18px 14px",
           boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)",
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -279,10 +286,11 @@ export function GuestShopEnquiryPopup({
         </h2>
         <p
           data-nex-guest-enquiry-honesty
-          style={{ margin: "8px 0 14px", fontSize: 12, lineHeight: 1.45, color: "#5A6A7E" }}
+          style={{ margin: "6px 0 10px", fontSize: 12, lineHeight: 1.4, color: "#5A6A7E" }}
         >
-          Your message is emailed directly to this shop. Their reply goes to the
-          email you give here. NEX does not store the message body.
+          Notifications of messages will be sent to your email address. Please
+          check your email is correct and also download our app when prompted
+          for easy access and direct messaging reply.
         </p>
 
         {state === "sent" ? (
@@ -550,12 +558,12 @@ function TextArea(props: {
         disabled={props.disabled}
         maxLength={props.maxLength}
         data-nex-field={props.dataAttr}
-        rows={5}
+        rows={4}
         style={{
           display: "block",
           width: "100%",
           marginTop: 4,
-          padding: "10px 12px",
+          padding: "9px 12px",
           borderRadius: 10,
           border: props.error
             ? "1px solid rgba(220,65,45,0.6)"
@@ -566,7 +574,11 @@ function TextArea(props: {
           background: "#FFFFFF",
           boxSizing: "border-box",
           resize: "vertical",
-          minHeight: 110,
+          // Owner directive 2026-11-28 (second-pass second-step): the
+          // popup must fit the mobile screen. 78px keeps the composer
+          // usable on small phones without pushing the rest of the
+          // card below the fold. User can still drag to enlarge.
+          minHeight: 78,
         }}
       />
       <span

@@ -84,7 +84,12 @@ describe("GuestShopEnquiryPopup · headline + honesty copy", () => {
     );
   });
 
-  it("includes the mandatory honesty line about not storing the message body", () => {
+  it("renders the owner-sealed 2026-11-28 second-pass honesty copy · notifications + app download", () => {
+    // Owner directive 2026-11-28 (second-pass second-step) replaced the
+    // Rev 3 "emailed directly · we don't store the body" line with a
+    // notification-and-install line. The old claim about not storing
+    // the body is now carried by the server contract + migration 372
+    // (see shop-enquiry-privacy-contract.test.ts), not by UI copy.
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
@@ -95,8 +100,14 @@ describe("GuestShopEnquiryPopup · headline + honesty copy", () => {
     const honesty = document.querySelector(
       "[data-nex-guest-enquiry-honesty]",
     );
-    expect(honesty?.textContent ?? "").toMatch(/does not store/i);
-    expect(honesty?.textContent ?? "").toMatch(/directly to this shop/i);
+    const text = honesty?.textContent ?? "";
+    expect(text).toMatch(/notifications of messages will be sent/i);
+    expect(text).toMatch(/check your email is correct/i);
+    expect(text).toMatch(/download our app/i);
+    expect(text).toMatch(/direct messaging/i);
+    // The pre-second-pass copy must not re-appear.
+    expect(text).not.toMatch(/does not store/i);
+    expect(text).not.toMatch(/emailed directly/i);
   });
 });
 

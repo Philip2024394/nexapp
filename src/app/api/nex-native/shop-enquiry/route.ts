@@ -63,6 +63,10 @@ import {
   parseShopEnquiryBody,
   type RawBody,
 } from "@/lib/nex-native/shop-enquiry/validation";
+import {
+  provisionShopEnquiryAccount,
+  type ProvisionAccountResult,
+} from "@/lib/nex-native/shop-enquiry/provision-account";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -289,6 +293,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ? sendResult.error.slice(0, 500)
       : null;
 
+  // 9b. Path A · owner-sealed 2026-11-28 (second-pass second-step).
+  //     If the enquiry was delivered (or honest dry_run), provision a NEX
+  //     account for the visitor so they can later install the app and
+  //     sign in via their email. Account creation NEVER blocks the
+  //     enquiry response · a failure is reported honestly, not swallowed.
+  //     Account creation is SKIPPED when the adapter failed · we don't
+  //     want orphan accounts for undelivered enquiries.
+  let accountResult: ProvisionAccountResult | null = null;
+  if (deliveryStatus === "delivered" || deliveryStatus === "dry_run") {
+    try {
+      accountResult = await provisionShopEnquiryAccount({
+        email: parsed.email,
+        phone: parsed.phone,
+        country: parsed.country,
+        displayName: parsed.name,
+        shopBusinessId: parsed.shopBusinessId,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[shop-enquiry] provisionShopEnquiryAccount threw", {
+        message: e instanceof Error ? e.message : String(e),
+      });
+      accountResult = {
+        outcome: "error",
+        message: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
   // 10. Insert metadata-only row. AFTER the adapter so delivery_status is
   //     accurate · the row reflects what actually happened.
   const { error: insertErr } = await nexSupabaseAdmin
@@ -334,7 +367,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 11. Honest response · never claim delivered when adapter is dry-run.
+  // 11. Honest response · never claim delivered when adapter is dry-run ·
+  //     never claim an account was created when the Path A helper reported
+  //     pre_existing or error.
+  const accountCreated =
+    accountResult !== null && accountResult.outcome === "created";
+  const accountPreExisting =
+    accountResult !== null && accountResult.outcome === "pre_existing_auth_user";
+  const accountError =
+    accountResult !== null && accountResult.outcome === "error"
+      ? accountResult.message.slice(0, 500)
+      : null;
+
   return NextResponse.json(
     {
       ok: true,
@@ -345,6 +389,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       dry_run_reason:
         deliveryStatus === "dry_run" ? sendResult.dry_run_reason ?? null : null,
       error: deliveryStatus === "failed" ? providerError : null,
+      account_created: accountCreated,
+      account_pre_existing: accountPreExisting,
+      account_error: accountError,
     },
     { status: 200 },
   );

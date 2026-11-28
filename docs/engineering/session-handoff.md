@@ -7,6 +7,21 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · third-pass Path A auto-create account + honesty copy + mobile fit (post-8c825e91 → now `<PATH-A-SHA>`)
+
+Owner directive 2026-11-28 (third-pass, verbatim): *"I would therefore choose Path A, AND THEN change this - Your message is emailed directly to this shop. Their reply goes to the email you give here. NEX does not store the message body. to - Notifications OF MESSAGES WILL BE SENT TO YOUR EMAIL ADDRESS PLEASE CHECK YOUR EMAIL IS CORRECT AND ALSO DOWN LOAD OUR APP WHEN PROMPTED FOR EASY ACCESS AND DIRECT MESSAGEING REPLY . THE MESSAGE WINDOW CONTAINER MUST FIT ON MOBILE SCREEN PAGE NOT CONTAINER."* Standing 2026-11-27 source-control policy still in force on `release-audit-v1-2026-11-14`.
+
+- **Remote HEAD before cycle:** `b08884a7` (session handoff after second-pass seal `8c825e91`).
+- **Commits this cycle (1):** `feat(shop-enquiry): Path A auto-create account + honesty copy + mobile fit` — 6 files. New helper `src/lib/nex-native/shop-enquiry/provision-account.ts` (116 lines) calls `nexSupabaseAdmin.auth.admin.createUser({ email, email_confirm:false, user_metadata:{ visitor_phone, display_name, country, created_via_shop_business_id } })` then inserts a linked `nex_account` row. Identity Doctrine preserved: phone goes in `user_metadata.visitor_phone`, never on `auth.users.phone`. Three outcomes: `created` / `pre_existing_auth_user` / `error`. Pattern-matched against five Supabase "already registered" variants. Route `src/app/api/nex-native/shop-enquiry/route.ts` gains step 9b between adapter result and metadata insert, gated on `delivery_status ∈ {delivered, dry_run}`, wrapped in try/catch so account failure never blocks the enquiry response. Response gains `account_created`, `account_pre_existing`, `account_error` fields. Popup honesty copy replaced; card padding + textarea tightened for mobile viewport fit (`maxHeight: 92dvh` + `overflowY: auto` already present); `data-nex-guest-enquiry-card` attribute added for future viewport Playwright assertions.
+- **Automated tests executed this cycle (all green):** new `shop-enquiry-provision-account.test.ts` = 7 passed (created + three pre_existing variants + three error branches, mocks `@/lib/nex-native/supabase-admin`). Popup + validator = 38 passed (honesty test rewritten to assert new text AND reject pre-second-pass text). Privacy contract + mock adapter = 59 passed (Rev 3 metadata privacy contract undisturbed by Path A). Scoped `npx tsc --noEmit | grep -E "(provision-account|shop-enquiry|GuestShopEnquiryPopup|guest-shop-enquiry)"` = 0 errors.
+- **Exclusions:** none — all 4 modified + 2 new files are logically one directive. No unrelated edits in the working tree.
+- **Standing blockers unchanged:** migration 372 still NOT applied, HMAC key still NOT provisioned, `DEFAULT_ADAPTER` still `ConsoleAdapter` so account creation only runs under `dry_run` branch by design, no production touched. The sealed `auth.admin.createUser` was NOT exercised live in this cycle — only through the mocked unit test. Real-device mobile viewport Playwright test NOT authored (data-attribute in place for a future cycle).
+- **Next cycle picks up from:** no outstanding engineering decision from the owner directive. Authorised independent items: propose+request sandbox mig 372 apply, HMAC key provisioning, Resend bridge activation, real-device Playwright `data-nex-guest-enquiry-card` boundingBox test, live `auth.admin.createUser` exercise in sandbox.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched.
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · second-pass popup directive (post-60e6f013 → via 9c953d20 → now 8c825e91)
 
 Owner directive 2026-11-28 (second-pass, verbatim): *"when user fills out the form and press send it automatly creates account for user - their phone number is required and add drop down for each country + also remove this Prefer your own NEX account? Create one"*. Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`.
