@@ -54,6 +54,17 @@ export interface GuestShopEnquiryPopupProps {
   readonly shopBusinessId: string;
   /** Shop accent hex · drives the primary CTA fill. */
   readonly accent: string;
+  /** Owner directive 2026-11-28 (eighth-pass) · the enquiry page now
+   *  reads as the shop's "home page" header: hero background + round
+   *  shop logo + display name + address + two X-Rated-style action
+   *  buttons (Send + Not now) sitting directly below the identity
+   *  block. The caller threads these from the resolved `nex_business`
+   *  row. All three are optional · when any is null the matching block
+   *  is suppressed and the popup falls back to the plain Addendum E
+   *  phone-frame-anchored full page. */
+  readonly shopLogoUrl?: string | null;
+  readonly shopAddress?: string | null;
+  readonly heroBackgroundUrl?: string | null;
   /** Close handler. Backdrop click, Esc, and the dismiss button all call this. */
   readonly onDismiss: () => void;
   /** Optional POST override for tests. Defaults to real `fetch(...)`. */
@@ -134,6 +145,9 @@ export function GuestShopEnquiryPopup({
   shopName,
   shopBusinessId,
   accent,
+  shopLogoUrl,
+  shopAddress,
+  heroBackgroundUrl,
   onDismiss,
   postShopEnquiry,
 }: GuestShopEnquiryPopupProps): React.JSX.Element | null {
@@ -309,13 +323,132 @@ export function GuestShopEnquiryPopup({
           width: "100%",
           maxWidth: 480,
           margin: "0 auto",
-          padding: "18px 18px 24px",
+          padding: "0 0 24px",
           boxSizing: "border-box",
         }}
       >
+        {/* Owner directive 2026-11-28 (eighth-pass) · the enquiry page
+            now reads as the shop's own "home page" header:
+              · hero background image (Scaffold Workers in the Mist by
+                default · overridable per-shop via heroBackgroundUrl)
+              · round shop logo (same 58px circle with accent rim that
+                CoverIdentityBadge uses on the public shop cover)
+              · shop display name
+              · plain-text address (city/country · no 📍 pin, matching
+                X-Rated Tool Belts' sixth-pass home-page iteration)
+            All four are OPTIONAL · when the shop row has no logo/address
+            the block degrades gracefully and the plain Addendum E
+            headline still reads as "Message <shop>". The hero is hidden
+            only if heroBackgroundUrl is explicitly null AND no default
+            is wired · the default keeps every shop with a branded
+            opener. */}
+        <div
+          data-nex-guest-enquiry-hero
+          style={{
+            position: "relative",
+            width: "100%",
+            height: 180,
+            backgroundImage: `url("${heroBackgroundUrl ?? "/nex/shop/scaffold-workers-in-the-mist.png"}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center 35%",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
+          {/* Dark gradient overlay so the identity block beneath
+              the hero still reads clean on any image. */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to bottom, rgba(10,21,38,0) 0%, rgba(10,21,38,0) 55%, rgba(10,21,38,0.55) 100%)",
+            }}
+          />
+        </div>
+        <div
+          data-nex-guest-enquiry-identity
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "0 18px",
+            marginTop: -36,
+          }}
+        >
+          {shopLogoUrl ? (
+            <img
+              data-nex-guest-enquiry-shop-logo
+              src={shopLogoUrl}
+              alt={`${shopLabel} logo`}
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: "50%",
+                objectFit: "cover",
+                background: "#FFFFFF",
+                border: `3px solid ${accent}`,
+                boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
+              }}
+            />
+          ) : (
+            <div
+              aria-hidden
+              data-nex-guest-enquiry-shop-logo-fallback
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: "50%",
+                background: `linear-gradient(135deg, ${accent} 0%, #0A1526 100%)`,
+                border: `3px solid ${accent}`,
+                boxShadow: "0 8px 22px rgba(0,0,0,0.25)",
+                display: "grid",
+                placeItems: "center",
+                color: "#FFFFFF",
+                fontSize: 24,
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {shopLabel.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div
+            data-nex-guest-enquiry-shop-name
+            style={{
+              marginTop: 10,
+              fontSize: 18,
+              fontWeight: 900,
+              letterSpacing: "-0.01em",
+              color: "#0A1526",
+              textAlign: "center",
+            }}
+          >
+            {shopLabel}
+          </div>
+          {shopAddress && shopAddress.trim().length > 0 ? (
+            <div
+              data-nex-guest-enquiry-shop-address
+              style={{
+                marginTop: 4,
+                fontSize: 12.5,
+                lineHeight: 1.4,
+                color: "#5A6A7E",
+                textAlign: "center",
+                maxWidth: 320,
+              }}
+            >
+              {shopAddress}
+            </div>
+          ) : null}
+        </div>
+        <div
+          style={{ padding: "16px 18px 0", boxSizing: "border-box" }}
+        >
         <h2
           id="nex-guest-enquiry-headline"
-          style={{ margin: 0, fontSize: 18, fontWeight: 900, letterSpacing: "-0.01em" }}
+          style={{ margin: 0, fontSize: 15, fontWeight: 800, letterSpacing: "-0.01em", color: "#3B4A5C" }}
         >
           Message {shopLabel}
         </h2>
@@ -419,56 +552,75 @@ export function GuestShopEnquiryPopup({
               </p>
             ) : null}
 
-            <button
-              type="submit"
-              data-nex-guest-enquiry-send
-              disabled={state === "sending"}
+            {/* Owner directive 2026-11-28 (eighth-pass) · two buttons
+                styled like the X-Rated home page: the Send CTA keeps
+                its orange accent pill, and the Not-now dismiss is
+                promoted from a tiny ghost link into a matched outline
+                pill sitting beside it so the pair reads as a proper
+                home-page action row. */}
+            <div
+              data-nex-guest-enquiry-action-row
               style={{
-                display: "block",
-                width: "100%",
-                marginTop: 14,
-                padding: "12px 14px",
-                borderRadius: 12,
-                background: accent,
-                color: "#1A120A",
-                fontSize: 13,
-                fontWeight: 900,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                textAlign: "center",
-                border: "none",
-                cursor: state === "sending" ? "progress" : "pointer",
-                opacity: state === "sending" ? 0.7 : 1,
-                boxShadow: "0 8px 20px rgba(198,161,91,0.25)",
-                fontFamily: "inherit",
+                display: "flex",
+                gap: 10,
+                marginTop: 16,
+                alignItems: "stretch",
               }}
             >
-              {state === "sending" ? "Sending…" : "Send message"}
-            </button>
+              <button
+                type="submit"
+                data-nex-guest-enquiry-send
+                disabled={state === "sending"}
+                style={{
+                  flex: "1 1 60%",
+                  display: "block",
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  background: accent,
+                  color: "#1A120A",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  textAlign: "center",
+                  border: "none",
+                  cursor: state === "sending" ? "progress" : "pointer",
+                  opacity: state === "sending" ? 0.7 : 1,
+                  boxShadow: "0 8px 20px rgba(198,161,91,0.25)",
+                  fontFamily: "inherit",
+                }}
+              >
+                {state === "sending" ? "Sending…" : "Send message"}
+              </button>
 
-            <button
-              type="button"
-              data-nex-guest-enquiry-dismiss
-              onClick={onDismiss}
-              disabled={state === "sending"}
-              style={{
-                display: "block",
-                margin: "12px auto 0",
-                padding: "6px 10px",
-                background: "transparent",
-                color: "#5A6A7E",
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                border: "none",
-                cursor: state === "sending" ? "not-allowed" : "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              Not now
-            </button>
+              <button
+                type="button"
+                data-nex-guest-enquiry-dismiss
+                onClick={onDismiss}
+                disabled={state === "sending"}
+                style={{
+                  flex: "1 1 40%",
+                  display: "block",
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  background: "#FFFFFF",
+                  color: "#0A1526",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  textAlign: "center",
+                  border: `1.5px solid ${accent}`,
+                  cursor: state === "sending" ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Not now
+              </button>
+            </div>
           </form>
         )}
+        </div>
       </section>
     </div>
   );
@@ -695,6 +847,24 @@ function SentCard({
         }}
       >
         NEX does not store the content of your message or the shop's reply.
+      </p>
+      {/* Owner directive 2026-11-28 (seventh-pass step-7 · bundled
+          into the eighth-pass restyle) · the app-download invitation
+          is strongest immediately after a successful send, so it
+          repeats here. The pre-send honesty line already carries the
+          same intent · this closes the loop for visitors who skimmed
+          past it on the form. */}
+      <p
+        data-nex-guest-enquiry-sent-app-invite
+        style={{
+          margin: "0 0 14px",
+          fontSize: 11.5,
+          lineHeight: 1.45,
+          color: "#5A6A7E",
+        }}
+      >
+        Download the NEX app when prompted so future replies land
+        directly in NEX Chat.
       </p>
       <button
         type="button"

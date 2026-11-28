@@ -547,6 +547,200 @@ describe("GuestShopEnquiryPopup · client-side validation", () => {
   });
 });
 
+describe("GuestShopEnquiryPopup · hero + identity block (owner directive 2026-11-28 eighth-pass)", () => {
+  // Owner directive 2026-11-28 (eighth-pass, verbatim): "CHANGE THE PAGE
+  // BACK GROUND OF Message X-Rated Tool Belts TO THIS IMAGE 'Scaffold
+  // Workers in the Mist.png' ALSO ADD THE XRATED PROFILE AND LOG IMAGE
+  // AND ADDRESS AND 2 BUTTONS LIKE IT WAS SAME AS X RATED HOME PAGE".
+  // Four assertions pin the four deltas.
+
+  it("renders a hero background image div referencing the shop-local bg asset by default", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const hero = document.querySelector(
+      "[data-nex-guest-enquiry-hero]",
+    ) as HTMLElement | null;
+    expect(hero).toBeTruthy();
+    // Default references the scaffold-workers asset the owner supplied.
+    expect(hero!.style.backgroundImage).toContain(
+      "/nex/shop/scaffold-workers-in-the-mist.png",
+    );
+    // The hero sits above the identity block (which anchors on the
+    // card margin-top:-36 so the logo circle overlaps the hero).
+    expect(hero!.style.backgroundSize).toBe("cover");
+  });
+
+  it("honours a caller-supplied heroBackgroundUrl override", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        heroBackgroundUrl="/some/other/bg.png"
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const hero = document.querySelector(
+      "[data-nex-guest-enquiry-hero]",
+    ) as HTMLElement | null;
+    expect(hero!.style.backgroundImage).toContain("/some/other/bg.png");
+    expect(hero!.style.backgroundImage).not.toContain(
+      "scaffold-workers-in-the-mist",
+    );
+  });
+
+  it("renders the shop logo as an <img> when shopLogoUrl is provided", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        shopLogoUrl="https://cdn.example.com/x-rated-logo.jpg"
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const logo = document.querySelector(
+      "[data-nex-guest-enquiry-shop-logo]",
+    ) as HTMLImageElement | null;
+    expect(logo).toBeTruthy();
+    expect(logo!.tagName).toBe("IMG");
+    expect(logo!.getAttribute("src")).toBe(
+      "https://cdn.example.com/x-rated-logo.jpg",
+    );
+    // No fallback initial when a real logo is present.
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-shop-logo-fallback]"),
+    ).toBeNull();
+  });
+
+  it("falls back to an initial circle when shopLogoUrl is null", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        shopLogoUrl={null}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-shop-logo]"),
+    ).toBeNull();
+    const fallback = document.querySelector(
+      "[data-nex-guest-enquiry-shop-logo-fallback]",
+    ) as HTMLElement | null;
+    expect(fallback).toBeTruthy();
+    // First letter of the shop label ("X" for X-Rated Tool Belts).
+    expect(fallback!.textContent).toBe("X");
+  });
+
+  it("renders the shop address line when shopAddress is provided (no 📍 pin · matches X-Rated home-page sixth-pass iteration)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        shopAddress="Yogyakarta, Indonesia"
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const addr = document.querySelector(
+      "[data-nex-guest-enquiry-shop-address]",
+    ) as HTMLElement | null;
+    expect(addr).toBeTruthy();
+    expect(addr!.textContent).toBe("Yogyakarta, Indonesia");
+    // No pin glyph · the X-Rated home page suppresses it on this
+    // template and the enquiry popup mirrors that choice.
+    expect(addr!.textContent).not.toContain("📍");
+  });
+
+  it("omits the address row entirely when shopAddress is null", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        shopAddress={null}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-shop-address]"),
+    ).toBeNull();
+  });
+
+  it("renders Send + Not now as a two-button action row (X-Rated home-page pair style)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const row = document.querySelector(
+      "[data-nex-guest-enquiry-action-row]",
+    ) as HTMLElement | null;
+    expect(row).toBeTruthy();
+    expect(row!.style.display).toBe("flex");
+    // Both buttons must live inside that row (the old vertical stack
+    // placed Not-now outside Send's button sibling · the eighth-pass
+    // pair sits side-by-side).
+    expect(
+      row!.querySelector("[data-nex-guest-enquiry-send]"),
+    ).toBeTruthy();
+    expect(
+      row!.querySelector("[data-nex-guest-enquiry-dismiss]"),
+    ).toBeTruthy();
+  });
+
+  it("styles the Not-now dismiss as a visible outline pill (not the old ghost text link)", () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    const dismiss = document.querySelector(
+      "[data-nex-guest-enquiry-dismiss]",
+    ) as HTMLElement | null;
+    expect(dismiss).toBeTruthy();
+    // The pre-eighth-pass dismiss had border:"none" + background:
+    // "transparent". The new pair carries a 1.5px accent-colored
+    // border so both buttons read as a matched pair.
+    expect(dismiss!.style.border).not.toBe("");
+    expect(dismiss!.style.border).toContain("1.5px");
+    expect(dismiss!.style.background).toBe("rgb(255, 255, 255)");
+  });
+});
+
+describe("GuestShopEnquiryPopup · SentCard app-download invitation (owner directive 2026-11-28 seventh-pass step-7, bundled into eighth-pass)", () => {
+  it("repeats the app-download invitation on the post-send SentCard", async () => {
+    render(
+      <GuestShopEnquiryPopup
+        {...SHOP}
+        onDismiss={() => undefined}
+        postShopEnquiry={async () => makeResponse(200, { ok: true })}
+      />,
+    );
+    fillHappyPath();
+    await act(async () => {
+      fireEvent.submit(
+        document.querySelector("[data-nex-guest-enquiry-form]") as HTMLElement,
+      );
+    });
+    const invite = document.querySelector(
+      "[data-nex-guest-enquiry-sent-app-invite]",
+    ) as HTMLElement | null;
+    expect(invite).toBeTruthy();
+    expect(invite!.textContent).toMatch(/download the nex app/i);
+    // The SentCard must still exist (sanity · the Sent state was reached).
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-sent]"),
+    ).toBeTruthy();
+  });
+});
+
 describe("GuestShopEnquiryPopup · server responses", () => {
   it("renders the Sent card only when the server returns 200", async () => {
     const post = vi.fn(async () => makeResponse(200, { ok: true }));

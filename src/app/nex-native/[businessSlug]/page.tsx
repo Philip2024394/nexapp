@@ -614,6 +614,8 @@ export default async function PublicShopPage({
           shopBusinessId={business.id}
           shopName={business.display_name}
           shopSlug={business.slug}
+          shopLogoUrl={business.logo_url}
+          shopAddress={business.address}
           isSignedIn={viewerSession !== null}
           accentHex={accentHex}
         />

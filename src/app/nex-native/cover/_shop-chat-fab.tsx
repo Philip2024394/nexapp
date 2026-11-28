@@ -62,6 +62,14 @@ interface Props {
   /** Shop slug · the visitor's RETURN URL after sign-up / sign-in from
    *  the "Create account" secondary CTA inside the enquiry popup. */
   readonly shopSlug?: string | null;
+  /** Owner directive 2026-11-28 (eighth-pass) · the enquiry popup now
+   *  renders a hero + logo + address identity block above the form so
+   *  it reads as the shop's own home-page header. These flow in from
+   *  the resolved `nex_business` row on the public shop page · both
+   *  optional, both gracefully omitted when the shop hasn't uploaded a
+   *  logo / set an address. */
+  readonly shopLogoUrl?: string | null;
+  readonly shopAddress?: string | null;
   /** Server-resolved signed-in state. True = tap goes straight to
    *  peer chat. False = tap shows the enquiry popup. */
   readonly isSignedIn?: boolean;
@@ -84,6 +92,8 @@ export function ShopChatFab({
   shopBusinessId,
   shopName,
   shopSlug,
+  shopLogoUrl,
+  shopAddress,
   isSignedIn = false,
   accentHex,
 }: Props): React.JSX.Element {
@@ -167,6 +177,8 @@ export function ShopChatFab({
           shopSlug={shopSlug}
           shopBusinessId={shopBusinessId}
           accent={accent}
+          shopLogoUrl={shopLogoUrl ?? null}
+          shopAddress={shopAddress ?? null}
           onDismiss={() => setShowPopup(false)}
         />
       ) : null}
