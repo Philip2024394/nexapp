@@ -7,7 +7,7 @@ What requires the owner before continuing?
 
 ---
 
-## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · fourth-pass phone↔country prefix match + red-glow invalid fields (post-79456cb7 → now `<PREFIX-SHA>`)
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · fourth-pass phone↔country prefix match + red-glow invalid fields (post-79456cb7 → now `aa96f021`)
 
 Owner directive 2026-11-28 (fourth-pass, verbatim): *"I THINK THESE 1 ROW AND COUNTRY MUST MATCH PHONE NUMBER PREFIX - Phone +44 7700 900000 Country - ALSO IF USER MISSING 1 FIELD IT WILL GLOWING RED COLOR AND WONT ALLOW SEND INTO THE CHAT WINDOW."* Standing 2026-11-27 source-control policy in force.
 
