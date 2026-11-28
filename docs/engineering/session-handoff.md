@@ -29,9 +29,9 @@ Supabase, chat, payments unchanged.
 - **Not yet done (future cycle, not launch-blocking):**
   - Host-aware canonical URL emission on shop page metadata (today still emits `nexcorner.com` base).
   - Outbound `<Link>` rewriting on vanity host (user-visible URL after navigation currently drifts back to `/nex-native/<slug>/...`).
-  - Preview-worker verification against the real Cloudflare Worker.
-- **Rule-8 status:** BUILT + WIRED + VERIFIED (preview). Prod deploy BLOCKED on owner approval.
-- **Reference docs:** `docs/engineering/xratedbelts-com-vanity-domain-cycle-2026-11-28.md` (full cycle report), `docs/engineering/xratedbelts-com-hosting-ireland-dns-setup-2026-11-28.md` (owner-only DNS steps).
+  - **Preview-worker verification BLOCKED** · GitHub Actions run #70 against `de9ddd2a` failed with "account locked due to a billing issue". All ten most recent `release-audit-v1-2026-11-14` deploys (#61-#70) failed the same way. Preview Worker at `https://nexapp-preview.nex-sandbox.workers.dev` is serving a stale build (confirmed 404 on `/api/nex-native/version`). Separately, Cloudflare edge returns 403 on Host-override probes to the preview hostname since the preview Worker is only bound to its `*.workers.dev` host. Escalation: resolve GitHub Actions billing OR pivot to Cloudflare native Git integration OR bind a transient test hostname to the preview Worker. All owner-only.
+- **Rule-8 status:** BUILT + WIRED + VERIFIED on local dev server. Preview Worker verification BLOCKED (not FAILED · not attempted, deploy never ran). Prod deploy BLOCKED on owner approval.
+- **Reference docs:** `docs/engineering/xratedbelts-com-vanity-domain-cycle-2026-11-28.md` (full cycle report, § 5.1 preview blocker), `docs/engineering/xratedbelts-com-hosting-ireland-dns-setup-2026-11-28.md` (owner-only DNS steps).
 
 ---
 

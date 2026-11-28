@@ -120,6 +120,56 @@ relaxed.
 - **`xratedbelts.com` zone added to Cloudflare account** (owner-only
   action in Cloudflare dashboard).
 
+### 5.1 · Preview-worker deploy **BLOCKED** (GitHub Actions billing lock)
+
+Post-push follow-up on 2026-11-28 13:53 UTC confirms:
+
+- The push to `release-audit-v1-2026-11-14` (commit `de9ddd2a`) did
+  trigger GitHub Actions run #70 of `cloudflare-deploy.yml`, but the
+  run failed at the **Build + deploy** step with:
+  > *"The job was not started because your account is locked due to a
+  > billing issue."*
+- All ten most recent runs on this branch (runs #61–#70) show the same
+  failure mode. The preview Worker at
+  `https://nexapp-preview.nex-sandbox.workers.dev` is therefore stale ·
+  it is serving a build that pre-dates even the
+  `/api/nex-native/version` endpoint (confirmed 404 on that route).
+- Vanity-host probes to the preview Worker return Cloudflare edge
+  **403 Forbidden** before the Worker code sees the request. This is
+  Cloudflare Workers host-validation · the preview Worker is only
+  bound to its `*.workers.dev` hostname, so requests with
+  `Host: xratedbelts.com` are rejected at the edge regardless of which
+  commit is deployed.
+
+**Escalation paths** (owner-only):
+
+1. **Resolve the GitHub Actions billing lock** on
+   `Philip2024394`. Once Actions can run again, push the branch (or
+   re-run run #70) and the preview Worker will update. Then
+   vanity-host probes still need path 3 below to actually exercise the
+   vanity routing on the preview Worker.
+2. **Pivot to Cloudflare native Git integration** (noted in
+   project memory as the standing fallback when Actions billing-locks).
+   This bypasses GitHub Actions and has Cloudflare pull + build the
+   branch directly. Does not require a billing fix on GitHub.
+3. **Temporarily bind a test hostname to the preview Worker** so the
+   vanity-host rewrite can be exercised against the real Workers
+   runtime without touching production. Options:
+   - Add a transient route pattern like `xratedbelts.preview.nex-sandbox.workers.dev/*` on the preview Worker + map the Host via the `vanity-domains/map.ts` table with a `preview` boolean, OR
+   - Use Cloudflare Workers "Custom Domains" on a sandbox hostname
+     the owner controls (same mechanism the production `routes`
+     block uses, but attached to the preview Worker).
+   Either option needs explicit owner approval before I build or
+   configure it.
+
+Until one of these is in place, the only verification I can offer is:
+(a) local Next.js dev server probes (done, 10/10 green · see § 3.2),
+(b) 44/44 vitest cases on the pure path-decision function (done).
+The Workers runtime behaviour is expected to match because the
+rewrite layer runs inside `src/middleware.ts` · the same code the
+OpenNext adapter ships to the Worker · with no Worker-specific APIs
+used · but "expected to match" is not the same as "observed to match".
+
 ## 6 · REMAINING (future-cycle, not blockers for owner approval)
 
 - **Host-aware canonical URL emission on shop pages** · the shop
@@ -187,7 +237,14 @@ execution:
    the `xratedbelts.com` + `www.xratedbelts.com` routes to the
    production Worker and provisions Universal SSL. Separate from the
    dev-branch push authorised under the 2026-11-27 standing policy.
-4. **No prod-DB migration, no prod Supabase change, no live Stripe
+4. **Resolve the GitHub Actions billing lock on
+   `Philip2024394`** · all ten most recent preview deploys on
+   `release-audit-v1-2026-11-14` have failed with "account locked due
+   to a billing issue" (see § 5.1). Until this clears, no commit on
+   this branch · including this cycle's · can reach the preview
+   Worker. Alternatively, authorise pivot to Cloudflare native Git
+   integration.
+5. **No prod-DB migration, no prod Supabase change, no live Stripe
    or PayPal activation, no production env-var change** is requested
    by this cycle.
 
