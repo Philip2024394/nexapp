@@ -36,10 +36,16 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-// Stage 7 · item 5 · 2026-11-14 · shared polished Stage-4 popup.
-// Anon tap now mounts this instead of routing to the anon preview
-// page (one hop less · same "your own private NEX" honesty copy).
-import { ShopChatRegistrationPopup } from "@/components/nex-native/business-chat/ShopChatRegistrationPopup";
+// Owner directive 2026-11-28 · Rev 3 guest-shop-enquiry pathway.
+// Anon FAB tap now mounts the enquiry form popup (name/email/phone/
+// country/message → POST /api/nex-native/shop-enquiry · email-as-body
+// per design doc 2026-11-28 §4-§6). The shop page stays visible behind
+// the shaded backdrop · the "background diverted shop chat page" the
+// owner described. Visitors who prefer a NEX account still get the
+// secondary CTA inside the enquiry popup ("Prefer your own NEX account?
+// Create one") which routes into the sealed ShopChatRegistrationPopup
+// sign-up chain.
+import { GuestShopEnquiryPopup } from "@/components/nex-native/business-chat/GuestShopEnquiryPopup";
 
 interface Props {
   /** Business owner's UUID · drives the peer-chat destination.
@@ -47,16 +53,17 @@ interface Props {
    *  in a visual-only state (owner preview mode) and tapping does
    *  nothing. */
   readonly ownerAccountId?: string | null;
-  /** Shop display name · used in the registration popup header. */
+  /** Business UUID · required to post the Rev 3 enquiry. When omitted
+   *  (owner preview mode, legacy callers), the anon popup refuses to
+   *  render and the FAB behaves as visual-only. */
+  readonly shopBusinessId?: string | null;
+  /** Shop display name · used in the enquiry popup header. */
   readonly shopName?: string | null;
-  /** Shop slug · the visitor's RETURN URL after sign-up / sign-in.
-   *  /nex-native/<slug>?open-chat=1 so the shop page auto-opens the
-   *  chat once auth completes. When null the popup still renders but
-   *  the return-to-shop param is omitted. */
+  /** Shop slug · the visitor's RETURN URL after sign-up / sign-in from
+   *  the "Create account" secondary CTA inside the enquiry popup. */
   readonly shopSlug?: string | null;
   /** Server-resolved signed-in state. True = tap goes straight to
-   *  peer chat. False = tap shows the registration popup. Default
-   *  false so anonymous viewers always see the popup. */
+   *  peer chat. False = tap shows the enquiry popup. */
   readonly isSignedIn?: boolean;
   /** Owner directive 2026-11-06 · "floating chat button must also
    *  change with theme color". The FAB sits outside CoverThemeSkin
@@ -74,6 +81,7 @@ const CARD_BG = "#FFFFFF";
 
 export function ShopChatFab({
   ownerAccountId,
+  shopBusinessId,
   shopName,
   shopSlug,
   isSignedIn = false,
@@ -95,18 +103,19 @@ export function ShopChatFab({
   }, [showPopup]);
 
   function onTap(): void {
-    // Stage 7 · item 5 · 2026-11-14 · anon tap now opens the sealed
-    // polished Stage-4 modal IN-SHOP · same honesty copy as the
-    // Product Detail Sheet's More-Details popup. The older anon
-    // preview page at `/<slug>/chat` stays available but is no
-    // longer the first stop · it is still used as the return path
-    // via the `?next=` chain when the modal's Create / Sign-in
-    // buttons complete. Signed-in flow unchanged.
+    // Owner directive 2026-11-28 · anon tap opens the Rev 3 enquiry
+    // popup over the shop page (shaded backdrop = the "diverted
+    // shop chat page" visible behind). Signed-in viewers continue
+    // straight into the business-chat conversation as before.
     if (!shopSlug) return;
     if (isSignedIn) {
       router.push(`/nex-native/${shopSlug}?open-chat=1`);
       return;
     }
+    // Owner-preview / legacy callers without a business id fall back
+    // to the FAB's visual-only mode · never mount a popup we can't
+    // POST from.
+    if (!shopBusinessId) return;
     setShowPopup(true);
   }
 
@@ -152,11 +161,11 @@ export function ShopChatFab({
         </svg>
       </button>
 
-      {showPopup && shopSlug ? (
-        <ShopChatRegistrationPopup
+      {showPopup && shopSlug && shopBusinessId ? (
+        <GuestShopEnquiryPopup
           shopName={shopName ?? null}
           shopSlug={shopSlug}
-          productId={null}
+          shopBusinessId={shopBusinessId}
           accent={accent}
           onDismiss={() => setShowPopup(false)}
         />
@@ -166,8 +175,10 @@ export function ShopChatFab({
 }
 
 
-// Stage 7 · item 5 · 2026-11-14 · inline RegistrationPopup removed.
-// The polished Stage-4 modal now lives at
-// `@/components/nex-native/business-chat/ShopChatRegistrationPopup`
-// and is reused by the Product Detail Sheet, this FAB, and the anon
-// chat preview · one shape, one copy, one `?next=` chain.
+// Owner directive 2026-11-28 · FAB anon branch now mounts
+// GuestShopEnquiryPopup (Rev 3 email-as-body pathway). The older
+// ShopChatRegistrationPopup remains the Product Detail Sheet's
+// "More Details" gate and the anon chat preview composer-send
+// gate · both are untouched. The enquiry popup carries a secondary
+// CTA that links into that same sign-up flow for visitors who prefer
+// a NEX account to a one-off email.

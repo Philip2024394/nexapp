@@ -611,6 +611,7 @@ export default async function PublicShopPage({
             after authentication. */}
         <ShopChatFab
           ownerAccountId={business.owner_account_id}
+          shopBusinessId={business.id}
           shopName={business.display_name}
           shopSlug={business.slug}
           isSignedIn={viewerSession !== null}
