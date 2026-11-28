@@ -7,6 +7,34 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 XRATEDBELTS.COM vanity-domain setup · pushed `de9ddd2a` on `release-audit-v1-2026-11-14`
+
+Owner directive 2026-11-28 ten-section brief: register-first vanity domain
+`xratedbelts.com` (Hosting Ireland) must point at the X-Rated Tool Belts
+shop via the existing Ireland NEX Cloudflare Worker. Customer lands on
+shop home · no splash · no SOS · no country gate. Shared NEX auth,
+Supabase, chat, payments unchanged.
+
+- **Remote HEAD after push:** `de9ddd2a` (branch `release-audit-v1-2026-11-14`).
+- **Commits this cycle (4, scoped):**
+  - `428474d6` fix(x-rated-shop): transparent PNG margins visible on Template 15 landscape frame (`cover/primitives.tsx` · `contain` instead of `cover` for isLandscape && textOnly).
+  - `096938da` feat(x-rated-shop): add Heavy-Duty Gear Bag as duffel product gallery image (sandbox-only seed script · evidence JSON).
+  - `9cbd572a` feat(vanity-domain): serve X-Rated shop on xratedbelts.com via edge rewrite (map · rewrite-path · host-identity · middleware · sitemap · robots · wrangler routes · 44 vitest cases).
+  - `de9ddd2a` docs(x-rated-shop): chat-based checkout gap analysis + build plan (companion to tasks #17-#19, planning-only).
+- **Verification (dev server :3008 with Host header overrides):** apex `/` → 200 shop · `/our-story` → 200 shop sub-page · `/product/<id>`, `/sign-in`, `/cart` → 200 · `www` → 308 apex · `/api/*` and `nexcorner.com` → unchanged · vanity `/sitemap.xml` → 2 URLs on `https://xratedbelts.com` · vanity `/robots.txt` → Host + Sitemap on vanity origin. Vitest 44/44 pass. Zero typecheck errors on touched files.
+- **Blocked (needs owner action):**
+  1. Add `xratedbelts.com` zone to Cloudflare account (Free plan).
+  2. Switch Hosting Ireland nameservers for `xratedbelts.com` to the Cloudflare pair.
+  3. Dispatch `.github/workflows/cloudflare-deploy.yml` with `environment=production` to bind the routes + issue Universal SSL.
+- **Not yet done (future cycle, not launch-blocking):**
+  - Host-aware canonical URL emission on shop page metadata (today still emits `nexcorner.com` base).
+  - Outbound `<Link>` rewriting on vanity host (user-visible URL after navigation currently drifts back to `/nex-native/<slug>/...`).
+  - Preview-worker verification against the real Cloudflare Worker.
+- **Rule-8 status:** BUILT + WIRED + VERIFIED (preview). Prod deploy BLOCKED on owner approval.
+- **Reference docs:** `docs/engineering/xratedbelts-com-vanity-domain-cycle-2026-11-28.md` (full cycle report), `docs/engineering/xratedbelts-com-hosting-ireland-dns-setup-2026-11-28.md` (owner-only DNS steps).
+
+---
+
 ## HEAD update · 2026-11-28 X-Rated · shared shop header + /our-story scroll fix + duffel transparent-padding trimmed (post-`3fd0a231` → now pending commit)
 
 Owner directive 2026-11-28 (eleventh pass): *"our story page is not scrolling · also we need same header as home page on our story page and also the page why Xratedbelts same issue and also need header global · tool bag is not fitting in image window · make sure image is cropped to fit"*. Four independent defects on the same fix pass. Standing 2026-11-27 source-control policy in force.
