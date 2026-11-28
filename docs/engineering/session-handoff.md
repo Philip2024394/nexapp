@@ -7,6 +7,25 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · eighth-pass X-Rated home-page restyle + SentCard app-invite (post-a334ac87 → now `2f407ba5`)
+
+Owner directive 2026-11-28 (eighth-pass, verbatim): *"CHANGE THE PAGE BACK GROUND OF Message X-Rated Tool Belts TO THIS IMAGE 'Scaffold Workers in the Mist.png' ALSO ADD THE XRATED PROFILE AND LOG IMAGE AND ADDRESS AND 2 BUTTONS LIKE IT WAS SAME AS X RATED HOME PAGE"*. Standing 2026-11-27 source-control policy in force. The seventh-pass §7 gap (app-download copy missing from SentCard) bundled into this cycle so install-intent is captured at peak moment.
+
+- **Remote HEAD before cycle:** `a334ac87`.
+- **Commits this cycle (1):** `feat(shop-enquiry): X-Rated home-page restyle + SentCard app-invite`. Six files + new hero image asset:
+  - `public/nex/shop/scaffold-workers-in-the-mist.png` (NEW · 1.5 MB · 941×1672 PNG · copied from owner Downloads path).
+  - `GuestShopEnquiryPopup.tsx` — new `[data-nex-guest-enquiry-hero]` (180px · bg image · gradient overlay) + `[data-nex-guest-enquiry-identity]` (72px round `<img>` logo with 3px accent rim overlapping hero via `marginTop:-36`, shop name, optional address line · no pin glyph · matches X-Rated sixth-pass product_hero_landscape). Send + Not-now rewrapped in `[data-nex-guest-enquiry-action-row]` (flex 60/40). Not-now promoted from ghost text-link → visible 1.5px accent outline pill. SentCard gained `[data-nex-guest-enquiry-sent-app-invite]` ("Download the NEX app when prompted so future replies land directly in NEX Chat"). `GuestShopEnquiryPopupProps` extended with three OPTIONAL fields: `shopLogoUrl`, `shopAddress`, `heroBackgroundUrl` (all null-safe · popup degrades to plain Addendum E full page when omitted).
+  - `_shop-chat-fab.tsx` — threads `shopLogoUrl` + `shopAddress` through to the popup.
+  - `[businessSlug]/page.tsx` — passes `business.logo_url` + `business.address` (both already on `nex_business` per migration 014 · no schema change).
+- **Automated tests this cycle:** popup suite 24→33 (+9: hero default URL, hero override, logo `<img>` present, logo fallback initial, address present, address null omission, two-button row, outline-pill Not-now, SentCard app-download copy). Combined focused run (same 7 suites) 149→158 (+9). Scoped tsc clean. **Sixth-pass phone-frame-anchored invariant preserved verbatim** (test `"renders as a phone-frame-anchored full page · no backdrop · no card frame · no portal"` still green — `position:fixed` + `inset:0` + no portal + no card chrome all untouched).
+- **Exclusions:** none. All six items plus the asset are logically one directive.
+- **Standing blockers narrowed:** step-7 app-download-on-SentCard gap **removed**. Remaining: `NEX_SHOP_ENQUIRY_HMAC_KEY` provisioning, Resend bridge + `RESEND_API_KEY`, real-device Playwright full-viewport + glow + hero snapshots.
+- **Next cycle picks up from:** owner has three candidate milestones (any unblocked): (1) approve HMAC key provisioning → unblock step-4 live-HTTP manipulation suite; (2) approve Resend bridge activation + credentials → unblock steps 5+6, close acceptance condition; (3) author Playwright visual snapshots (no owner gate).
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched.
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · seventh-pass live sandbox Path A verification (post-3f3487f7 → now `a2d4eaf3`)
 
 Owner directive 2026-11-28 (seventh-pass): execute the five-step sandbox verification plan from fifth-pass §10 against `kdstoyyeygcopkogqsyv` (NOT prod `ijvqdvsvwtwxzcqmoqit`), with an expanded seven-step acceptance. Standing 2026-11-27 source-control policy in force.
