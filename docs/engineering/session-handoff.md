@@ -7,6 +7,26 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · seventh-pass live sandbox Path A verification (post-3f3487f7 → now `a2d4eaf3`)
+
+Owner directive 2026-11-28 (seventh-pass): execute the five-step sandbox verification plan from fifth-pass §10 against `kdstoyyeygcopkogqsyv` (NOT prod `ijvqdvsvwtwxzcqmoqit`), with an expanded seven-step acceptance. Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `3f3487f7`.
+- **Commits this cycle (1):** `chore(shop-enquiry): live sandbox Path A verification (steps 1-3 VERIFIED)`. New script `scripts/verify-shop-enquiry-path-a-sandbox.mjs` (280 lines) + Rule-9 report `docs/engineering/cycle-strict-completion-2026-11-28-rev3-seventh-pass-sandbox-path-a-verify.md`. Script hard-aborts if URL points at prod; mirrors `auth.admin.createUser` + `nex_account` insert + repeat-email branch using service-role client; cleans up both rows on every run (idempotent, RFC-2606 `@example.com` domain). Never logs the key.
+- **Live run result:** 13 VERIFIED / 0 FAILED against sandbox `kdstoyyeygcopkogqsyv`.
+  - auth user id `d4ad7e97-ac30-46f5-b7de-c972bc88b731` created (email_confirmed_at:null; visitor_phone in user_metadata; auth.users.phone empty = identity doctrine preserved) and deleted.
+  - `nex_account` id `2dcabdf1-025f-487b-be68-a7022d7feb05` inserted and deleted, `supabase_user_id` correctly linked.
+  - Repeat `createUser` for same email surfaced "A user with this email address has already been registered" — matches `EMAIL_EXISTS_PATTERN` → `pre_existing_auth_user` branch verified live. No duplicate `nex_account` row.
+  - **Correction to prior handoff claim:** `nex_shop_enquiry` table IS reachable in sandbox — migration 372 WAS applied earlier. All earlier "mig 372 not applied" blocker notes were stale.
+- **Rule-8 status per owner-numbered step:** 1-VERIFIED (account creation live) · 2-VERIFIED (nex_account linkage live) · 3-VERIFIED (duplicate protection live, three sub-checks) · 4-PARTIAL (21 vitest pass; live HTTP blocked on HMAC key) · 5-BLOCKED (`DEFAULT_ADAPTER=ConsoleAdapter` + no `RESEND_API_KEY`) · 6-BLOCKED (depends on 5) · 7-PARTIAL (pre-send copy pinned by vitest; SentCard missing — bundled into upcoming restyle).
+- **Acceptance condition:** "Do not call the guest shop-enquiry journey complete until account creation, enquiry delivery and merchant reply delivery have all been demonstrated successfully." → 1-of-3 met. **Journey NOT complete.**
+- **Standing blockers (narrowed):** mig 372 cleared (was stale); still blocked: `NEX_SHOP_ENQUIRY_HMAC_KEY` provisioning, Resend bridge activation + `RESEND_API_KEY`, real-device Playwright full-viewport + glow snapshots, SentCard app-download copy (bundled into next cycle).
+- **Next cycle picks up from:** owner has issued an eighth-pass UI restyle directive (hero background + shop logo + address + two X-Rated-home-page-style buttons) which will touch the popup chrome. Bundling the deferred SentCard app-download copy into that restyle keeps the diff coherent.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched.
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · sixth-pass phone-frame-anchored full page (post-358d4beb → now `40208787`)
 
 Owner correction 2026-11-28 (sixth-pass, verbatim): *"I SAID MOBILE PHONE SCREEN INSIDE PHONE NOT FULL DESKTOP SCREEN"*. Standing 2026-11-27 source-control policy in force.
