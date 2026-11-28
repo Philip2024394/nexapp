@@ -6,9 +6,9 @@
 //   · fetchShopContactsMetadata     → counterparties that have a peer
 //                                     conversation with the shop owner
 //                                     (metadata only · never plaintext)
-//   · fetchShopMessageInboxMeta     → recent business-chat message
-//                                     metadata (counterparty + created_at)
-//                                     with body NEVER returned
+//   · fetchShopMessageInboxMeta     → recent peer-chat inbound message
+//                                     metadata (counterparty + sent_at)
+//                                     with body/ciphertext NEVER returned
 //
 // Doctrine
 //   · nex_message + nex_peer_message BODIES are end-to-end encrypted
@@ -21,6 +21,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "../supabase-admin";
+import { NEX_HQ_SENTINEL_ACCOUNT_ID } from "../hq-direct-channel/hq-direct-service";
 
 const UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -184,10 +185,27 @@ export interface ShopInboxRow {
   readonly encrypted: boolean;
 }
 
-/** Most-recent business-chat messages sent TO the shop (metadata only).
- *  Body is NEVER returned · HQ cannot read ciphertext, and plaintext
- *  rows are frozen to null post-mig-345. The HQ operator sees who
- *  messaged, when, and whether it was encrypted. */
+/** Most-recent peer-chat messages sent INTO the shop (metadata only).
+ *
+ *  Defect fix 2026-11-28 · previous revision read nex_conversation +
+ *  nex_message (mig-004 business-chat system), but the shop chat FAB
+ *  routes through nex_peer_conversation + nex_peer_message (mig-047
+ *  Bridge 3 peer-chat system · sealed 2026-11-13 FAB redesign).
+ *  Reading the wrong table rendered the inbox empty even when real
+ *  customers had messaged the shop.
+ *
+ *  Architecture:
+ *   · businessId → nex_business.owner_account_id → one side of every
+ *     peer conversation.
+ *   · Conversations are the (participant_a_id, participant_b_id) rows
+ *     where owner is either side.
+ *   · "Inbox" = inbound, so we exclude messages sent BY the owner
+ *     (that's their outbox) and messages from the Nex HQ sentinel
+ *     (that's HQ→customer, not customer→shop).
+ *   · Body / ciphertext / nonce / sender_public_key columns are NEVER
+ *     selected · the 2026-11-09 device-only E2E seal stands.
+ *   · `encrypted` flag comes from mig-093 which added the dual-mode
+ *     column on nex_peer_message. */
 export async function fetchShopMessageInboxMeta(
   businessId: string,
   opts: { readonly limit?: number } = {},
@@ -195,33 +213,58 @@ export async function fetchShopMessageInboxMeta(
   if (!UUID_SHAPE.test(businessId)) return [];
   const limit = Math.max(1, Math.min(opts.limit ?? 50, 200));
 
-  // Find the business's conversations · one per mig-004 shape.
-  const conv = await nexSupabaseAdmin
-    .from("nex_conversation")
-    .select("id")
-    .eq("business_id", businessId)
-    .limit(10);
-  if (conv.error || !conv.data || conv.data.length === 0) return [];
-  const conversationIds = (conv.data as Array<{ id: string }>).map(
-    (r) => r.id,
-  );
+  // Resolve the shop owner · peer-chat is keyed on accounts, not
+  // businesses, so we need the owner account id to query.
+  const bizRes = await nexSupabaseAdmin
+    .from("nex_business")
+    .select("owner_account_id")
+    .eq("id", businessId)
+    .maybeSingle();
+  const ownerAccountId = (bizRes.data as { owner_account_id: string | null } | null)
+    ?.owner_account_id;
+  if (bizRes.error || !ownerAccountId || !UUID_SHAPE.test(ownerAccountId)) {
+    return [];
+  }
 
+  // Enumerate the owner's peer conversations · one row per canonical
+  // pair per mig-047 schema.
+  const conv = await nexSupabaseAdmin
+    .from("nex_peer_conversation")
+    .select("id, participant_a_id, participant_b_id")
+    .or(
+      `participant_a_id.eq.${ownerAccountId},participant_b_id.eq.${ownerAccountId}`,
+    )
+    .limit(500);
+  if (conv.error || !conv.data || conv.data.length === 0) return [];
+  const conversationIds = (
+    conv.data as Array<{
+      id: string;
+      participant_a_id: string;
+      participant_b_id: string;
+    }>
+  ).map((r) => r.id);
+
+  // Fetch inbound messages · exclude owner's own outbound and the
+  // Nex HQ sentinel's announcements (mig-301).
   const msgs = await nexSupabaseAdmin
-    .from("nex_message")
-    .select("conversation_id, sender_account_id, created_at, encrypted")
+    .from("nex_peer_message")
+    .select("conversation_id, sender_account_id, sent_at, encrypted")
     .in("conversation_id", conversationIds)
-    .order("created_at", { ascending: false })
+    .neq("sender_account_id", ownerAccountId)
+    .neq("sender_account_id", NEX_HQ_SENTINEL_ACCOUNT_ID)
+    .order("sent_at", { ascending: false })
     .limit(limit);
   if (msgs.error || !msgs.data) return [];
 
   const rows = msgs.data as Array<{
     conversation_id: string;
     sender_account_id: string;
-    created_at: string;
+    sent_at: string;
     encrypted: boolean | null;
   }>;
 
   const senderIds = [...new Set(rows.map((r) => r.sender_account_id))];
+  if (senderIds.length === 0) return [];
   const senders = await nexSupabaseAdmin
     .from("nex_account")
     .select("id, display_name")
@@ -240,7 +283,7 @@ export async function fetchShopMessageInboxMeta(
     conversationId: r.conversation_id,
     senderAccountId: r.sender_account_id,
     senderDisplayName: senderMap.get(r.sender_account_id) ?? null,
-    createdAt: r.created_at,
+    createdAt: r.sent_at,
     encrypted: r.encrypted ?? false,
   }));
 }
