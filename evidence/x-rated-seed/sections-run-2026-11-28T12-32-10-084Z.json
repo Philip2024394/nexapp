@@ -1,0 +1,181 @@
+{
+  "timestamp": "2026-11-28T12:32:10.084Z",
+  "business_id": "22222222-2222-4222-8222-222222299902",
+  "sections_before": [
+    {
+      "id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde",
+      "name": "Tool Rig Bag",
+      "sort_order": 0
+    }
+  ],
+  "sections_after": [
+    {
+      "id": "02b46535-319e-427f-823f-1360d87419a5",
+      "name": "Scaffolders Rig Belts",
+      "sort_order": 0
+    },
+    {
+      "id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde",
+      "name": "Tool Rig Bag",
+      "sort_order": 1
+    }
+  ],
+  "products_before": [
+    {
+      "sku": "XRTB-001",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-002",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-003",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-004",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-005",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-006",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-007",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-008",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-009",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-010",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-011",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-012",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-013",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-014",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-015",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-016",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-017",
+      "section_id": null
+    },
+    {
+      "sku": "XRTB-018",
+      "section_id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde"
+    }
+  ],
+  "products_after": [
+    {
+      "sku": "XRTB-001",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-002",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-003",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-004",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-005",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-006",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-007",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-008",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-009",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-010",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-011",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-012",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-013",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-014",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-015",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-016",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-017",
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5"
+    },
+    {
+      "sku": "XRTB-018",
+      "section_id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde"
+    }
+  ],
+  "counts_by_section": [
+    {
+      "section_id": "02b46535-319e-427f-823f-1360d87419a5",
+      "n": 17
+    },
+    {
+      "section_id": "0a33717d-2c5e-4c7a-a6ba-cb74b2c0dbde",
+      "n": 1
+    }
+  ]
+}

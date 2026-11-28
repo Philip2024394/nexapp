@@ -768,7 +768,16 @@ export function LayoutProductHeroLandscape({
   // Owner directive 2026-11-28 (third pass) · category dropdown drives
   // the catalog filter via controlled props so the parent owns the
   // active section id. Empty string = no filter (show every product).
-  const [categoryId, setCategoryId] = React.useState<string>("");
+  //
+  // Owner directive 2026-11-28 (twelfth pass · Utility Duffel third
+  // pass) · when the shop has at least one section authored, the
+  // dropdown defaults to the first section (by sort_order) so the
+  // home page lands on the owner's intended primary category
+  // (e.g. X-Rated → "Scaffolders Rig Belts"). Shops with no sections
+  // still default to "" (All) · unchanged.
+  const [categoryId, setCategoryId] = React.useState<string>(
+    content.sections[0]?.id ?? "",
+  );
   // Owner directive 2026-11-28 (ninth pass) · filter icon beside the
   // Categories header opens a panel offering Price / Color / Material
   // / Thread color / Buckle type dimensions. State lives at the layout

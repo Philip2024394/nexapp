@@ -7,6 +7,32 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 X-Rated · Scaffolders Rig Belts first-category + index-0 image override gated + dropdown defaults to first section (post-`468324cd` → now pending commit)
+
+Owner directive 2026-11-28: *"the tool rig when select the category is not showing the bag image on the main category cards page for tool rig bag - first category is scaffolders rig belts, which will be the home page displaying cards"* — two defects: (1) selecting Tool Rig Bag rendered the belt placeholder in place of the duffel's real image because the slug-gated `index===0` image override in `[businessSlug]/page.tsx` fired for the only product in that section · (2) no "Scaffolders Rig Belts" category existed and the home page landed on "All" rather than the belt grid. Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `468324cd`.
+- **Files added/modified this cycle (4):**
+  - `scripts/add-x-rated-scaffolders-rig-belts-section-2026-11-28.mjs` (NEW) — idempotent, sandbox-only (prod hard-refused). Creates `nex_product_section` row `Scaffolders Rig Belts` at `sort_order=0` (or UPDATEs if exists), bumps existing `Tool Rig Bag` to `sort_order=1`, and attaches every X-Rated product with `section_id IS NULL AND sku <> 'XRTB-018'` to the new section. Writes `evidence/x-rated-seed/sections-run-{timestamp}.json` with before/after snapshots + counts.
+  - `evidence/x-rated-seed/sections-run-2026-11-28T12-32-10-084Z.json` (NEW) — DB state proof.
+  - `src/app/nex-native/[businessSlug]/page.tsx` (MOD) — gated the thirty-second-pass `index===0` image override on `!p.image_url` so a product carrying a real image in the DB renders its own image even when it becomes the first card in a filtered view (e.g. the duffel in the Tool Rig Bag section). `XRTB-001` still has `image_url NULL` and continues to receive the branded placeholder.
+  - `src/app/nex-native/cover/layouts.tsx` (MOD) — `LayoutProductHeroLandscape` `categoryId` useState now defaults to `content.sections[0]?.id ?? ""`, so shops that have authored at least one section land on the first section (by `sort_order`) instead of "All". Shops with no sections still default to "" — unchanged.
+  - `docs/engineering/session-handoff.md` (MOD) — this addendum.
+- **Sections-run result (sandbox `kdstoyyeygcopkogqsyv`):**
+  - Sections: `Scaffolders Rig Belts` (sort_order=0, 17 products) · `Tool Rig Bag` (sort_order=1, 1 product · XRTB-018 duffel).
+  - Unsectioned products: 0 (was 17 before the run).
+- **Verification checks:**
+  - **Storefront SSR** `/nex-native/x-rated-tool-belts` — HTTP 200 · 167,961 B · dropdown contains both `Scaffolders Rig Belts` and `Tool Rig Bag` · selected option is `Scaffolders` (verified `<option selected="">Scaffolders…`) · `utility-duffel-s.png` present 4× (duffel's real image threaded) · `brand/x-rated` placeholder present 4× (XRTB-001 still null-imaged — placeholder correctly kicks in for it only) · XRTB-001 Classic Leather name + XRTB-018 Utility Duffel name both present 4× in markup.
+- **Rule-8 status:** BUILT + WIRED + VERIFIED. Real browser snapshot NOT EXECUTED this cycle.
+- **Scope choice:** the `useState` default change in `LayoutProductHeroLandscape` affects every shop using Template 15 that has authored sections — this is intentional and matches owner intent ("first category is … the home page displaying cards"). Shops with zero sections are unaffected.
+- **Exclusions:** `docs/doctrine/x-rated-chat-checkout-build-plan-2026-11-28.md` still NOT committed — separate directive, 4 approvals pending.
+- **Flagged for owner (judgment call):** every non-duffel X-Rated product (XRTB-001 .. XRTB-017) was bulk-assigned to `Scaffolders Rig Belts`. Owner can re-categorise individual items (e.g. drill holsters, tape clips, suspenders) via the management UI if finer buckets are wanted.
+- **Next cycle picks up from:** owner reviews `/nex-native/x-rated-tool-belts` and confirms (a) Scaffolders Rig Belts is the first dropdown entry and default view, (b) switching to Tool Rig Bag shows the duffel card with its actual image, (c) product assignments are sensible.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched (no prod DB, no prod migration, no prod deploy, no main push, no live Stripe/PayPal).
+
+---
+
 ## HEAD update · 2026-11-28 X-Rated Utility Duffel · image swap + Canvas D365 material + sections wired into storefront (post-`570eb9cb` → now pending commit)
 
 Owner directive 2026-11-28: *"change the tool bag image with this and the material is - Canvas D365 water ressitant with twin zipper · and this must also show on the home page category list drop"* (new image at `C:/Users/Victus/Downloads/tool_bag-removebg-preview.png` · 225 KB · 499×500 PNG RGBA · transparent background · X-Rated branded). Standing 2026-11-27 source-control policy in force.

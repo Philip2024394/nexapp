@@ -341,6 +341,14 @@ export default async function PublicShopPage({
   // shop settings surface. Same slug-gated pattern already in use for
   // brandStripUrl / headerLogoUrl above. The asset lives at
   // /nex-native/brand/x-rated-tool-belts-product-1.png.
+  //
+  // Owner directive 2026-11-28 (twelfth pass · Utility Duffel third
+  // pass) · gate the index-0 override on `!p.image_url` so a product
+  // that carries a real image in the DB (e.g. XRTB-018 Utility Duffel
+  // when the Tool Rig Bag section is selected and the duffel becomes
+  // the index-0 card) renders its own image instead of being
+  // clobbered by the belt placeholder. XRTB-001 still has image_url
+  // NULL so it continues to pick up the branded placeholder.
   const coverProducts: CoverProduct[] = products.map((p, index) => ({
     id: p.id,
     slug: null,
@@ -348,7 +356,7 @@ export default async function PublicShopPage({
     price_pence: p.price_pence,
     currency: p.currency,
     image_url:
-      business.slug === "x-rated-tool-belts" && index === 0
+      business.slug === "x-rated-tool-belts" && index === 0 && !p.image_url
         ? "/nex-native/brand/x-rated-tool-belts-product-1.png"
         : p.image_url,
     stock_status: p.stock_status,
