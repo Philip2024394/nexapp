@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-11-28T13:59:07.066Z",
+  "product_id": "7fe7b701-11b3-4949-a43a-47c7570998f7",
+  "source": {
+    "path": "C:/Users/Victus/Downloads/Open Black Duffel Bag Interior.webp",
+    "bytes": 1521380,
+    "width": 1536,
+    "height": 1024,
+    "format": "webp"
+  },
+  "output": {
+    "bucket": "nex-business-assets",
+    "path": "x-rated-tool-belts/products/utility-duffel-s-gallery-3.webp",
+    "bytes": 262588,
+    "content_type": "image/webp",
+    "width": 1536,
+    "height": 1024,
+    "webp_quality": 82,
+    "public_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s-gallery-3.webp"
+  },
+  "db": {
+    "before": [
+      "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s-gallery-2.png"
+    ],
+    "after": [
+      "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s-gallery-2.png",
+      "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s-gallery-3.webp"
+    ],
+    "idempotent": false
+  }
+}
