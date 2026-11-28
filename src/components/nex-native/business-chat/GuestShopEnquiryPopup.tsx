@@ -330,21 +330,10 @@ export function GuestShopEnquiryPopup({
         backgroundColor: "#0A1526",
       }}
     >
-      {/* Full-bleed legibility scrim · darker at the top so the
-          "Message X-Rated Tool Belts" title reads clean against any
-          image, fading toward the middle where the form card paints
-          its own background. */}
-      <div
-        aria-hidden
-        data-nex-guest-enquiry-scrim
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          background:
-            "linear-gradient(to bottom, rgba(10,21,38,0.55) 0%, rgba(10,21,38,0.2) 30%, rgba(10,21,38,0.2) 70%, rgba(10,21,38,0.6) 100%)",
-        }}
-      />
+      {/* Owner directive 2026-11-28 (eleventh pass) · page shade
+          removed. The Scaffold Workers background now reads at full
+          saturation; the headline carries its own text-shadow for
+          legibility, and the form sits on its own frosted panel. */}
       <section
         data-nex-guest-enquiry-card
         style={{
@@ -371,7 +360,7 @@ export function GuestShopEnquiryPopup({
             textShadow: "0 2px 10px rgba(0,0,0,0.45)",
           }}
         >
-          Message {shopLabel}
+          {shopLabel}
         </h2>
         <p
           data-nex-guest-enquiry-honesty
@@ -558,7 +547,7 @@ export function GuestShopEnquiryPopup({
                   fontFamily: "inherit",
                 }}
               >
-                Not now
+                Close
               </button>
             </div>
           </form>

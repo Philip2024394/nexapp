@@ -175,34 +175,94 @@ export function ShopFilterPanel({
         alignItems: "stretch",
         justifyContent: "center",
         padding: "24px 14px",
+        boxSizing: "border-box",
       }}
     >
+      {/* Owner directive 2026-11-28 (eleventh pass) · running light
+          around the filter card's edge + layout rebuild so text no
+          longer bleeds past the rounded corners. The outer wrapper
+          paints a 2px animated conic-gradient ring; the inner white
+          card sits on top, inset by 2px, with its own padding so
+          content stays inside the rounded corners. */}
+      <style>{`
+        @keyframes nex-shop-filter-running-light {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       <div
         data-nex-shop-filter-card
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#FFFFFF",
+          position: "relative",
           borderRadius: 20,
-          overflow: "hidden",
-          maxHeight: "calc(100% - 0px)",
+          maxHeight: "100%",
+          minHeight: 0,
           display: "flex",
           flexDirection: "column",
+          padding: 2,
           boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
           fontFamily: "Inter, system-ui, sans-serif",
           color: INK,
+          overflow: "hidden",
+          background: "#0A1526",
+          boxSizing: "border-box",
         }}
       >
-        {/* Header */}
+        <div
+          aria-hidden
+          data-nex-shop-filter-running-light
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: "200%",
+            aspectRatio: "1 / 1",
+            transform: "translate(-50%, -50%)",
+            background:
+              "conic-gradient(from 0deg, rgba(255,122,0,0) 0deg, rgba(255,122,0,0.95) 40deg, rgba(255,160,70,0.9) 60deg, rgba(255,122,0,0) 120deg, rgba(255,122,0,0) 220deg, rgba(255,122,0,0.85) 260deg, rgba(255,122,0,0) 320deg)",
+            animation: "nex-shop-filter-running-light 3.6s linear infinite",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          data-nex-shop-filter-card-inner
+          style={{
+            position: "relative",
+            background: "#FFFFFF",
+            borderRadius: 18,
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+            boxSizing: "border-box",
+          }}
+        >
+        {/* Header · owner directive 2026-11-28 (eleventh pass) · title
+            column gets minWidth:0 so it wraps instead of elbowing the
+            close button; close button is flexShrink:0 to stay pinned
+            at the right edge of the card. */}
         <header
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 12,
             padding: "16px 18px 12px",
             borderBottom: `1px solid ${DIVIDER}`,
+            flexShrink: 0,
+            boxSizing: "border-box",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
             <strong
               style={{
                 fontSize: 16,
@@ -212,7 +272,16 @@ export function ShopFilterPanel({
             >
               Filters
             </strong>
-            <span style={{ fontSize: 12, color: INK_DIM, fontWeight: 600 }}>
+            <span
+              style={{
+                fontSize: 12,
+                color: INK_DIM,
+                fontWeight: 600,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {activeCount === 0
                 ? "No filters applied"
                 : `${activeCount} filter${activeCount === 1 ? "" : "s"} active`}
@@ -226,6 +295,7 @@ export function ShopFilterPanel({
             style={{
               width: 32,
               height: 32,
+              flexShrink: 0,
               borderRadius: 999,
               background: "rgba(10,21,38,0.06)",
               color: INK,
@@ -242,13 +312,19 @@ export function ShopFilterPanel({
           </button>
         </header>
 
-        {/* Scrollable body */}
+        {/* Scrollable body · minHeight:0 lets the flex child shrink
+            below its content height so overflowY:auto actually paints
+            a scrollbar instead of letting content bleed under the
+            footer. */}
         <div
           data-nex-shop-filter-sections
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
+            overflowX: "hidden",
             padding: "4px 18px 8px",
+            boxSizing: "border-box",
           }}
         >
           {/* Price section */}
@@ -296,12 +372,14 @@ export function ShopFilterPanel({
                         }));
                       }}
                       style={{
+                        width: "100%",
                         padding: "10px 12px",
                         borderRadius: 10,
                         border: `1px solid ${DIVIDER}`,
                         fontSize: 14,
                         fontWeight: 700,
                         color: INK,
+                        boxSizing: "border-box",
                       }}
                     />
                   </label>
@@ -329,12 +407,14 @@ export function ShopFilterPanel({
                         }));
                       }}
                       style={{
+                        width: "100%",
                         padding: "10px 12px",
                         borderRadius: 10,
                         border: `1px solid ${DIVIDER}`,
                         fontSize: 14,
                         fontWeight: 700,
                         color: INK,
+                        boxSizing: "border-box",
                       }}
                     />
                   </label>
@@ -438,6 +518,8 @@ export function ShopFilterPanel({
             padding: "12px 18px 16px",
             borderTop: `1px solid ${DIVIDER}`,
             background: "#FFFFFF",
+            flexShrink: 0,
+            boxSizing: "border-box",
           }}
         >
           <button
@@ -484,6 +566,7 @@ export function ShopFilterPanel({
             Apply filters
           </button>
         </footer>
+        </div>
       </div>
     </div>
   );

@@ -618,7 +618,7 @@ describe("GuestShopEnquiryPopup · full-page background (owner directive 2026-11
     ).toBeNull();
   });
 
-  it("renders a legibility scrim over the full-page background image", () => {
+  it("removes the page shade · no scrim element paints over the full-page background (owner directive 2026-11-28 eleventh-pass)", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
@@ -626,14 +626,12 @@ describe("GuestShopEnquiryPopup · full-page background (owner directive 2026-11
         postShopEnquiry={async () => makeResponse(200, { ok: true })}
       />,
     );
-    const scrim = document.querySelector(
-      "[data-nex-guest-enquiry-scrim]",
-    ) as HTMLElement | null;
-    expect(scrim).toBeTruthy();
-    expect(scrim!.style.position).toBe("absolute");
-    // Gradient scrim · must reference the ink tone so the title reads
-    // clean at the top.
-    expect(scrim!.style.background).toContain("10, 21, 38");
+    // Eleventh-pass correction · the Scaffold Workers image now reads
+    // at full saturation; legibility is carried by the headline's own
+    // text-shadow and the form panel's frosted background.
+    expect(
+      document.querySelector("[data-nex-guest-enquiry-scrim]"),
+    ).toBeNull();
   });
 
   it("wraps the form in a frosted-white legibility panel so inputs stay readable over the image", () => {
@@ -656,7 +654,7 @@ describe("GuestShopEnquiryPopup · full-page background (owner directive 2026-11
     ).toBeTruthy();
   });
 
-  it("renders Send + Not now as a two-button action row (X-Rated home-page pair style)", () => {
+  it("renders Send + Close as a two-button action row (X-Rated home-page pair style)", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
@@ -675,12 +673,16 @@ describe("GuestShopEnquiryPopup · full-page background (owner directive 2026-11
     expect(
       row!.querySelector("[data-nex-guest-enquiry-send]"),
     ).toBeTruthy();
-    expect(
-      row!.querySelector("[data-nex-guest-enquiry-dismiss]"),
-    ).toBeTruthy();
+    const dismissBtn = row!.querySelector(
+      "[data-nex-guest-enquiry-dismiss]",
+    ) as HTMLElement | null;
+    expect(dismissBtn).toBeTruthy();
+    // Owner directive 2026-11-28 (eleventh-pass) · dismiss copy
+    // changed "Not now" → "Close".
+    expect(dismissBtn!.textContent).toBe("Close");
   });
 
-  it("styles the Not-now dismiss as a visible outline pill (not the old ghost text link)", () => {
+  it("styles the Close dismiss as a visible outline pill (not the old ghost text link)", () => {
     render(
       <GuestShopEnquiryPopup
         {...SHOP}
