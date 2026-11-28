@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-11-28T12:26:40.364Z",
+  "product_id": "7fe7b701-11b3-4949-a43a-47c7570998f7",
+  "image": {
+    "source": "C:/Users/Victus/Downloads/tool_bag-removebg-preview.png",
+    "object_path": "x-rated-tool-belts/products/utility-duffel-s.png",
+    "content_type": "image/png",
+    "bytes": 225945,
+    "public_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png"
+  },
+  "before": {
+    "image_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png",
+    "materials": [
+      "Cordura",
+      "Cordura 600D",
+      "polyester"
+    ],
+    "water_resistance": "water-resistant",
+    "features": [
+      "external pocket for scaffolders' cards or site drawings",
+      "compact for carrying tool belt rigs and tools",
+      "keeps the tool belt rig neatly stored away",
+      "convenient for transporting between job sites"
+    ]
+  },
+  "after": {
+    "image_url": "https://kdstoyyeygcopkogqsyv.supabase.co/storage/v1/object/public/nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png",
+    "materials": [
+      "Canvas D365"
+    ],
+    "water_resistance": "water-resistant",
+    "features": [
+      "twin zipper",
+      "external pocket for scaffolders' cards or site drawings",
+      "compact for carrying tool belt rigs and tools",
+      "keeps the tool belt rig neatly stored away",
+      "convenient for transporting between job sites"
+    ],
+    "updated_at": "2026-11-28T12:26:39.409Z"
+  }
+}

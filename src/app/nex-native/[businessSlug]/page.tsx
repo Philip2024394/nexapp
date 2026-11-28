@@ -50,6 +50,7 @@ import {
 } from "@/lib/nex-native/analytics/page-view-service";
 import { resolveViewerToken } from "@/lib/nex-native/analytics/viewer-cookie";
 import * as productService from "@/lib/nex-native/product-service";
+import { listSectionsByBusiness } from "@/lib/nex-native/product-section-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 // Owner directive 2026-11-06 readiness fill · surface an owner-only
 // empty state when the shop is live but has zero products so the
@@ -196,7 +197,7 @@ export default async function PublicShopPage({
 
   // Parallel loads · all fail-soft so a transient Supabase blip
   // doesn't crash the shop surface.
-  const [products, coverContent, themeRow, viewerSession, ownerAccount] =
+  const [products, coverContent, themeRow, viewerSession, ownerAccount, productSections] =
     await Promise.all([
       productService
         .listProductsByBusiness(business.id, "live")
@@ -207,6 +208,14 @@ export default async function PublicShopPage({
       // Owner directive 2026-11-13 · flag source · read the owner's
       // ISO so Indonesian shops render 🇮🇩 instead of 🇮🇪.
       getAccountById(business.owner_account_id).catch(() => null),
+      // Owner directive 2026-11-28 (eleventh pass) · load the shop's
+      // product sections so the Categories dropdown in Template 15
+      // (product_hero_landscape) surfaces the owner's own category
+      // names (e.g. "Tool Rig Bag"). Previously hardcoded to `[]`,
+      // which hid every section from the dropdown even when one had
+      // been authored. Fail-soft to [] so a Supabase blip doesn't
+      // crash the shop page.
+      listSectionsByBusiness(business.id).catch(() => []),
     ]);
 
   // Owner-sealed 2026-11-13 (iter 2) · complete the return journey
@@ -358,10 +367,18 @@ export default async function PublicShopPage({
         : undefined,
   }));
 
-  // Grouping placeholder · owners can add nex_product_section rows in
-  // a follow-up · for now sections is empty so CoverCategoryTabs
-  // hides itself (sections.length ≤ 1 returns null).
-  const sections: CoverSection[] = [];
+  // Owner directive 2026-11-28 (eleventh pass) · thread the real
+  // nex_product_section rows through to CoverCatalog · the Categories
+  // dropdown in Template 15 reads from this array. Shape pared down to
+  // the CoverSection primitive (id + name + sort_order). CoverCategoryTabs
+  // still hides itself when sections.length ≤ 1; the dropdown in
+  // LayoutProductHeroLandscape does not gate on count, so a single
+  // owner-authored section (e.g. "Tool Rig Bag") will surface there.
+  const sections: CoverSection[] = productSections.map((s) => ({
+    id: s.id,
+    name: s.name,
+    sort_order: s.sort_order,
+  }));
 
   const themeEmojis = themeRow
     ? await listThemeEmojis(themeRow.id).catch(() => [])

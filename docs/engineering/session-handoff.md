@@ -7,6 +7,36 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 X-Rated Utility Duffel · image swap + Canvas D365 material + sections wired into storefront (post-`570eb9cb` → now pending commit)
+
+Owner directive 2026-11-28: *"change the tool bag image with this and the material is - Canvas D365 water ressitant with twin zipper · and this must also show on the home page category list drop"* (new image at `C:/Users/Victus/Downloads/tool_bag-removebg-preview.png` · 225 KB · 499×500 PNG RGBA · transparent background · X-Rated branded). Standing 2026-11-27 source-control policy in force.
+
+- **Remote HEAD before cycle:** `570eb9cb`.
+- **Files added/modified this cycle (4):**
+  - `scripts/update-x-rated-utility-duffel-image-2026-11-28.mjs` (NEW) — idempotent one-shot. Hard-refuses prod. Uploads new image to `nex-business-assets/x-rated-tool-belts/products/utility-duffel-s.png` with `upsert:true` + `cacheControl:"31536000"` (new PNG 225 KB · fits under 2 MB bucket cap so no compression needed · JPEG fallback path preserved). Rewrites `nex_product.spec`: `materials=["Canvas D365"]`, `additional.water_resistance="water-resistant"`, `additional.features` gains `"twin zipper"` prepended (dedupe-safe). BEGIN/COMMIT/ROLLBACK · preserves `size_label`, `dimensions`, `brand`, `condition`. Writes `evidence/x-rated-seed/update-run-{timestamp}.json`.
+  - `evidence/x-rated-seed/update-run-2026-11-28T12-26-40-363Z.json` (NEW) — before/after diff.
+  - `src/app/nex-native/[businessSlug]/page.tsx` (MOD) — wired real `nex_product_section` rows into the storefront. Two changes: (1) imported `listSectionsByBusiness` from `product-section-service`; (2) added a sixth parallel await `listSectionsByBusiness(business.id).catch(() => [])` into the existing `Promise.all`; (3) replaced the hardcoded `const sections: CoverSection[] = []` placeholder with a mapped projection of `{id, name, sort_order}` from the loaded rows. This fixes a pre-existing gap where owner-authored sections existed in DB but were invisible on the shop page. Template 15 (`product_hero_landscape`) `CategorySelectLocalized` dropdown now surfaces the owner's own category names; `CoverCategoryTabs` still hides itself when `sections.length ≤ 1` (unchanged doctrine). Fail-soft to `[]` so a Supabase blip doesn't crash the shop.
+  - `docs/engineering/session-handoff.md` (MOD) — this addendum.
+- **Update-run result (sandbox `kdstoyyeygcopkogqsyv`):**
+  - Image uploaded 225,945 bytes · storage returned HTTP 200 · public URL unchanged (same path, overwrite).
+  - DB before: `materials=["Cordura","Cordura 600D","polyester"]` · features (4 items).
+  - DB after: `materials=["Canvas D365"]` · features (5 items — "twin zipper" + 4 prior).
+  - `water_resistance="water-resistant"` preserved. `size_label="S"`, `dimensions`, `brand`, `condition` all untouched.
+- **Verification checks:**
+  - **Image CDN** — `HEAD` on public URL returned HTTP 200 · `Content-Type: image/png` · `Content-Length: 225945` · Cloudflare CF-Cache-Status DYNAMIC (first hit) · Accept-Ranges bytes.
+  - **Storefront SSR** `/nex-native/x-rated-tool-belts` — HTTP 200 · 166,666 B · dropdown contains "Tool Rig Bag" (2 matches · one option + one aria label) · image URL `utility-duffel-s.png` appears in markup.
+  - **Product-detail SSR** `/nex-native/product/7fe7b701-…` — HTTP 200 · 45,984 B · "Canvas D365" renders · "twin zipper" renders · image URL appears 4 times (main + variants).
+  - **Correction to prior addendum:** the earlier seed-run JSON's `sandbox_urls.product_detail` field pointed at `/nex-native/<slug>/<productId>`, which is a 404. The real PDP route is `/nex-native/product/<productId>`.
+- **Rule-8 status:** BUILT + WIRED + VERIFIED. Real browser snapshot NOT EXECUTED this cycle.
+- **Scope choice:** the sections-wiring edit in `[businessSlug]/page.tsx` fixes a pre-existing gap for *every* shop, not just X-Rated. Directly required by the directive ("must also show on the home page category list drop"). Minimal · 3-field projection · fail-soft.
+- **Flagged for owner (not a defect):** no "water-resistant" feature chip in `features` array because `water_resistance` already lives as a top-level `additional.water_resistance` key per migration 075 canonical. Owner may request a duplicate under features if the UI reads from features only.
+- **Exclusions:** `docs/doctrine/x-rated-chat-checkout-build-plan-2026-11-28.md` still NOT committed — separate directive, 4 approvals pending.
+- **Next cycle picks up from:** owner reviews the updated listing + dropdown at `http://localhost:3008/nex-native/x-rated-tool-belts` and PDP at `/nex-native/product/7fe7b701-11b3-4949-a43a-47c7570998f7`.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched (no prod DB, no prod migration, no prod deploy, no main push, no live Stripe/PayPal).
+
+---
+
 ## HEAD update · 2026-11-28 X-Rated Utility Duffel Bag S seeded into sandbox (post-`c4f313a0` → now pending commit)
 
 Owner directive 2026-11-28 (10-instruction build directive, verbatim intent): add a real X-Rated Tool Belts Utility Duffel (Small) product — name `Black X-Rated Utility Duffel Bag` · category `Tool Rig Bag` (new shop section) · price **£7.50 GBP** (explicit: not £4.50, not £45.00) · size S 30×20×12 · materials `Cordura`, `Cordura 600D`, `polyester` · full description preserved verbatim · use existing product-media + product-creation architecture · SANDBOX ONLY (`kdstoyyeygcopkogqsyv`) · verify DB record + storefront + basket flow · commit + push under standing 2026-11-27 policy. Standing 2026-11-27 source-control policy in force.
