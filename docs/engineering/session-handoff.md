@@ -7,6 +7,21 @@ What requires the owner before continuing?
 
 ---
 
+## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · fifth-pass "Select" sentinel + full-page view (post-70770ce2 → now `980cba3f`)
+
+Owner directive 2026-11-28 (fifth-pass, verbatim): *"CHANGE SECT YOUR COUNTRY TO sELECT - SEND MESSAGE CONTAINER SHOULD BE PAGE NO CONTAINER"*. Standing 2026-11-27 source-control policy in force. Owner's standing verdict ("Keep the implementation. Do not start another architecture debate.") preserved — no route-level promotion attempted.
+
+- **Remote HEAD before cycle:** `70770ce2`.
+- **Commits this cycle (1):** `feat(shop-enquiry): "Select" sentinel + full-page view (no card frame · no backdrop)`. Country `<option value="">` text shortened `"Select your country…"` → `"Select"` so it fits the narrow 40%-width column introduced in Addendum C. Outer `[data-nex-guest-shop-enquiry-popup]` wrapper now fills the viewport (`width:100vw · height:100dvh · background:#FFFFFF · overflowY:auto · WebkitOverflowScrolling:touch`). The dark `rgba(0,0,0,0.65)` backdrop + blur element is removed entirely. Inner `[data-nex-guest-enquiry-card]` section keeps a reading column (`maxWidth:480; margin:0 auto; padding:18px 18px 24px`) but drops card chrome: no `borderRadius`, no `boxShadow`, no `maxHeight`. Escape key + "Not now" button remain the two dismiss paths — no backdrop-click path because there is no backdrop.
+- **Automated tests this cycle:** popup suite grew 22→24 (+2 new tests: "Select" sentinel text + "renders as a full page · no backdrop · no card frame"). Combined focused run (same 7 suites as Addendum C) = **149 passed / 0 failed / 0 skipped**. Scoped tsc clean.
+- **Exclusions:** none — three modified files all logically one directive.
+- **Standing blockers unchanged:** migration 372 still NOT applied, HMAC key still NOT provisioned, `DEFAULT_ADAPTER` still `ConsoleAdapter`, no production touched, no real-device Playwright full-viewport + glow snapshot authored, no live `auth.admin.createUser` exercised against sandbox.
+- **Next cycle picks up from:** no outstanding engineering decision from this directive. Next milestone per owner's standing recommendation: **real-sandbox verification of Path A** against `kdstoyyeygcopkogqsyv` (NOT prod `ijvqdvsvwtwxzcqmoqit`) — see `docs/engineering/cycle-strict-completion-2026-11-28-rev3-fifth-pass-fullpage.md` §10 for the 5-step plan.
+
+**Rule 7 posture.** Standing 2026-11-27 source-control policy in force on `release-audit-v1-2026-11-14`. All other Rule-7 clauses hard-gated and untouched.
+
+---
+
 ## HEAD update · 2026-11-28 Rev 3 guest-shop-enquiry · fourth-pass phone↔country prefix match + red-glow invalid fields (post-79456cb7 → now `aa96f021`)
 
 Owner directive 2026-11-28 (fourth-pass, verbatim): *"I THINK THESE 1 ROW AND COUNTRY MUST MATCH PHONE NUMBER PREFIX - Phone +44 7700 900000 Country - ALSO IF USER MISSING 1 FIELD IT WILL GLOWING RED COLOR AND WONT ALLOW SEND INTO THE CHAT WINDOW."* Standing 2026-11-27 source-control policy in force.
